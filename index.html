@@ -7760,7 +7760,7 @@
             let myPres = {};
             let peersSnap = [];
             const peerListeners = [];
-            const toPeer = (u, t, p) => Object.freeze({ peer: u + '~' + t, by: u, isMe: u === uid, sameTab: u === uid && t === tab, kind: 'viewer', guest: false, presence: Object.freeze(p || {}), updatedAt: Date.now() });
+            const toPeer = (u, t, p) => Object.freeze({ peer: u + '~' + t, by: u, isMe: u === uid, sameTab: u === uid && t === tab, kind: 'viewer', guest: false, presence: Object.freeze(Object.assign({}, p || {})), updatedAt: Date.now() });   // freeze a copy, never our own live presence object
             let prev = new Map();
             fdb.ref('presence').on('value', snap => {
                 const all = snap.val() || {};
@@ -9401,6 +9401,12 @@
             return statueEnvMap;
         }
 
+        // Statue models are set up one at a time with a short pause between them, so the page stays responsive while they load
+        let statueQueueTail = Promise.resolve();
+        function queueStatueTask(fn) {
+            statueQueueTail = statueQueueTail.then(() => new Promise(done => setTimeout(() => { try { fn(); } catch (e) { console.warn('statue setup failed', e); } done(); }, 120)));
+        }
+
         function upgradeStatuesFromGLB(specs) {
             if (typeof THREE.GLTFLoader !== 'function' || typeof STATUE_GLB === 'undefined') return;
             const loader = new THREE.GLTFLoader();
@@ -9414,7 +9420,7 @@
             }
             const env = getStatueEnvMap();
             const maxAniso = renderer ? renderer.capabilities.getMaxAnisotropy() : 1;
-            specs.forEach(spec => {
+            specs.forEach(spec => queueStatueTask(() => {
                 const b64 = STATUE_GLB[spec.key];
                 if (!b64) return;
                 let buffer;
@@ -9484,7 +9490,7 @@
                     spec.container.add(model);
                     if (spec.onReady) spec.onReady(model);
                 }, err => console.warn('statue model failed to load; keeping procedural statue', spec.key, err));
-            });
+            }));
         }
 
         // 六十甲子籤筒：紅漆金箍竹節筒、金字「六十甲子靈籤」、八角漆座、六十支紅頭竹籤（抽中時一支升出筒口）
@@ -11980,7 +11986,9 @@
                     '<div class="fixed inset-0 z-[60] flex items-center justify-center text-amber-100 text-sm p-6 text-center">3D 引擎載入失敗，請檢查網路連線後重新整理頁面。</div>');
                 return;
             }
-            waitForTempleFonts().then(() => {
+            waitForTempleFonts().then(async () => {
+                // public multiplayer: ask a first-time visitor's name before the heavy 3D build starts, so typing stays smooth
+                if (FIREBASE_CONFIG && !getNick()) { try { await askNick(); } catch (e) {} }
                 initThreeTemple();
                 render60SticksDirectory();
                 renderBlessingWall();
@@ -11991,7 +11999,7 @@
                 loadCustomPilgrims();
                 updatePoseButtons();
                 initCamGroups();
-                initMultiplayer();
+                setTimeout(initMultiplayer, 2000);   // connect once the first frames are on screen
                 animate3DTemple();
             });
         };
