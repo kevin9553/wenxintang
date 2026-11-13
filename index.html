@@ -7694,7 +7694,15 @@
         // 把 Firebase 專案的網頁設定貼進 FIREBASE_CONFIG 即啟用；留 null 則改用 Claude 平台連線或單機。
         // 這裡提供與 Claude 平台相同介面的 room / user / db，多人程式碼不需分兩套。
         // =====================================================================
-        const FIREBASE_CONFIG = null;   // 例：{ apiKey: "...", authDomain: "xxx.firebaseapp.com", databaseURL: "https://xxx-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "xxx", appId: "..." }
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyDnStP_FijpIYXtGOGWq5Ak7rKgJQ9RjBY",
+            authDomain: "wenxintang.firebaseapp.com",
+            databaseURL: "https://wenxintang-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "wenxintang",
+            storageBucket: "wenxintang.firebasestorage.app",
+            messagingSenderId: "1047696461780",
+            appId: "1:1047696461780:web:cc9781de0ee9aaa8f01041"
+        };   // 例：{ apiKey: "...", authDomain: "xxx.firebaseapp.com", databaseURL: "https://xxx-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "xxx", appId: "..." }
         const FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
 
         function loadScriptOnce(src) {
