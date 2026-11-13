@@ -8146,6 +8146,85 @@
             el.textContent = `🌐 大家共同累計：點燈 ${t.lantern}・插香 ${t.incense}・撞鐘 ${t.bell}・擊鼓 ${t.drum}・投幣 ${t.coin}・叩拜 ${t.kowtow}（${NET.docs.length} 位香客）`;
         }
 
+        // =====================================================================
+        // 效能：燈光輪替（只讓離鏡頭最近的幾盞點光源真正發光）＋陰影降頻
+        // 每多一盞點光源，畫面上每個像素都要多算一次；50 盞對手機太重。
+        // 所有原本的燈仍照常計算亮度（閃爍、夜間、金爐爆亮），只是改由固定數量的「燈位」輪流呈現，
+        // 燈位數固定，著色器不必重新編譯。
+        // =====================================================================
+        const lightPool = { slots: [], sources: [], chosen: [], lastPick: 0, frame: 0, cull: [], lastCull: 0 };
+        function initPerformanceTuning() {
+            const K = LOW_MEM_DEVICE ? 4 : 8;
+            scene.traverse(o => { if (o.isPointLight) lightPool.sources.push(o); });
+            lightPool.sources.forEach(l => { l.visible = false; });
+            for (let k = 0; k < K; k++) {
+                const L = new THREE.PointLight(0xffffff, 0, 10, 2);
+                scene.add(L);
+                lightPool.slots.push(L);
+            }
+            // distance culling: small details far from the camera move to layer 1, which the camera does not draw
+            // (layers, not .visible, so nothing that shows/hides objects for gameplay is disturbed)
+            const v0 = new THREE.Vector3();
+            scene.traverse(o => {
+                if (!o.isMesh || o.isInstancedMesh || !o.geometry) return;
+                if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+                o.getWorldScale(v0);
+                const r = o.geometry.boundingSphere.radius * Math.max(v0.x, v0.y, v0.z);
+                const far = r < 0.35 ? 30 : r < 1.0 ? 55 : r < 2.5 ? 90 : 0;
+                if (far) lightPool.cull.push({ o, far: far * (LOW_MEM_DEVICE ? 0.8 : 1), out: false });
+            });
+            // shadows: the sun never moves, so the shadow map only needs refreshing for moving people
+            renderer.shadowMap.autoUpdate = false;
+            renderer.shadowMap.needsUpdate = true;
+            // phones: tiny objects (cups, coins, petals…) stop casting shadows; their shadows are barely visible
+            if (LOW_MEM_DEVICE) {
+                const v = new THREE.Vector3();
+                scene.traverse(o => {
+                    if (!o.isMesh || !o.castShadow || !o.geometry) return;
+                    if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+                    o.getWorldScale(v);
+                    if (o.geometry.boundingSphere.radius * Math.max(v.x, v.y, v.z) < 0.3) o.castShadow = false;
+                });
+            }
+        }
+        const _lpTmp = new THREE.Vector3();
+        function updatePerformanceTuning(t) {
+            const LP = lightPool;
+            if (!LP.slots.length) return;
+            LP.frame++;
+            if (LP.frame % (LOW_MEM_DEVICE ? 4 : 2) === 0) renderer.shadowMap.needsUpdate = true;
+            const now = performance.now();
+            if (now - LP.lastCull > 400) {
+                LP.lastCull = now;
+                const cp = camera.position;
+                LP.cull.forEach(e => {
+                    const m = e.o.matrixWorld.elements;
+                    const dx = m[12] - cp.x, dy = m[13] - cp.y, dz = m[14] - cp.z;
+                    const out = dx * dx + dy * dy + dz * dz > e.far * e.far;
+                    if (out !== e.out) { e.out = out; e.o.layers.set(out ? 1 : 0); }
+                });
+            }
+            if (now - LP.lastPick > 250) {
+                LP.lastPick = now;
+                const c = camControl.target;
+                LP.chosen = LP.sources
+                    .filter(l => l.intensity > 0.02)
+                    .map(l => { l.getWorldPosition(_lpTmp); return { l, score: _lpTmp.distanceTo(c) - Math.min(l.intensity, 4) * 3 - (l.distance || 10) * 0.2 }; })
+                    .sort((a, b) => a.score - b.score)
+                    .slice(0, LP.slots.length)
+                    .map(e => e.l);
+            }
+            LP.slots.forEach((slot, i) => {
+                const src = LP.chosen[i];
+                if (!src) { slot.intensity = 0; return; }
+                src.getWorldPosition(slot.position);
+                slot.color.copy(src.color);
+                slot.intensity = src.intensity;
+                slot.distance = src.distance;
+                slot.decay = src.decay;
+            });
+        }
+
         let scene, camera, renderer, templeGroup;
         let ambientLight, sunDirLight, hemiLight;
         let playerAvatarGroup, playerIncenseGroup, shoujingMasterGroup;
@@ -8242,8 +8321,8 @@
             sunDirLight.shadow.bias = -0.0004;
             sunDirLight.shadow.normalBias = 0.03;
             sunDirLight.castShadow = true;
-            sunDirLight.shadow.mapSize.width = 2048;
-            sunDirLight.shadow.mapSize.height = 2048;
+            sunDirLight.shadow.mapSize.width = LOW_MEM_DEVICE ? 1024 : 2048;
+            sunDirLight.shadow.mapSize.height = LOW_MEM_DEVICE ? 1024 : 2048;
             sunDirLight.shadow.camera.near = 1;
             sunDirLight.shadow.camera.far = 140;
             const d = 60;
@@ -11459,6 +11538,7 @@
             if (playerAvatarGroup && !state.seated && !climbing) animateWalk(playerAvatarGroup, playerMoving, state.walkPhase || 0);
 
             update3DLabelsProjection();
+            updatePerformanceTuning(t);
             renderer.render(scene, camera);
         }
 
@@ -11990,6 +12070,7 @@
                 // public multiplayer: ask a first-time visitor's name before the heavy 3D build starts, so typing stays smooth
                 if (FIREBASE_CONFIG && !getNick()) { try { await askNick(); } catch (e) {} }
                 initThreeTemple();
+                initPerformanceTuning();
                 render60SticksDirectory();
                 renderBlessingWall();
                 let savedSpeed = 'normal';
