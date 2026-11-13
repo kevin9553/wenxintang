@@ -164,6 +164,7 @@
             <button onclick="moveCameraPreset('shitou')" id="camBtn-shitou" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">石頭公</button>
             <button onclick="moveCameraPreset('puppet')" id="camBtn-puppet" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🎭 布袋戲</button>
             <button onclick="moveCameraPreset('rearhall')" id="camBtn-rearhall" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏯 後殿五層樓</button>
+            <button onclick="moveCameraPreset('fortune')" id="camBtn-fortune" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🔮 算命館</button>
             <button onclick="moveCameraPreset('xiaoren')" id="camBtn-xiaoren" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">👡 打小人</button>
             <button onclick="moveCameraPreset('fireworks')" id="camBtn-fireworks" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🎆 煙火區</button>
             <button onclick="moveCameraPreset('guandi')" id="camBtn-guandi" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">⚔️ 關帝</button>
@@ -533,6 +534,37 @@
             <p class="text-xs text-stone-300 mb-3">請輸入您在廟裡的名字（最多 10 字），其他在線香客會看到。請勿使用真實全名。之後點右上角「在線」可以改名。</p>
             <input id="nickInput" maxlength="10" placeholder="例：阿明" class="w-full px-3 py-2 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white mb-3">
             <button id="nickOk" class="w-full py-2.5 btn-warm-gold text-sm tracking-widest">進入廟埕</button>
+        </div>
+    </div>
+
+    <!-- MODAL: 問心算命館 -->
+    <div id="fortuneModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
+        <div class="xinxiang-modal max-w-md w-full p-5 relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeFortuneModal()" class="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-bold">✕</button>
+            <h3 class="text-lg font-bold text-amber-300 tracking-wider mb-1">🔮 問心算命館</h3>
+            <p class="text-[11px] text-stone-400 mb-3">民俗趣味，僅供參考；重大決定請理性判斷。想深入聊聊，可找<button onclick="closeFortuneModal(); toggleAIChatDrawer(true)" class="underline text-amber-200">師父問事</button>。</p>
+            <div class="flex gap-1.5 mb-3">
+                <button id="ftTab-bird" onclick="showFortuneTab('bird')" class="flex-1 py-1.5 rounded-full text-xs font-bold palace-pill text-amber-200">🐦 文鳥抽卡</button>
+                <button id="ftTab-zodiac" onclick="showFortuneTab('zodiac')" class="flex-1 py-1.5 rounded-full text-xs font-bold palace-pill text-amber-200">🐲 生肖流年</button>
+                <button id="ftTab-coin" onclick="showFortuneTab('coin')" class="flex-1 py-1.5 rounded-full text-xs font-bold palace-pill text-amber-200">☯️ 擲錢卦</button>
+            </div>
+            <div id="ftPane-bird" class="bg-black/30 border border-amber-300/25 rounded-xl p-3 space-y-2">
+                <p class="text-xs text-stone-300">心中默想想問的事，請小文鳥替您叼出一張籤卡。</p>
+                <button onclick="birdPickCard()" class="w-full py-2.5 btn-warm-gold text-sm tracking-widest">🐦 請文鳥抽卡</button>
+            </div>
+            <div id="ftPane-zodiac" class="hidden bg-black/30 border border-amber-300/25 rounded-xl p-3 space-y-2">
+                <label class="block text-[11px] text-amber-200">出生年（國曆）
+                    <input id="ftYear" type="number" inputmode="numeric" min="1920" max="2026" placeholder="例：1990" class="mt-1 w-full px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white">
+                </label>
+                <label class="flex items-center gap-1.5 text-[11px] text-stone-300"><input id="ftEarly" type="checkbox"> 生日在農曆新年之前（約 1 月至 2 月中）</label>
+                <button onclick="readZodiac()" class="w-full py-2.5 btn-warm-gold text-sm tracking-widest">🐲 看 2026 流年</button>
+            </div>
+            <div id="ftPane-coin" class="hidden bg-black/30 border border-amber-300/25 rounded-xl p-3 space-y-2">
+                <p class="text-xs text-stone-300">心念一事，以三枚銅錢連擲六次，自下而上成一卦。</p>
+                <input id="ftQuestion" maxlength="40" placeholder="想問的事（可不填）" class="w-full px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white">
+                <button onclick="tossCoinHexagram()" class="w-full py-2.5 btn-warm-gold text-sm tracking-widest">☯️ 擲錢起卦</button>
+            </div>
+            <div id="fortuneResult" class="hidden mt-3 bg-gradient-to-b from-red-950/70 to-black/50 border border-amber-300/40 rounded-xl p-3"></div>
         </div>
     </div>
 
@@ -8044,7 +8076,7 @@
         const NET_ACT_TEXT = {
             bell: '敲響了祈福鐘 🔔', drum: '擊響了鼓樓大鼓 🥁', fireworks: '施放了煙火 🎆', firecracker: '點燃了鞭炮 🧨',
             incense: '插香參拜 🙏', bow: '合掌參拜 🙏', kowtow: '行三跪九叩大禮 🙇', meditate: '盤腿打坐 🪷', chant: '念經持咒 📖',
-            futian: '在福田池投幣許願 🪙', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟'
+            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟'
         };
         function onNetAct(msg) {
             if (!msg || msg.sameTab || msg.kind !== 'viewer') return;
@@ -8223,6 +8255,439 @@
                 slot.distance = src.distance;
                 slot.decay = src.decay;
             });
+        }
+
+        // =====================================================================
+        // 問心算命館（山門內左側）：算命先生、文鳥抽卡、生肖流年、擲錢卦（六十四卦）
+        // 民俗趣味，僅供參考。
+        // =====================================================================
+        const FORTUNE_POS = { x: -18, z: 41, rot: Math.PI / 2 };   // stall faces +x, toward the processional path
+        const fortuneStall = { bird: null, birdHome: null, cards: [], tray: null, teller: null, busy: false, anim: null, coins: [] };
+
+        const BIRD_CARDS = [
+            ['上上', '鵬程萬里', '風起正是好時機，大膽向前，貴人自來。', '把握這個月提出計畫或申請。'],
+            ['上上', '花開富貴', '耕耘多時，終見花開；付出將有回報。', '保持耐心，別在最後關頭放棄。'],
+            ['上吉', '和氣生財', '以和為貴，人緣即是財緣。', '多與人合作，少與人爭。'],
+            ['上吉', '春風得意', '近來運勢順遂，心想事成。', '得意時更要謙虛，福氣才長久。'],
+            ['中吉', '撥雲見日', '眼前困擾即將散去，轉機就在不遠。', '先把最小的一步做好。'],
+            ['中吉', '細水長流', '不求一夕致富，穩紮穩打最長久。', '規律存錢、規律作息。'],
+            ['中吉', '貴人相扶', '有長輩或朋友願意拉你一把。', '別怕開口求助。'],
+            ['中吉', '心安理得', '問心無愧，自然夜夜好眠。', '做對的事，結果交給時間。'],
+            ['中平', '靜待時機', '時機未熟，宜守不宜攻。', '多準備、少衝動，三個月後再看。'],
+            ['中平', '舊中求新', '老方法遇到瓶頸，換個角度就通了。', '試著請教不同領域的人。'],
+            ['中平', '量力而為', '貪多嚼不爛，專心一件事最好。', '刪掉清單上一件不必要的事。'],
+            ['中平', '以退為進', '暫時讓步不是輸，是為了走更遠。', '爭執時先離開現場冷靜。'],
+            ['小吉', '守口如瓶', '近日口舌較多，言多必失。', '重要的事先別說出去。'],
+            ['小吉', '健康為本', '身體在提醒你放慢腳步。', '早點睡，多喝水，按時吃飯。'],
+            ['小吉', '破財消災', '小破財可擋大災，不必心疼。', '花錢前多比較一下，避免衝動購物。'],
+            ['小吉', '迷途知返', '方向偏了沒關係，現在回頭剛剛好。', '寫下你真正想要的三件事。']
+        ];
+
+        const ZODIAC = ['鼠', '牛', '虎', '兔', '龍', '蛇', '馬', '羊', '猴', '雞', '狗', '豬'];
+        const STEM_ELEMENT = ['木', '木', '火', '火', '土', '土', '金', '金', '水', '水'];
+        // 2026 丙午年：值太歲（馬）、沖太歲（鼠）、害太歲（牛）、破太歲（兔）
+        const TAISUI_2026 = { 6: '值太歲（本命年）', 0: '沖太歲', 1: '害太歲', 3: '破太歲' };
+        const ZODIAC_2026 = [
+            '鼠：今年與太歲相沖，變動較多。工作或住處可能有調整，順勢而為反而有新機會。理財宜保守，出行注意安全。',
+            '牛：今年與太歲相害，人際上容易有小誤會。多溝通、少猜測；下半年財運轉好，適合穩健投資。',
+            '虎：寅午相合，貴人運旺，事業有發揮舞台。適合學新技能、爭取升遷，注意別過度勞累。',
+            '兔：今年與太歲相破，計畫易生變數。凡事預留後路，簽約前多看兩遍；感情上真誠最重要。',
+            '龍：運勢平穩上揚，努力會被看見。財運中等偏好，適合整理舊帳、規劃長期目標。',
+            '蛇：巳午同屬火，熱情有勁，業績有成。小心急躁，凡事先想三秒再說。',
+            '馬：本命年值太歲，宜靜不宜動。重大決定多聽家人意見，保持運動與規律作息，平安就是福。',
+            '羊：午未相合，人緣極佳，有喜事臨門的機會。財運穩定，適合與朋友合作。',
+            '猴：腦筋靈活、機會多，但要專注在最重要的一兩件事。注意飲食與睡眠。',
+            '雞：工作上能得到肯定，偶有小人口舌。低調做事、高調做人；年底有意外之財。',
+            '狗：寅午戌三合，整年貴人相助、事業順遂，是開創新局的好年。記得回饋幫助你的人。',
+            '豬：運勢先蹲後跳，上半年打基礎，下半年見成果。理財宜分散，不宜借錢給人。'
+        ];
+
+        // ---- 六十四卦 (King Wen order). Trigrams bottom→top line bits: 乾111 兌110 離101 震100 巽011 坎010 艮001 坤000
+        const TRIGRAMS = { '111': ['乾', '天'], '110': ['兌', '澤'], '101': ['離', '火'], '100': ['震', '雷'], '011': ['巽', '風'], '010': ['坎', '水'], '001': ['艮', '山'], '000': ['坤', '地'] };
+        const TRI_ORDER = ['乾', '震', '坎', '艮', '坤', '巽', '離', '兌'];   // table rows = lower, cols = upper
+        const HEX_TABLE = [
+            [1, 34, 5, 26, 11, 9, 14, 43],
+            [25, 51, 3, 27, 24, 42, 21, 17],
+            [6, 40, 29, 4, 7, 59, 64, 47],
+            [33, 62, 39, 52, 15, 53, 56, 31],
+            [12, 16, 8, 23, 2, 20, 35, 45],
+            [44, 32, 48, 18, 46, 57, 50, 28],
+            [13, 55, 63, 22, 36, 37, 30, 49],
+            [10, 54, 60, 41, 19, 61, 38, 58]
+        ];
+        const HEX = [null,
+            ['乾', '上吉', '天行健，君子以自強不息。剛健向上，宜積極進取，但忌驕傲。'],
+            ['坤', '上吉', '地勢坤，君子以厚德載物。柔順包容、跟隨有德之人，必有收穫。'],
+            ['屯', '中平', '萬事起頭難，草創艱辛。堅持方向，尋求協助，終能突破。'],
+            ['蒙', '中平', '啟蒙求學之象。虛心請教、多學多問，迷惑自然解開。'],
+            ['需', '中吉', '等待時機。雲在天上尚未成雨，耐心準備，時到自成。'],
+            ['訟', '小吉', '易起爭訟。退一步海闊天空，和解勝過爭贏。'],
+            ['師', '中吉', '率眾出師之象。紀律與正當理由是成功關鍵，宜團隊合作。'],
+            ['比', '上吉', '親近依附、團結和睦。廣結善緣，得道多助。'],
+            ['小畜', '中平', '小有積蓄、力量尚弱。先累積實力，不宜冒進。'],
+            ['履', '中吉', '如履虎尾，小心行事可保平安。守禮守分，步步為營。'],
+            ['泰', '上上', '天地交泰，萬事亨通。上下一心，好運正旺，宜把握。'],
+            ['否', '小吉', '天地不交，閉塞不通。暫時低調蓄力，否極自會泰來。'],
+            ['同人', '上吉', '與人同心，志同道合。開放合作，眾志成城。'],
+            ['大有', '上上', '火在天上，光明普照，大有收穫。富而能謙，福澤綿長。'],
+            ['謙', '上上', '謙卦六爻皆吉。謙虛受益，處處得人敬重。'],
+            ['豫', '中吉', '和樂歡愉之象。適合規劃、安排，但勿耽於安逸。'],
+            ['隨', '中吉', '隨機應變、擇善而從。順應時勢，自然順利。'],
+            ['蠱', '中平', '整頓積弊之時。舊問題需要面對處理，改革後轉好。'],
+            ['臨', '上吉', '居高臨下、親臨其事。好運將至，宜主動把握。'],
+            ['觀', '中平', '觀察省思之時。多看多聽，認清局勢再行動。'],
+            ['噬嗑', '中平', '咬合除障。有阻礙需果斷處理，公正明快則通。'],
+            ['賁', '中吉', '文飾美化。注重形象與禮節有益，但內在更重要。'],
+            ['剝', '小吉', '剝落衰退之象。宜守不宜進，保存實力，等待回升。'],
+            ['復', '上吉', '一陽來復，否極泰來。重新開始的好時機。'],
+            ['无妄', '中吉', '真誠無妄。不存僥倖、按部就班，自然無災。'],
+            ['大畜', '上吉', '大有積蓄，厚積薄發。持續充實自己，大有可為。'],
+            ['頤', '中吉', '頤養之道。注意飲食言語，養身也養德。'],
+            ['大過', '小吉', '負擔過重。量力而為，適時求援，避免硬撐。'],
+            ['坎', '小吉', '重重險阻。保持誠信與冷靜，一步步渡過難關。'],
+            ['離', '中吉', '光明附麗。依附正道、發揮才華，前景明亮。'],
+            ['咸', '上吉', '感應相通，人和情順。感情、人際皆有好消息。'],
+            ['恆', '中吉', '恆久之道。持之以恆，貴在堅持，不宜頻繁改變。'],
+            ['遯', '中平', '退避之時。暫時退讓保全，是明智之舉。'],
+            ['大壯', '中吉', '聲勢壯大。氣勢雖盛，仍須守正，勿逞強。'],
+            ['晉', '上吉', '旭日東昇，步步高升。工作有表現機會，宜積極爭取。'],
+            ['明夷', '小吉', '光明受傷，宜韜光養晦。低調守正，等待天亮。'],
+            ['家人', '上吉', '家道正則天下定。重視家庭和諧，家和萬事興。'],
+            ['睽', '中平', '意見相左。求同存異，小事可成，大事緩議。'],
+            ['蹇', '小吉', '前路艱難。反身修德、尋求貴人，不宜硬闖。'],
+            ['解', '中吉', '困難解除，雨過天青。把握時機了結舊事。'],
+            ['損', '中吉', '損下益上，有捨才有得。適度付出，終有回報。'],
+            ['益', '上吉', '損上益下，利有攸往。適合投入、助人，雙方受益。'],
+            ['夬', '中平', '當斷則斷。果決處理問題，但手段宜溫和。'],
+            ['姤', '中平', '不期而遇。新的人事物出現，宜審慎評估。'],
+            ['萃', '上吉', '聚集薈萃，人才與資源匯聚。適合聚會、合作、祭祀祈福。'],
+            ['升', '上吉', '積小以高大，步步上升。循序漸進，前途光明。'],
+            ['困', '小吉', '受困之時。守住信念、少說多做，困境終將過去。'],
+            ['井', '中吉', '井水養人而不窮。修身養德，默默付出自有回報。'],
+            ['革', '中吉', '變革之時。時機成熟可大膽改變，除舊布新。'],
+            ['鼎', '上吉', '鼎新立業。穩定根基、推陳出新，大吉。'],
+            ['震', '中吉', '雷聲震動，有驚無險。保持鎮定，反而能有所得。'],
+            ['艮', '中平', '止於當止。適可而止、安守本分，靜中得安。'],
+            ['漸', '上吉', '循序漸進，如鴻雁漸飛。慢慢來，比較快。'],
+            ['歸妹', '小吉', '名分未定，宜守正道。感情事勿操之過急。'],
+            ['豐', '上吉', '豐盛圓滿，如日中天。盛極當思防衰，惜福為要。'],
+            ['旅', '中平', '旅途在外，處處謹慎。謙和待人，小事可成。'],
+            ['巽', '中吉', '如風般柔順深入。以柔克剛，循序滲透。'],
+            ['兌', '上吉', '喜悅和樂。真誠交流，人際和諧，事情順利。'],
+            ['渙', '中吉', '渙散之後重聚。凝聚人心、重建秩序的時機。'],
+            ['節', '中吉', '節制有度。量入為出、適可而止，則亨通。'],
+            ['中孚', '上吉', '誠信在中。以誠待人，連豚魚都能感動，無往不利。'],
+            ['小過', '中平', '小事可為，大事不宜。行事稍過謹慎反而有利。'],
+            ['既濟', '中吉', '事已完成。成功之後更要防範鬆懈。'],
+            ['未濟', '中平', '事未完成，仍有可為。審慎前進，終將渡河。']
+        ];
+        // one 爻 drawn with inline styles (solid = yang, broken = yin; 變 marks a changing line)
+        function yaoLine(v, i) {
+            const bar = w => `<span style="display:inline-block;width:${w}px;height:9px;border-radius:3px;background:#fcd34d"></span>`;
+            const line = v % 2 ? bar(112) : `<span style="display:inline-flex;width:112px;justify-content:space-between">${bar(50)}${bar(50)}</span>`;
+            return `<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin:3px 0"><span style="width:44px;text-align:right;font-size:10px;color:#a8a29e">第${i + 1}爻</span>${line}<span style="width:24px;font-size:10px;color:#fda4af">${v === 6 || v === 9 ? '變' : ''}</span></div>`;
+        }
+        function hexOf(bits) {   // bits: six 0/1 from bottom to top
+            const lo = TRIGRAMS[bits.slice(0, 3).join('')], up = TRIGRAMS[bits.slice(3, 6).join('')];
+            const n = HEX_TABLE[TRI_ORDER.indexOf(lo[0])][TRI_ORDER.indexOf(up[0])];
+            const [name, rank, text] = HEX[n];
+            const full = lo[0] === up[0] ? `${name}為${up[1]}` : `${up[1]}${lo[1]}${name}`;
+            return { n, name, full, rank, text };
+        }
+
+        function buildFortuneStall(goldMat) {
+            const P = FORTUNE_POS;
+            const g = new THREE.Group();
+            g.position.set(P.x, 0, P.z);
+            g.rotation.y = P.rot;
+            templeGroup.add(g);
+            fortuneStall.group = g;
+            const M = propMats();
+            const red = new THREE.MeshStandardMaterial({ color: 0x9b1c16, roughness: 0.42 });
+            const wood = new THREE.MeshStandardMaterial({ color: 0x5c2d14, roughness: 0.6 });
+            const click = { interactType: 'fortune', label: '🔮 問心算命館（點擊算命問事）' };
+            const tag = m => { m.userData = { ...click }; clickableMeshes.push(m); return m; };
+            const box = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = m.receiveShadow = true; g.add(m); return m; };
+            // stone floor, four red posts, curved roof
+            box(5.6, 0.12, 4.6, M.stone, 0, 0.06, 0);
+            [[-2.4, -1.9], [2.4, -1.9], [-2.4, 1.9], [2.4, 1.9]].forEach(([x, z]) => {
+                const c = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.13, 3.0, 12), red);
+                c.position.set(x, 1.62, z); c.castShadow = true; g.add(c);
+            });
+            const mats = towerRoofMats(goldMat);
+            buildHexEaveRoof(g, 3.12, 4.3, 0.2, 1.35, 0.42, mats, 4);
+            const fin = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 10), goldMat);
+            fin.position.y = 4.55;
+            g.add(fin);
+            // back wall with a 八卦 panel
+            box(5.0, 2.4, 0.12, wood, 0, 1.32, -1.95);
+            const bc = document.createElement('canvas'); bc.width = bc.height = 256;
+            const bx = bc.getContext('2d');
+            bx.fillStyle = '#7f1d1d'; bx.fillRect(0, 0, 256, 256);
+            bx.translate(128, 128);
+            bx.fillStyle = '#facc15';
+            for (let k = 0; k < 8; k++) {
+                bx.save(); bx.rotate(k * Math.PI / 4);
+                const bits = [[1,1,1],[1,1,0],[1,0,1],[1,0,0],[0,1,1],[0,1,0],[0,0,1],[0,0,0]][k];
+                bits.forEach((b, l) => { const y = -112 + l * 14; if (b) bx.fillRect(-28, y, 56, 8); else { bx.fillRect(-28, y, 22, 8); bx.fillRect(6, y, 22, 8); } });
+                bx.restore();
+            }
+            bx.fillStyle = '#f8f5ec'; bx.beginPath(); bx.arc(0, 0, 52, 0, Math.PI * 2); bx.fill();
+            bx.fillStyle = '#111'; bx.beginPath(); bx.arc(0, 0, 52, Math.PI / 2, Math.PI * 1.5); bx.fill();
+            bx.beginPath(); bx.arc(0, -26, 26, 0, Math.PI * 2); bx.fill();
+            bx.fillStyle = '#f8f5ec'; bx.beginPath(); bx.arc(0, 26, 26, 0, Math.PI * 2); bx.fill();
+            bx.beginPath(); bx.arc(0, -26, 8, 0, Math.PI * 2); bx.fill();
+            bx.fillStyle = '#111'; bx.beginPath(); bx.arc(0, 26, 8, 0, Math.PI * 2); bx.fill();
+            const bagua = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.3), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(bc), roughness: 0.6 }));
+            bagua.position.set(0, 1.75, -1.88);
+            g.add(bagua);
+            // banners and signboard
+            [['指點迷津', -2.4], ['趨吉避凶', 2.4]].forEach(([t, x]) => {
+                const b = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 1.9), new THREE.MeshStandardMaterial({ map: createSignboardTexture(t, 80, 360, '#7f1d1d', '#facc15', '#fde68a', true, 54), side: THREE.DoubleSide }));
+                b.position.set(x, 1.75, 2.02);
+                g.add(b);
+            });
+            const sign = tag(new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.55, 0.1), new THREE.MeshStandardMaterial({ map: createSignboardTexture('問 心 算 命 館', 520, 110, '#2a0806', '#facc15', '#fef08a', false, 64), roughness: 0.35 })));
+            sign.position.set(0, 3.0, 2.05);
+            g.add(sign);
+            // table with a red cloth, the 文鳥 cage, a tray of folded fortune cards
+            tag(box(2.4, 0.08, 1.0, wood, 0, 0.82, 0.35));
+            [[-1.1, -0.1], [1.1, -0.1], [-1.1, 0.8], [1.1, 0.8]].forEach(([x, z]) => box(0.07, 0.78, 0.07, wood, x, 0.43, z));
+            const cloth = tag(box(2.45, 0.6, 0.02, new THREE.MeshStandardMaterial({ map: createSignboardTexture('鐵口直斷', 360, 90, '#b91c1c', '#facc15', '#fde68a', false, 50), roughness: 0.8 }), 0, 0.55, 0.86));
+            const cage = new THREE.Group();
+            cage.position.set(-0.75, 0.86, 0.3);
+            g.add(cage);
+            const cageMat = new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: 0.6, roughness: 0.35 });
+            const cbase = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.28, 0.06, 20), wood);
+            cbase.position.y = 0.03;
+            cage.add(cbase);
+            for (let i = 0; i < 14; i++) {
+                const a = i / 14 * Math.PI * 2;
+                if (i === 3) continue;   // the open door, facing the tray
+                const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.42, 4), cageMat);
+                bar.position.set(Math.cos(a) * 0.24, 0.27, Math.sin(a) * 0.24);
+                cage.add(bar);
+            }
+            const dome = new THREE.Mesh(new THREE.SphereGeometry(0.245, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: 0.6, roughness: 0.35, wireframe: true }));
+            dome.position.y = 0.48;
+            const hook = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.008, 6, 12), cageMat);
+            hook.position.y = 0.76;
+            cage.add(dome, hook);
+            // 文鳥 (Java sparrow): grey body, black cap, white cheeks, pink beak
+            const bird = new THREE.Group();
+            const bodyM = new THREE.MeshStandardMaterial({ color: 0x8d939c, roughness: 0.6 });
+            const b1 = new THREE.Mesh(new THREE.SphereGeometry(0.06, 14, 10), bodyM); b1.scale.set(0.85, 0.9, 1.3);
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.042, 12, 10), new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.5 })); head.position.set(0, 0.05, 0.06);
+            [-1, 1].forEach(s => { const ch = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), new THREE.MeshStandardMaterial({ color: 0xf5f5f4 })); ch.position.set(s * 0.026, 0.04, 0.08); bird.add(ch); });
+            const beak = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.045, 8), new THREE.MeshStandardMaterial({ color: 0xf2708a, roughness: 0.4 })); beak.rotation.x = Math.PI / 2; beak.position.set(0, 0.045, 0.11);
+            const tail = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.01, 0.08), new THREE.MeshStandardMaterial({ color: 0x1c1917 })); tail.position.set(0, 0.0, -0.09); tail.rotation.x = -0.4;
+            bird.add(b1, head, beak, tail);
+            bird.position.set(-0.75, 0.95, 0.3);
+            g.add(bird);
+            fortuneStall.bird = bird;
+            fortuneStall.birdHome = bird.position.clone();
+            // card tray with folded fortune cards
+            const tray = box(0.7, 0.05, 0.32, wood, 0.15, 0.885, 0.45);
+            const cardMat = new THREE.MeshStandardMaterial({ color: 0xf3df9a, roughness: 0.7 });
+            for (let i = 0; i < 12; i++) {
+                const c = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.16, 0.24), cardMat);
+                c.position.set(-0.13 + i * 0.05, 0.98, 0.45);
+                c.rotation.z = (i - 5.5) * 0.04;
+                const strip = new THREE.Mesh(new THREE.BoxGeometry(0.037, 0.03, 0.242), new THREE.MeshBasicMaterial({ color: 0xb91c1c }));
+                strip.position.y = 0.05;
+                c.add(strip);
+                g.add(c);
+                tag(c);
+                fortuneStall.cards.push(c);
+            }
+            // three bronze coins and a small tortoise shell for 擲錢卦
+            const coinM = new THREE.MeshStandardMaterial({ color: 0xb8862b, metalness: 0.7, roughness: 0.35 });
+            for (let i = 0; i < 3; i++) {
+                const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.01, 16), coinM);
+                coin.position.set(0.7 + i * 0.12, 0.87, 0.6);
+                g.add(coin); tag(coin);
+                fortuneStall.coins.push(coin);
+            }
+            const shell = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.5 }));
+            shell.scale.set(1.2, 0.7, 1);
+            shell.position.set(0.85, 0.86, 0.25);
+            g.add(shell); tag(shell);
+            // the fortune teller: an old master in a dark robe behind the table, and a stool for visitors
+            const teller = createWoodenDollCharacter({ shirtColor: 0x2b2b44, accentColor: 0xd4a017, hairColor: 0xd8d2c6, hairStyle: 'bun', mood: 'smile', pantsColor: 0x1f1d24 });
+            teller.position.set(0, 0.12, -0.55);
+            teller.traverse(o => { if (o.isMesh) { o.castShadow = true; tag(o); } });
+            g.add(teller);
+            fortuneStall.teller = teller;
+            const beard = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.28, 10), new THREE.MeshStandardMaterial({ color: 0xeeeae2, roughness: 0.8 }));
+            beard.rotation.x = Math.PI;
+            beard.position.set(0, 1.23, 0.24);
+            teller.add(beard);
+            box(0.5, 0.45, 0.5, wood, 0, 0.35, 1.5);
+            // lanterns
+            [-2.0, 2.0].forEach(x => {
+                const lan = new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 12), new THREE.MeshStandardMaterial({ color: 0xdc2626, emissive: 0x991b1b, emissiveIntensity: 0.45 }));
+                lan.scale.set(1, 1.15, 1);
+                lan.position.set(x, 2.55, 1.85);
+                registerNightEmissive(lan.material, 0.45, 1.8);
+                g.add(lan);
+            });
+            const lw = towerWorld(P, 0, 2.2, 0.6);
+            addNightLight(lw.x, lw.y, lw.z, 0xffc58a, 1.2, 7, false, 0.25);
+            [[-2.4, -1.9], [2.4, -1.9], [-2.4, 1.9], [2.4, 1.9], [0, -1.95], [0, 0.35]].forEach(([lx, lz]) => { const w = towerWorld(P, lx, 0, lz); colliders.push({ x: w.x, z: w.z, r: lx === 0 && lz > 0 ? 1.3 : 0.4 }); });
+            const anchor = new THREE.Object3D();
+            anchor.position.y = 4.9;
+            g.add(anchor);
+            register3DLabel(anchor, 0, '🔮 問心算命館', '#c4b5fd', () => openFortuneModal());
+        }
+
+        // ---------------------------------------------------------------- modal
+        function openFortuneModal(tab) {
+            document.getElementById('fortuneModal').classList.remove('hidden');
+            showFortuneTab(tab || 'bird');
+        }
+        function closeFortuneModal() { document.getElementById('fortuneModal').classList.add('hidden'); }
+        function showFortuneTab(k) {
+            ['bird', 'zodiac', 'coin'].forEach(t => {
+                document.getElementById('ftPane-' + t).classList.toggle('hidden', t !== k);
+                const b = document.getElementById('ftTab-' + t);
+                b.classList.toggle('cam-tab-on', t === k);
+            });
+        }
+        function fortuneResult(html) {
+            const el = document.getElementById('fortuneResult');
+            el.innerHTML = html;
+            el.classList.remove('hidden');
+            el.scrollIntoView({ block: 'nearest' });
+        }
+        function seatAtFortune() {
+            if (!playerAvatarGroup) return;
+            playerAvatarGroup.userData.kowtowToken = null;
+            setPlayerPose('stand');
+            const w = towerWorld(FORTUNE_POS, 0, 0, 1.95);
+            playerAvatarGroup.position.set(w.x, 0, w.z);
+            playerAvatarGroup.rotation.y = Math.atan2(FORTUNE_POS.x - w.x, FORTUNE_POS.z - w.z);
+            moveCameraPreset('fortune');
+        }
+
+        // 文鳥抽卡
+        function birdPickCard() {
+            if (fortuneStall.busy) return;
+            fortuneStall.busy = true;
+            seatAtFortune();
+            emitAct('fortune');
+            document.getElementById('fortuneResult').classList.add('hidden');
+            const i = (Math.random() * BIRD_CARDS.length) | 0;
+            const card = fortuneStall.cards[(Math.random() * fortuneStall.cards.length) | 0];
+            fortuneStall.anim = { t: 0, card, cardHome: card.position.clone(), idx: i };
+            playTempleBellSound(880);
+            showToast('🐦 先生打開籠門：「小文鳥，替這位善信挑一張吧！」');
+        }
+        function finishBirdCard(idx) {
+            const [rank, title, text, advice] = BIRD_CARDS[idx];
+            playTempleBellSound(660);
+            fortuneResult(`<div class="text-center"><div class="text-[11px] text-amber-300/80">文鳥叼出的卡</div>
+                <div class="text-2xl font-black text-amber-200 tracking-widest my-1">${escapeHTML(title)}</div>
+                <div class="inline-block px-2 py-0.5 rounded bg-red-900/70 border border-amber-300/50 text-xs text-amber-100 mb-2">${escapeHTML(rank)}</div>
+                <div class="text-sm text-stone-100">${escapeHTML(text)}</div>
+                <div class="text-xs text-emerald-200 mt-2">先生建議：${escapeHTML(advice)}</div></div>`);
+            fortuneStall.busy = false;
+        }
+
+        // 生肖流年
+        function readZodiac() {
+            const y = parseInt(document.getElementById('ftYear').value, 10);
+            if (!(y >= 1920 && y <= 2026)) { showToast('🐲 請輸入 1920 到 2026 之間的出生年'); return; }
+            const early = document.getElementById('ftEarly').checked;
+            const ly = early ? y - 1 : y;                     // born before 立春/農曆新年 → previous zodiac year
+            const zi = ((ly - 4) % 12 + 12) % 12, si = ((ly - 4) % 10 + 10) % 10;
+            const ganzhi = STEMS[si] + ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'][zi];
+            const ts = TAISUI_2026[zi];
+            const age = 2026 - y + 1;                         // 虛歲
+            seatAtFortune();
+            emitAct('fortune');
+            playTempleBellSound(587);
+            fortuneResult(`<div class="text-center mb-2"><div class="text-[11px] text-amber-300/80">${ly} 年生・${ganzhi}年・虛歲 ${age} 歲</div>
+                <div class="text-2xl font-black text-amber-200 my-1">屬${ZODIAC[zi]}・年干屬${STEM_ELEMENT[si]}</div>
+                ${ts ? `<div class="inline-block px-2 py-0.5 rounded bg-red-900/80 border border-amber-300/60 text-xs text-amber-100">2026 丙午年 ${ts}</div>` : '<div class="inline-block px-2 py-0.5 rounded bg-emerald-900/60 border border-emerald-300/50 text-xs text-emerald-100">2026 丙午年 未犯太歲</div>'}</div>
+                <div class="text-sm text-stone-100">${escapeHTML(ZODIAC_2026[zi])}</div>
+                ${ts ? '<div class="text-xs text-amber-200 mt-2">先生建議：犯太歲者可到光明燈處點一盞元辰燈、安太歲祈求平安。<button onclick="closeFortuneModal(); toggleBlessingWallModal(true)" class="ml-1 underline">去點燈</button></div>' : ''}`);
+        }
+
+        // 擲錢卦：three coins × six tosses (heads = 3, tails = 2): 6 老陰(變) 7 少陽 8 少陰 9 老陽(變)
+        function tossCoinHexagram() {
+            if (fortuneStall.busy) return;
+            fortuneStall.busy = true;
+            seatAtFortune();
+            emitAct('fortune');
+            const lines = [];
+            const out = document.getElementById('fortuneResult');
+            out.classList.remove('hidden');
+            const q = document.getElementById('ftQuestion').value.trim().slice(0, 40);
+            const step = k => {
+                if (k === 6) { finishHexagram(lines, q); return; }
+                const coins = [0, 1, 2].map(() => Math.random() < 0.5 ? 3 : 2);
+                const sum = coins.reduce((a, b) => a + b, 0);
+                lines.push(sum);
+                fortuneStall.coinT = 0;           // coins flip on the table
+                playCoinClink();
+                const draw = lines.map((v, i) => yaoLine(v, i)).reverse().join('');
+                out.innerHTML = `<div class="text-[11px] text-center text-amber-300/80 mb-1">擲第 ${k + 1} 次：${coins.map(c => c === 3 ? '字' : '背').join('、')}</div><div class="space-y-1">${draw}</div>`;
+                setTimeout(() => step(k + 1), 650);
+            };
+            step(0);
+        }
+        function finishHexagram(lines, q) {
+            const ben = lines.map(v => v % 2);                         // 7,9 yang (1); 6,8 yin (0)
+            const moving = lines.map(v => v === 6 || v === 9);
+            const bian = ben.map((b, i) => moving[i] ? 1 - b : b);
+            const h = hexOf(ben), hb = moving.some(Boolean) ? hexOf(bian) : null;
+            const draw = lines.map((v, i) => yaoLine(v, i)).reverse().join('');
+            playTempleBellSound(523);
+            fortuneResult(`${q ? `<div class="text-[11px] text-center text-stone-300 mb-1">所問：${escapeHTML(q)}</div>` : ''}<div class="space-y-1 mb-2">${draw}</div>
+                <div class="text-center"><div class="text-[11px] text-amber-300/80">本卦・第 ${h.n} 卦</div>
+                <div class="text-2xl font-black text-amber-200 my-1">${h.full}</div>
+                <div class="inline-block px-2 py-0.5 rounded bg-red-900/70 border border-amber-300/50 text-xs text-amber-100 mb-2">${h.rank}</div>
+                <div class="text-sm text-stone-100">${h.text}</div>
+                ${hb ? `<div class="text-xs text-sky-200 mt-2">有變爻，變卦為「${hb.full}」（${hb.rank}）：${hb.text}</div><div class="text-[10px] text-stone-400 mt-1">本卦看現況，變卦看發展。</div>` : '<div class="text-[10px] text-stone-400 mt-2">六爻皆靜，以本卦卦辭為主。</div>'}</div>`);
+            fortuneStall.busy = false;
+        }
+
+        function updateFortuneStall(t, dt) {
+            const F = fortuneStall;
+            if (!F.bird) return;
+            // idle: the bird hops a little inside its cage
+            if (!F.anim) {
+                F.bird.position.y = F.birdHome.y + Math.abs(Math.sin(t * 2.3)) * 0.03;
+                F.bird.rotation.y = Math.sin(t * 0.7) * 0.8;
+            } else {
+                const A = F.anim;
+                A.t += dt;
+                const tray = A.card.position.clone().add(new THREE.Vector3(0, 0.14, 0));
+                const out = F.birdHome.clone().add(new THREE.Vector3(0.3, 0, 0.12));
+                const lerp3 = (a, b, k) => a.clone().lerp(b, Math.min(1, Math.max(0, k)));
+                if (A.t < 0.8) { F.bird.position.copy(lerp3(F.birdHome, out, A.t / 0.8)); F.bird.position.y += Math.abs(Math.sin(A.t * 12)) * 0.05; F.bird.rotation.y = Math.PI / 2 - 0.4; }
+                else if (A.t < 1.8) { F.bird.position.copy(lerp3(out, tray, (A.t - 0.8))); F.bird.position.y += Math.abs(Math.sin(A.t * 12)) * 0.05; }
+                else if (A.t < 2.6) { F.bird.rotation.x = Math.sin((A.t - 1.8) * 12) * 0.4; A.card.position.y = A.cardHome.y + Math.min(0.12, (A.t - 1.8) * 0.3); }
+                else if (A.t < 3.8) {
+                    const k = (A.t - 2.6) / 1.2;
+                    F.bird.rotation.x = 0;
+                    F.bird.position.copy(lerp3(tray, F.birdHome, k)); F.bird.position.y += Math.abs(Math.sin(A.t * 12)) * 0.05;
+                    A.card.position.copy(F.bird.position).add(new THREE.Vector3(0, 0.02, 0.12));
+                } else {
+                    A.card.position.copy(A.cardHome);
+                    F.bird.position.copy(F.birdHome);
+                    F.anim = null;
+                    finishBirdCard(A.idx);
+                }
+            }
+            // coins spin briefly after each toss
+            if (F.coinT !== undefined && F.coinT >= 0) {
+                F.coinT += dt;
+                F.coins.forEach((c, i) => { c.rotation.x = F.coinT < 0.5 ? F.coinT * 25 + i : (Math.random() < 0.5 ? 0 : Math.PI); c.position.y = 0.87 + Math.max(0, Math.sin(Math.min(1, F.coinT / 0.5) * Math.PI)) * 0.25; });
+                if (F.coinT > 0.5) F.coinT = -1;
+            }
+            // the master nods now and then
+            if (F.teller) F.teller.userData.headGroup.rotation.x = Math.max(0, Math.sin(t * 0.9)) * 0.15;
         }
 
         let scene, camera, renderer, templeGroup;
@@ -8898,6 +9363,7 @@
             buildLotusPond(goldMat);
             buildBellAndDrumTowers(goldMat);
             buildFutianPond(goldMat);
+            buildFortuneStall(goldMat);
             buildExtraCensers(goldMat);
             buildXiaorenArea(goldMat);
             buildFireworksArea(goldMat);
@@ -10949,7 +11415,7 @@
             ['偏殿', ['tudigong', 'light', 'side_left', 'side_right', 'side_wing_left', 'side_wing_right']],
             ['後殿', ['rearhall', 'guandi', 'tianshi', 'xuantian', 'yuhuang', 'sanqing']],
             ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'puppet', 'guanyinpond', 'grounds']],
-            ['活動', ['xiaoren', 'fireworks', 'festival']]
+            ['活動', ['fortune', 'xiaoren', 'fireworks', 'festival']]
         ];
         let camGroupActive = 0;
         function showCamGroup(i) {
@@ -10999,6 +11465,7 @@
                 gate:     { r: 21,   theta: 0.22,   phi: 1.4,  tx: GROUNDS.axisX, ty: 5.2, tz: GROUNDS.maxZ },
                 belltower: { r: 15, theta: BELL_TOWER.rot + 0.35, phi: 1.32, tx: BELL_TOWER.x, ty: 4.2, tz: BELL_TOWER.z },
                 drumtower: { r: 13, theta: DRUM_TOWER.rot - 0.8, phi: 1.18, tx: DRUM_TOWER.x, ty: 4.2, tz: DRUM_TOWER.z },
+                fortune:  { r: 7.5, theta: FORTUNE_POS.rot + 0.35, phi: 1.25, tx: FORTUNE_POS.x, ty: 1.4, tz: FORTUNE_POS.z },
                 futian:   { r: 9.5, theta: FUTIAN.rot + 0.3, phi: 1.12, tx: FUTIAN.x, ty: 1.0, tz: FUTIAN.z },
                 guanyinpond: { r: 17, theta: 0.3, phi: 1.22, tx: LOTUS_POND.x, ty: 2.6, tz: LOTUS_POND.z + 0.5 },
                 baidian:  { r: 9.5,  theta: 0.5,    phi: 1.12, tx: BAIDIAN.x, ty: 0.9, tz: BAIDIAN.z + 0.5 }
@@ -11182,6 +11649,7 @@
             else if (type === 'bigbell') strikeTowerBell();
             else if (type === 'bigdrum') beatTowerDrum();
             else if (type === 'futian') openFutianModal();
+            else if (type === 'fortune') openFortuneModal();
             else if (type === 'guanyin_pond') { playTempleBellSound(587); showToast('🪷 南無觀世音菩薩：手持淨瓶、楊柳枝灑甘露，大慈大悲、尋聲救苦。可在岸邊觀音爐插香，或點池水餵錦鯉。'); }
             else if (type === 'kneeler' || type === 'lotusseat') {
                 const spot = (type === 'kneeler' ? BAIDIAN.kneelers : BAIDIAN.lotus)[ud.idx];
@@ -11465,6 +11933,7 @@
             updateDollPoses(t, dt);
             updateLotusPond(t, dt);
             updateTowersAndPond(t, dt);
+            updateFortuneStall(t, dt);
             netTick(dt);
 
             npcWalkers.forEach(w => {
