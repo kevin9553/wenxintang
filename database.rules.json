@@ -6,63 +6,179 @@
         ".write": "auth != null && auth.uid === $uid",
         "$tab": {
           ".validate": "newData.hasChild('t') && (!newData.child('nick').exists() || (newData.child('nick').isString() && newData.child('nick').val().length <= 10))",
-          "x": { ".validate": "newData.isNumber()" },
-          "y": { ".validate": "newData.isNumber()" },
-          "z": { ".validate": "newData.isNumber()" },
-          "ry": { ".validate": "newData.isNumber()" },
-          "rx": { ".validate": "newData.isNumber()" },
-          "pose": { ".validate": "newData.isString() && newData.val().length <= 8" },
-          "inc": { ".validate": "newData.isBoolean()" },
-          "nick": { ".validate": "newData.isString()" },
-          "t": { ".validate": "newData.isNumber() && newData.val() <= now" },
-          "look": {
-            "shirt": { ".validate": "newData.isNumber()" },
-            "hair": { ".validate": "newData.isNumber()" },
-            "style": { ".validate": "newData.isString() && newData.val().length <= 8" },
-            "skirt": { ".validate": "newData.isBoolean()" },
-            "$other": { ".validate": false }
+          "x": {
+            ".validate": "newData.isNumber()"
           },
-          "$other": { ".validate": false }
+          "y": {
+            ".validate": "newData.isNumber()"
+          },
+          "z": {
+            ".validate": "newData.isNumber()"
+          },
+          "ry": {
+            ".validate": "newData.isNumber()"
+          },
+          "rx": {
+            ".validate": "newData.isNumber()"
+          },
+          "pose": {
+            ".validate": "newData.isString() && newData.val().length <= 8"
+          },
+          "inc": {
+            ".validate": "newData.isBoolean()"
+          },
+          "nick": {
+            ".validate": "newData.isString()"
+          },
+          "t": {
+            ".validate": "newData.isNumber() && newData.val() <= now"
+          },
+          "look": {
+            "shirt": {
+              ".validate": "newData.isNumber()"
+            },
+            "hair": {
+              ".validate": "newData.isNumber()"
+            },
+            "style": {
+              ".validate": "newData.isString() && newData.val().length <= 8"
+            },
+            "skirt": {
+              ".validate": "newData.isBoolean()"
+            },
+            "gender": {
+              ".validate": "newData.isString() && newData.val().length <= 2"
+            },
+            "$other": {
+              ".validate": false
+            },
+            "skin": {
+              ".validate": "newData.isNumber()"
+            },
+            "mood": {
+              ".validate": "newData.isString() && newData.val().length <= 8"
+            },
+            "sash": {
+              ".validate": "newData.isNumber()"
+            },
+            "pants": {
+              ".validate": "newData.isNumber()"
+            },
+            "hat": {
+              ".validate": "newData.isString() && newData.val().length <= 8"
+            },
+            "acc": {
+              ".validate": "newData.isString() && newData.val().length <= 8"
+            }
+          },
+          "$other": {
+            ".validate": false
+          }
         }
       }
     },
     "acts": {
       ".read": "auth != null",
-      ".indexOn": ["t"],
+      ".indexOn": [
+        "t"
+      ],
       "$id": {
         ".write": "auth != null && ((!data.exists() && newData.child('by').val() === auth.uid) || (data.exists() && !newData.exists() && data.child('by').val() === auth.uid))",
         ".validate": "newData.hasChildren(['by', 'tab', 't']) && newData.child('t').val() === now",
-        "by": { ".validate": "newData.isString()" },
-        "tab": { ".validate": "newData.isString() && newData.val().length <= 12" },
-        "t": { ".validate": "newData.isNumber()" },
-        "d": {
-          "kind": { ".validate": "newData.isString() && newData.val().length <= 16" },
-          "mode": { ".validate": "newData.isString() && newData.val().length <= 16" },
-          "to": { ".validate": "newData.isString() && newData.val().length <= 64" },
-          "$other": { ".validate": false }
+        "by": {
+          ".validate": "newData.isString()"
         },
-        "$other": { ".validate": false }
+        "tab": {
+          ".validate": "newData.isString() && newData.val().length <= 12"
+        },
+        "t": {
+          ".validate": "newData.isNumber()"
+        },
+        "d": {
+          "kind": {
+            ".validate": "newData.isString() && newData.val().length <= 16"
+          },
+          "mode": {
+            ".validate": "newData.isString() && newData.val().length <= 16"
+          },
+          "to": {
+            ".validate": "newData.isString() && newData.val().length <= 64"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
       }
     },
     "pilgrims": {
       ".read": "auth != null",
       "$uid": {
         ".write": "auth != null && auth.uid === $uid",
-        "updatedAt": { ".validate": "newData.isNumber()" },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        },
         "counts": {
-          "$k": { ".validate": "$k.matches(/^(lantern|incense|bell|drum|coin|kowtow)$/) && newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000" }
+          "$k": {
+            ".validate": "$k.matches(/^(lantern|incense|bell|drum|coin|kowtow)$/) && newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000"
+          }
         },
         "lanterns": {
           "$i": {
             ".validate": "$i.matches(/^([0-9]|1[01])$/) && newData.hasChildren(['wish', 'ts'])",
-            "name": { ".validate": "newData.isString() && newData.val().length <= 20" },
-            "tag": { ".validate": "newData.isString() && newData.val().length <= 20" },
-            "wish": { ".validate": "newData.isString() && newData.val().length <= 60" },
-            "ts": { ".validate": "newData.isNumber()" },
-            "$other": { ".validate": false }
+            "name": {
+              ".validate": "newData.isString() && newData.val().length <= 20"
+            },
+            "tag": {
+              ".validate": "newData.isString() && newData.val().length <= 20"
+            },
+            "wish": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "ts": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         },
-        "$other": { ".validate": false }
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "chat": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "t"
+      ],
+      "$id": {
+        ".write": "auth != null && ((!data.exists() && newData.child('by').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('by').val() === auth.uid || data.child('t').val() < now - 86400000)))",
+        ".validate": "newData.hasChildren(['by', 'text', 't']) && newData.child('t').val() === now && (!root.child('chatLast').child(auth.uid).exists() || now - root.child('chatLast').child(auth.uid).val() >= 2500)",
+        "by": {
+          ".validate": "newData.isString()"
+        },
+        "nick": {
+          ".validate": "newData.isString() && newData.val().length <= 10"
+        },
+        "text": {
+          ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 60"
+        },
+        "t": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "chatLast": {
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.isNumber() && newData.val() === now"
       }
     }
   }

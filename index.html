@@ -90,6 +90,9 @@
             text-orientation: upright;
         }
         .cam-pill { white-space: nowrap; flex-shrink: 0; }
+        #chatToggle { bottom: 6.2rem; }
+        #chatPanel { bottom: 10rem; }
+        @media (min-width: 640px) { #chatToggle { bottom: 6.8rem; } #chatPanel { bottom: 10.6rem; } }
         .cam-tab-on { background: #fbbf24 !important; color: #1c1917; border-color: #fde68a; }
         /* phones: one swipeable row; wider screens: wrap within 60% of the width so the top-right icons stay clear */
         #camPillRow { flex-wrap: wrap; max-width: 96vw; }
@@ -207,6 +210,8 @@
         <button onclick="toggle3DLabelsVisibility()" class="w-9 h-9 rounded-full palace-pill flex items-center justify-center text-stone-100 hover:text-amber-300 transition" title="顯示/隱藏標籤">
             <i class="fa-solid fa-tag text-xs"></i>
         </button>
+
+        <button onclick="openAvatarEditor()" class="w-9 h-9 rounded-full palace-pill flex items-center justify-center text-stone-100 hover:text-amber-300 transition text-sm" title="捏偶：自訂我的人物">🎨</button>
 
         <button onclick="openPilgrimModal()" class="w-9 h-9 rounded-full palace-pill flex items-center justify-center text-stone-100 hover:text-amber-300 transition" title="新增香客">
             <i class="fa-solid fa-user-plus text-xs"></i>
@@ -584,6 +589,37 @@
                 <button onclick="submitTaisui()" class="w-full py-2.5 btn-warm-gold text-sm tracking-widest">🐲 安太歲・點燈</button>
             </div>
             <div id="tsResult" class="hidden mt-3 bg-gradient-to-b from-red-950/70 to-black/50 border border-amber-300/40 rounded-xl p-3"></div>
+        </div>
+    </div>
+
+    <!-- 廟埕聊天室 -->
+    <button id="chatToggle" onclick="toggleChatPanel()" class="fixed right-3 z-40 w-12 h-12 rounded-full palace-pill text-xl flex items-center justify-center pointer-events-auto" title="廟埕聊天室">💬<span id="chatBadge" class="hidden absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center"></span></button>
+    <div id="chatPanel" class="hidden fixed right-3 z-40 xinxiang-modal flex flex-col pointer-events-auto" style="width: min(88vw, 330px); height: min(52vh, 420px)">
+        <div class="flex items-center justify-between px-3 py-2 border-b border-amber-300/25">
+            <div><div class="text-sm font-bold text-amber-300">💬 廟埕聊天室</div><div id="chatHint" class="text-[10px] text-stone-400"></div></div>
+            <button onclick="toggleChatPanel(false)" class="w-7 h-7 rounded-full bg-white/10 text-amber-200 text-xs">✕</button>
+        </div>
+        <div id="chatMessages" class="flex-1 overflow-y-auto px-3 py-2 space-y-2"></div>
+        <div id="chatQuick" class="flex gap-1.5 overflow-x-auto no-scrollbar px-3 pb-1.5"></div>
+        <form onsubmit="submitChat(event)" class="flex gap-1.5 px-3 pb-3">
+            <input id="chatInput" maxlength="60" autocomplete="off" placeholder="說點什麼…（最多 60 字）" class="flex-1 min-w-0 px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white">
+            <button type="submit" class="px-3 py-1.5 btn-warm-gold text-xs">送出</button>
+        </form>
+    </div>
+
+    <!-- 捏偶：自訂人物 -->
+    <div id="avatarModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
+        <div class="xinxiang-modal max-w-lg w-full p-4 relative max-h-[92vh] overflow-y-auto">
+            <button onclick="closeAvatarEditor()" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-bold">✕</button>
+            <h3 class="text-lg font-bold text-amber-300 tracking-wider mb-2">🎨 捏偶・我的人物</h3>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <canvas id="avatarPreview" class="mx-auto sm:mx-0 shrink-0 rounded-xl bg-gradient-to-b from-amber-900/40 to-black/40 border border-amber-300/25" style="width:180px;height:220px"></canvas>
+                <div id="avatarOptions" class="flex-1 space-y-2"></div>
+            </div>
+            <div class="flex gap-2 mt-3">
+                <button onclick="randomizeAvatar()" class="flex-1 py-2 bg-black/40 border border-amber-300/40 rounded-lg text-xs text-amber-100 font-bold">🎲 隨機</button>
+                <button onclick="saveAvatar()" class="flex-[2] py-2 btn-warm-gold text-sm tracking-widest">完成</button>
+            </div>
         </div>
     </div>
 
@@ -7810,7 +7846,8 @@
         }
 
         // nickname for anonymous visitors (kept on this device)
-        function getNick() { try { return localStorage.getItem('temple.nick') || ''; } catch (e) { return ''; } }
+        let SESSION_NICK = '';   // the name chosen in this tab (two tabs on one device may use different names)
+        function getNick() { if (SESSION_NICK) return SESSION_NICK; try { return localStorage.getItem('temple.nick') || ''; } catch (e) { return ''; } }
         function cleanNick(s) {
             return String(s || '').replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁠-⁯<>]/g, '').trim().slice(0, 10);
         }
@@ -7823,6 +7860,7 @@
                 setTimeout(() => inp.focus(), 50);
                 const done = () => {
                     const n = cleanNick(inp.value) || ('香客' + Math.floor(1000 + Math.random() * 9000));
+                    SESSION_NICK = n;
                     try { localStorage.setItem('temple.nick', n); } catch (e) {}
                     m.classList.add('hidden');
                     resolve(n);
@@ -7935,7 +7973,26 @@
                 }),
                 doc: path => ({ set: data => fdb.ref(path).set(data) })
             };
-            return { room, user, db };
+            // ---- chat: last 30 messages; each message also stamps chatLast/<uid> so the rules can rate-limit
+            const chatRef = fdb.ref('chat');
+            const chat = {
+                send: async text => {
+                    const k = chatRef.push().key, upd = {};
+                    upd['chat/' + k] = { by: uid, nick: fb.nick, text, t: TS };
+                    upd['chatLast/' + uid] = TS;
+                    await fdb.ref().update(upd);
+                },
+                on: h => {
+                    chatRef.orderByChild('t').limitToLast(30).on('child_added', snap => {
+                        const m = snap.val();
+                        if (!m || typeof m.text !== 'string') return;
+                        h({ id: snap.key, by: m.by, name: cleanNick(m.nick) || '香客', text: m.text, t: typeof m.t === 'number' ? m.t : Date.now(), isMe: m.by === uid });
+                    });
+                    // tidy up: messages older than a day may be removed by anyone (the rules allow it)
+                    chatRef.orderByChild('t').endAt(Date.now() - 86400000).limitToFirst(50).once('value', s => s.forEach(c => { c.ref.remove().catch(() => {}); }));
+                }
+            };
+            return { room, user, db, chat };
         }
 
 
@@ -7947,23 +8004,14 @@
                 const pick = a => a[(Math.random() * a.length) | 0];
                 look = {
                     shirt: pick([0x8b5cc6, 0xe58fb0, 0x4b5f8a, 0x6b8f5e, 0xb8565f, 0x7c6a9a, 0xd97706, 0x0e7490, 0x8a6a4a]),
-                    hair: pick([0x1c140d, 0x2b1a12, 0x5a3a22, 0x6b4226]),
+                    hair: pick([0x1c140d, 0x2b1a12, 0x5a3a22, 0x8a5a2b]),
                     style: pick(NET_STYLES), skirt: Math.random() < 0.4
                 };
+                look.gender = look.skirt ? 'f' : 'm';
                 try { localStorage.setItem('temple.myLook', JSON.stringify(look)); } catch (e) {}
             }
             return look;
         }
-        function lookToDollCfg(l) {
-            const num = (v, d) => (Number.isInteger(v) && v >= 0 && v <= 0xffffff) ? v : d;
-            const shirt = num(l && l.shirt, 0x8b5cc6);
-            return {
-                shirtColor: shirt, hairColor: num(l && l.hair, 0x2b1a12),
-                hairStyle: NET_STYLES.includes(l && l.style) ? l.style : 'short', skirt: !!(l && l.skirt),
-                accentColor: new THREE.Color(shirt).lerp(new THREE.Color(0xffffff), 0.7).getHex()
-            };
-        }
-
         function netToast(msg) {
             const now = performance.now();
             if (now - NET.toastAt < 1500) return;      // don't flood the screen when many people act at once
@@ -7984,6 +8032,7 @@
                     NET.myId = await be.user.id();
                     startSharedDb(be.db);
                     attachRoom(be.room);
+                    initChat(be.chat);
                     const lab = document.getElementById('netRoomLabel');
                     if (lab) { lab.style.cursor = 'pointer'; lab.title = '點擊修改您在廟裡的名字'; lab.onclick = changeNick; }
                 } catch (e) {
@@ -8007,6 +8056,10 @@
         }
         function attachRoom(r) {
             NET.room = r;
+            if (!NET.fb) initChat({
+                send: text => r.emit('chat', { text }),
+                on: h => r.on('chat', msg => h({ by: msg.by, peer: msg.peer, name: msg.isMe ? '我' : peerName(msg.by, msg.peer), text: msg.data && msg.data.text, t: Date.now(), isMe: msg.isMe && msg.sameTab }), () => {})
+            });
             r.onPeers(onPeersChange, () => { NET.room = null; clearRemotePeers(); updateOnlineLabel(); });
             r.on('act', onNetAct, () => {});
         }
@@ -8040,6 +8093,7 @@
                 if (typeof pr.x !== 'number' || typeof pr.z !== 'number') return;
                 let e = NET.peers.get(p.peer);
                 if (!e) e = addRemotePeer(p);
+                else if (JSON.stringify(pr.look || {}) !== e.lookKey) replacePeerLook(p.peer, e, pr.look);
                 e.target.set(pr.x, typeof pr.y === 'number' ? pr.y : 0, pr.z);
                 e.ry = typeof pr.ry === 'number' ? pr.ry : 0;
                 e.rx = typeof pr.rx === 'number' ? Math.max(-1, Math.min(1.2, pr.rx)) : 0;
@@ -8059,14 +8113,14 @@
         }
 
         function addRemotePeer(p) {
-            const mesh = createWoodenDollCharacter(lookToDollCfg(p.presence && p.presence.look));
+            const mesh = createLookDoll(p.presence && p.presence.look);
             mesh.position.set(p.presence.x, p.presence.y || 0, p.presence.z);
             templeGroup.add(mesh);
             mesh.traverse(o => { if (o.isMesh) { o.castShadow = true; o.userData = { interactType: 'peer', label: '🙏 在線香客（點擊合掌問好）', peer: p.peer }; clickableMeshes.push(o); } });
             registerMinorLabel(mesh, 2.25, p.guest ? '訪客' : '香客', () => greetPeer(p.peer));
             const labelItem = tracked3DLabels[tracked3DLabels.length - 1];
             labelItem.el.style.background = 'rgba(14,116,144,0.75)';
-            const e = { mesh, labelItem, name: p.guest ? '訪客' : '香客', by: p.by, target: mesh.position.clone(), ry: 0, rx: 0, pose: 'stand', phase: 0, bubbleUntil: 0 };
+            const e = { lookKey: JSON.stringify((p.presence && p.presence.look) || {}), mesh, labelItem, name: p.guest ? '訪客' : '香客', by: p.by, target: mesh.position.clone(), ry: 0, rx: 0, pose: 'stand', phase: 0, bubbleUntil: 0 };
             NET.peers.set(p.peer, e);
             if (p.by && NET.user && NET.user.profiles) {
                 NET.user.profiles([p.by]).then(ps => {
@@ -8075,6 +8129,19 @@
                 }).catch(() => {});
             }
             return e;
+        }
+
+        function replacePeerLook(peer, e, look) {
+            const old = e.mesh;
+            const mesh = createLookDoll(look);
+            mesh.position.copy(old.position); mesh.rotation.copy(old.rotation);
+            templeGroup.remove(old); templeGroup.add(mesh);
+            for (let i = clickableMeshes.length - 1; i >= 0; i--) if (clickableMeshes[i].userData && clickableMeshes[i].userData.peer === peer) clickableMeshes.splice(i, 1);
+            mesh.traverse(o => { if (o.isMesh) { o.castShadow = true; o.userData = { interactType: 'peer', label: '🙏 在線香客（點擊合掌問好）', peer }; clickableMeshes.push(o); } });
+            e.labelItem.obj = mesh;
+            e.mesh = mesh;
+            e.lookKey = JSON.stringify(look || {});
+            if (e.pose && e.pose !== 'stand') setDollPose(mesh, e.pose);
         }
 
         function removeRemotePeer(peer) {
@@ -8113,11 +8180,11 @@
             if (el) el.textContent = BASE_PILGRIM_COUNT + customPilgrims.length + NET.peers.size;
         }
 
-        function showPeerBubble(peer, text) {
+        function showPeerBubble(peer, text, ms = 3000) {
             const e = NET.peers.get(peer);
             if (!e) return;
             e.labelItem.el.textContent = `${e.name} ${text}`;
-            e.bubbleUntil = performance.now() + 3000;
+            e.bubbleUntil = performance.now() + ms;
         }
 
         // ---------------------------------------------------------------- shared moments
@@ -8883,6 +8950,308 @@
                 <div class="text-xs text-emerald-200 mt-1">${ts ? '祈求太歲星君庇佑，今年逢凶化吉、出入平安。' : '雖未犯太歲，點燈祈福亦可保一年平安順遂。'}</div></div>`;
             r.classList.remove('hidden');
             showToast(`🐲 已為「${name}」安太歲、點亮太歲燈，祈求丙午年平安順遂！`);
+        }
+
+        // =====================================================================
+        // 捏偶：自訂人物外觀（臉、髮、衣、配件），存在這台裝置，多人連線時同步給其他人
+        // =====================================================================
+        const AV_OPTIONS = {
+            gender: [['m', '👦 男偶'], ['f', '👧 女偶']],
+            skin:  [0xffe2cc, 0xf6d2b4, 0xe8bc94, 0xcf9a6e, 0x9b6a45],
+            mood:  [['open', '睜眼'], ['smile', '笑眼']],
+            style: [['short', '短髮'], ['bun', '包包頭'], ['twin', '雙丸子'], ['long', '長髮'], ['pony', '馬尾']],
+            hair:  [0x1c140d, 0x2b1a12, 0x5a3a22, 0x8a5a2b, 0xb9b2a6, 0xd8d2c6, 0x7a1f2b],
+            shirt: [0x8b5cc6, 0xe58fb0, 0x4b5f8a, 0x6b8f5e, 0xb8565f, 0xf5f0e6, 0x7c6a9a, 0xd97706, 0x0e7490, 0x8a6a4a, 0xb91c1c, 0x1f2937],
+            sash:  [0xf5d0fe, 0xfde68a, 0xffffff, 0xd4a017, 0xb91c1c, 0x1f2937],
+            pants: [0x3b2a4a, 0x2f2a26, 0x1f2937, 0x5c4033, 0x7f1d1d],
+            hat:   [['none', '無'], ['straw', '斗笠'], ['cap', '瓜皮帽']],
+            acc:   [['none', '無'], ['beads', '念珠'], ['fan', '摺扇'], ['gourd', '葫蘆'], ['bag', '香包']]
+        };
+        const pickOpt = (list, v, d) => list.some(o => (Array.isArray(o) ? o[0] : o) === v) ? v : d;
+
+        // doll options from a look object (also used for other pilgrims' looks, so every field is whitelisted)
+        function lookToDollCfg(l) {
+            l = l || {};
+            const shirt = pickOpt(AV_OPTIONS.shirt, l.shirt, 0x8b5cc6);
+            return {
+                skin: pickOpt(AV_OPTIONS.skin, l.skin, 0xffdcc4),
+                mood: pickOpt(AV_OPTIONS.mood, l.mood, 'open'),
+                shirtColor: shirt,
+                hairColor: pickOpt(AV_OPTIONS.hair, l.hair, 0x2b1a12),
+                hairStyle: pickOpt(AV_OPTIONS.style, l.style, 'short'),
+                skirt: !!l.skirt,
+                gender: pickOpt(AV_OPTIONS.gender, l.gender, l.skirt ? 'f' : 'm'),
+                accentColor: pickOpt(AV_OPTIONS.sash, l.sash, new THREE.Color(shirt).lerp(new THREE.Color(0xffffff), 0.7).getHex()),
+                pantsColor: pickOpt(AV_OPTIONS.pants, l.pants, 0x3b2a4a),
+                hat: pickOpt(AV_OPTIONS.hat, l.hat, 'none'),
+                acc: pickOpt(AV_OPTIONS.acc, l.acc, 'none')
+            };
+        }
+
+        // a doll with the look's extra hat / accessory added on
+        function createLookDoll(look, extra) {
+            const cfg = Object.assign(lookToDollCfg(look), extra || {});
+            const g = createWoodenDollCharacter(cfg);
+            const ud = g.userData;
+            const gold = new THREE.MeshStandardMaterial({ color: 0xd9a520, metalness: 0.6, roughness: 0.3 });
+            if (cfg.hat === 'cap') {
+                const capM = new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.6 });
+                const cap = new THREE.Mesh(new THREE.SphereGeometry(0.4, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), capM);
+                cap.scale.set(1, 0.55, 1);
+                cap.position.y = 0.3;
+                const knob = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), new THREE.MeshStandardMaterial({ color: 0xb91c1c }));
+                knob.position.y = 0.53;
+                ud.headGroup.add(cap, knob);
+            }
+            if (cfg.acc === 'beads') {
+                const b = new THREE.Group();
+                for (let i = 0; i < 18; i++) {
+                    const a = i / 18 * Math.PI * 2;
+                    const bead = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), new THREE.MeshStandardMaterial({ color: 0x6b3a1a, roughness: 0.4 }));
+                    bead.position.set(Math.sin(a) * 0.2, -Math.max(0, Math.cos(a)) * 0.12, Math.cos(a) * 0.17);
+                    b.add(bead);
+                }
+                b.position.y = 0.95;
+                g.add(b);
+            } else if (cfg.acc === 'fan') {
+                const fan = new THREE.Mesh(new THREE.CircleGeometry(0.2, 16, 0.5, 2.1), new THREE.MeshStandardMaterial({ color: 0xf5efe0, side: THREE.DoubleSide, roughness: 0.6 }));
+                fan.position.set(0, -0.42, 0.06);
+                fan.rotation.set(0, 0, Math.PI / 2);
+                ud.leftArm.add(fan);
+            } else if (cfg.acc === 'gourd') {
+                const gm = new THREE.MeshStandardMaterial({ color: 0xc98a2c, roughness: 0.4 });
+                const g1 = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 10), gm); g1.position.set(0.3, 0.5, 0.05);
+                const g2 = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 10), gm); g2.position.set(0.3, 0.63, 0.05);
+                const tie = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.01, 6, 10), new THREE.MeshStandardMaterial({ color: 0xb91c1c }));
+                tie.position.set(0.3, 0.57, 0.05); tie.rotation.x = Math.PI / 2;
+                g.add(g1, g2, tie);
+            } else if (cfg.acc === 'bag') {
+                const bag = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.18, 0.06), new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.6 }));
+                bag.position.set(-0.27, 0.55, 0.12);
+                const fu = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.1), new THREE.MeshBasicMaterial({ map: createSignboardTexture('福', 64, 64, 'rgba(0,0,0,0)', 'rgba(0,0,0,0)', '#fde047', false, 50), transparent: true }));
+                fu.position.set(-0.27, 0.55, 0.155);
+                const strap = new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.012, 6, 30, Math.PI * 0.9), gold);
+                strap.position.set(-0.02, 0.78, 0.0); strap.rotation.set(0, Math.PI / 2, 0.75);
+                g.add(bag, fu, strap);
+            }
+            return g;
+        }
+
+        // swap the player's doll for one with a new look, keeping its place, pose and label
+        function rebuildPlayerAvatar() {
+            if (!playerAvatarGroup) return;
+            const old = playerAvatarGroup;
+            const pose = old.userData.pose || 'stand';
+            if (pose !== 'stand') setDollPose(old, 'stand');
+            const fresh = createLookDoll(getMyLook(), { holdingIncense: state.incenseLit });
+            fresh.position.copy(old.position);
+            fresh.rotation.copy(old.rotation);
+            fresh.traverse(o => { if (o.isMesh) o.castShadow = true; });
+            templeGroup.remove(old);
+            templeGroup.add(fresh);
+            tracked3DLabels.forEach(l => { if (l.obj === old) l.obj = fresh; });
+            playerAvatarGroup = fresh;
+            playerIncenseGroup = fresh.userData.incenseBundle;
+            if (pose !== 'stand') setDollPose(fresh, pose);
+            if (typeof NET !== 'undefined') { NET.lastPres.look = undefined; }
+        }
+
+        // ---- the 捏偶 modal with a turntable preview
+        const avEdit = { look: null, r: null, scene: null, cam: null, doll: null, raf: 0 };
+        function openAvatarEditor() {
+            avEdit.look = Object.assign({}, getMyLook());
+            renderAvatarOptions();
+            document.getElementById('avatarModal').classList.remove('hidden');
+            const cv = document.getElementById('avatarPreview');
+            if (!avEdit.r) {
+                avEdit.r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+                avEdit.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+                avEdit.scene = new THREE.Scene();
+                avEdit.scene.add(new THREE.HemisphereLight(0xffffff, 0x8a6a4a, 0.9));
+                const d = new THREE.DirectionalLight(0xffffff, 0.8); d.position.set(2, 3, 4); avEdit.scene.add(d);
+                avEdit.cam = new THREE.PerspectiveCamera(32, 1, 0.1, 20);
+                avEdit.cam.position.set(0, 1.25, 4.2);
+                avEdit.cam.lookAt(0, 0.95, 0);
+            }
+            const w = cv.clientWidth || 180, h = cv.clientHeight || 220;
+            avEdit.r.setSize(w, h, false);
+            avEdit.cam.aspect = w / h; avEdit.cam.updateProjectionMatrix();
+            refreshAvatarPreview();
+            cancelAnimationFrame(avEdit.raf);
+            const spin = () => {
+                if (document.getElementById('avatarModal').classList.contains('hidden')) return;
+                if (avEdit.doll) avEdit.doll.rotation.y += 0.012;
+                avEdit.r.render(avEdit.scene, avEdit.cam);
+                avEdit.raf = requestAnimationFrame(spin);
+            };
+            spin();
+        }
+        function closeAvatarEditor() { document.getElementById('avatarModal').classList.add('hidden'); cancelAnimationFrame(avEdit.raf); }
+        function refreshAvatarPreview() {
+            if (!avEdit.scene) return;
+            const y = avEdit.doll ? avEdit.doll.rotation.y : 0.4;
+            if (avEdit.doll) avEdit.scene.remove(avEdit.doll);
+            avEdit.doll = createLookDoll(avEdit.look);
+            avEdit.doll.rotation.y = y;
+            avEdit.scene.add(avEdit.doll);
+        }
+        // 選性別時順手換成該性別常見的髮型／下身（之後各項仍可自由改）
+        function setAvatarGender(g) {
+            const L = avEdit.look;
+            if (L.gender === g) return;
+            L.gender = g;
+            if (g === 'f') { L.skirt = true; if (L.style === 'short') L.style = 'twin'; }
+            else { L.skirt = false; if (L.style !== 'short' && L.style !== 'pony') L.style = 'short'; }
+            renderAvatarOptions(); refreshAvatarPreview();
+        }
+        function setAvatarOpt(k, v) {
+            avEdit.look[k] = v;
+            renderAvatarOptions();
+            refreshAvatarPreview();
+        }
+        function randomizeAvatar() {
+            const pick = a => { const o = a[(Math.random() * a.length) | 0]; return Array.isArray(o) ? o[0] : o; };
+            ['skin', 'mood', 'style', 'hair', 'shirt', 'sash', 'pants', 'hat', 'acc'].forEach(k => { avEdit.look[k] = pick(AV_OPTIONS[k]); });
+            avEdit.look.gender = Math.random() < 0.5 ? 'f' : 'm';
+            avEdit.look.skirt = avEdit.look.gender === 'f' ? Math.random() < 0.75 : false;
+            if (avEdit.look.gender === 'm' && Math.random() < 0.7) avEdit.look.style = 'short';
+            renderAvatarOptions(); refreshAvatarPreview();
+        }
+        function saveAvatar() {
+            try { localStorage.setItem('temple.myLook', JSON.stringify(avEdit.look)); } catch (e) {}
+            rebuildPlayerAvatar();
+            closeAvatarEditor();
+            playTempleBellSound(660);
+            showToast('🎨 新造型完成！在線的香客也會看到您的新樣子');
+        }
+        function renderAvatarOptions() {
+            const L = avEdit.look;
+            const hex = h => '#' + h.toString(16).padStart(6, '0');
+            const swatches = (k, list) => list.map(h => `<button type="button" onclick="setAvatarOpt('${k}', ${h})" class="w-6 h-6 rounded-full border-2 ${L[k] === h ? 'border-amber-300 scale-110' : 'border-white/20'}" style="background:${hex(h)}"></button>`).join('');
+            const chips = (k, list) => list.map(([v, t]) => `<button type="button" onclick="setAvatarOpt('${k}', '${v}')" class="px-2 py-0.5 rounded-full text-[11px] border ${L[k] === v ? 'bg-amber-400 text-stone-900 border-amber-200' : 'border-amber-300/40 text-amber-100'}">${t}</button>`).join('');
+            const row = (title, inner) => `<div><div class="text-[11px] text-amber-200 mb-1">${title}</div><div class="flex flex-wrap gap-1.5">${inner}</div></div>`;
+            const g = L.gender || (L.skirt ? 'f' : 'm');
+            document.getElementById('avatarOptions').innerHTML = [
+                row('性別', AV_OPTIONS.gender.map(([v, t]) => `<button type="button" onclick="setAvatarGender('${v}')" class="px-3 py-1 rounded-full text-xs font-bold border ${g === v ? 'bg-amber-400 text-stone-900 border-amber-200' : 'border-amber-300/40 text-amber-100'}">${t}</button>`).join('')),
+                row('膚色', swatches('skin', AV_OPTIONS.skin)),
+                row('表情', chips('mood', AV_OPTIONS.mood)),
+                row('髮型', chips('style', AV_OPTIONS.style)),
+                row('髮色', swatches('hair', AV_OPTIONS.hair)),
+                row('上衣', swatches('shirt', AV_OPTIONS.shirt)),
+                row('衣領・腰帶', swatches('sash', AV_OPTIONS.sash)),
+                row('下身', `<button type="button" onclick="setAvatarOpt('skirt', false)" class="px-2 py-0.5 rounded-full text-[11px] border ${!L.skirt ? 'bg-amber-400 text-stone-900 border-amber-200' : 'border-amber-300/40 text-amber-100'}">褲裝</button><button type="button" onclick="setAvatarOpt('skirt', true)" class="px-2 py-0.5 rounded-full text-[11px] border ${L.skirt ? 'bg-amber-400 text-stone-900 border-amber-200' : 'border-amber-300/40 text-amber-100'}">長裙</button>` + swatches('pants', AV_OPTIONS.pants)),
+                row('帽子', chips('hat', AV_OPTIONS.hat)),
+                row('配件', chips('acc', AV_OPTIONS.acc))
+            ].join('');
+        }
+
+        // =====================================================================
+        // 廟埕聊天室：自由打字＋不雅字過濾；頭上對話泡泡；可封鎖他人訊息
+        // 公開版走 Firebase（保留最近 30 則、一天後自動清除）；Claude 版走 room 'chat'（只給在線的人）
+        // =====================================================================
+        const CHAT = { list: [], unread: 0, open: false, lastSent: 0, blocked: new Set(), ready: false, max: 30 };
+        try { (JSON.parse(localStorage.getItem('temple.chatBlocked') || '[]') || []).forEach(b => CHAT.blocked.add(b)); } catch (e) {}
+        const CHAT_QUICK = ['🙏 阿彌陀佛', '平安喜樂', '大家好～', '要不要一起去撞鐘？', '我在拜殿這邊', '願所求皆如願', '謝謝！', '晚安，祝好眠'];
+
+        // ---- profanity / spam filter (applied when sending AND when showing, since other clients can't be trusted)
+        const BAD_WORDS = ['靠北', '靠杯', '靠夭', '靠腰', '三小', '機掰', '雞掰', '機八', '雞巴', '智障', '白痴', '白癡', '低能', '腦殘', '他媽的', '他媽', '你媽的', '你娘', '操你', '肏', '幹你', '幹妳', '幹林', '幹拎', '賤人', '婊子', '妓女', '王八蛋', '混帳', '去死', '廢物', '垃圾人', '畜生', '屌', '北七', '87分', '腦包',
+                           'fuck', 'fck', 'f*ck', 'shit', 'bitch', 'asshole', 'cunt', 'dick', 'pussy', 'nigger', 'retard', 'stfu', 'wtf'];
+        function filterChat(raw) {
+            let t = String(raw || '').replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁠-⁯]/g, '').replace(/\s+/g, ' ').trim().slice(0, 60);
+            t = t.replace(/(https?:\/\/|www\.)\S+/gi, '［連結已移除］');
+            const loose = s => s.split('').map(ch => ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\s._\\-*]*');   // catch "f u c k", "靠.北"
+            BAD_WORDS.forEach(w => { t = t.replace(new RegExp(loose(w), 'gi'), m => '＊'.repeat(Math.min(4, m.replace(/[\s._\-*]/g, '').length))); });
+            // 幹 alone is common in normal words (幹嘛、能幹), so only mask it as a swear: at the start, or before 你/林/拎/恁/！
+            t = t.replace(/(^|[\s，。！!？?])幹(?=[你妳您他她林拎恁！!，。]|$)/g, '$1＊');
+            return t;
+        }
+
+        function chatAvailable() { return !!(NET.chat); }
+        function initChat(chatApi) {
+            NET.chat = chatApi;
+            chatApi.on(onChatMessage);
+            CHAT.ready = true;
+            renderChatPanel();
+        }
+        function onChatMessage(m) {
+            if (!m || typeof m.text !== 'string') return;
+            const text = filterChat(m.text);
+            if (!text) return;
+            if (m.id && CHAT.list.some(x => x.id === m.id)) return;
+            const msg = { id: m.id || (Date.now() + Math.random()), by: m.by || '', name: (m.name || '香客').slice(0, 12), text, t: m.t || Date.now(), isMe: !!m.isMe, peer: m.peer || null };
+            CHAT.list.push(msg);
+            CHAT.list.sort((a, b) => a.t - b.t);
+            while (CHAT.list.length > CHAT.max) CHAT.list.shift();
+            if (msg.by && CHAT.blocked.has(msg.by) && !msg.isMe) { renderChatPanel(); return; }
+            // speech bubble over the speaker, for messages from the last few seconds
+            if (Date.now() - msg.t < 8000) {
+                if (msg.isMe) showPlayerBubble(text);
+                else NET.peers.forEach((e, peer) => { if ((msg.peer && peer === msg.peer) || (msg.by && e.by === msg.by)) showPeerBubble(peer, '💬 ' + text.slice(0, 16) + (text.length > 16 ? '…' : ''), 5000); });
+                if (!CHAT.open && !msg.isMe) { CHAT.unread++; playTempleBellSound(1046); }
+            }
+            renderChatPanel();
+        }
+
+        function showPlayerBubble(text) {
+            const item = tracked3DLabels.find(l => l.obj === playerAvatarGroup);
+            if (!item) return;
+            if (!item.origText) item.origText = item.el.textContent;
+            item.el.textContent = '💬 ' + text.slice(0, 16) + (text.length > 16 ? '…' : '');
+            clearTimeout(item.bubbleTimer);
+            item.bubbleTimer = setTimeout(() => { item.el.textContent = item.origText; }, 5000);
+        }
+
+        async function sendChat(text) {
+            const t = filterChat(text);
+            if (!t) return;
+            if (!NET.chat) { showToast('💬 目前為單機模式，連線後才能和其他香客聊天'); return; }
+            const now = Date.now();
+            if (now - CHAT.lastSent < 3000) { showToast('💬 說慢一點～每 3 秒可以發一則'); return; }
+            CHAT.lastSent = now;
+            try {
+                await NET.chat.send(t);
+                document.getElementById('chatInput').value = '';
+            } catch (e) {
+                CHAT.lastSent = 0;
+                showToast(e && e.code === 'not_permitted' ? '💬 您目前只有檢視權限，無法發言' : '💬 訊息沒有送出，請稍後再試');
+            }
+        }
+        function submitChat(ev) { ev.preventDefault(); sendChat(document.getElementById('chatInput').value); }
+
+        function toggleChatPanel(open) {
+            CHAT.open = open === undefined ? !CHAT.open : open;
+            document.getElementById('chatPanel').classList.toggle('hidden', !CHAT.open);
+            if (CHAT.open) { CHAT.unread = 0; setTimeout(() => { const box = document.getElementById('chatMessages'); box.scrollTop = box.scrollHeight; }, 0); }
+            renderChatPanel();
+        }
+        function toggleBlock(by, name) {
+            if (!by) return;
+            if (CHAT.blocked.has(by)) { CHAT.blocked.delete(by); showToast(`💬 已重新顯示「${name}」的訊息`); }
+            else if (confirm(`不再顯示「${name}」的訊息嗎？（只影響您自己的畫面，可再點名字取消）`)) { CHAT.blocked.add(by); showToast(`💬 已封鎖「${name}」的訊息`); }
+            try { localStorage.setItem('temple.chatBlocked', JSON.stringify([...CHAT.blocked].slice(-200))); } catch (e) {}
+            renderChatPanel();
+        }
+        function renderChatPanel() {
+            const badge = document.getElementById('chatBadge');
+            if (badge) { badge.textContent = CHAT.unread > 9 ? '9+' : CHAT.unread; badge.classList.toggle('hidden', !CHAT.unread); }
+            const box = document.getElementById('chatMessages');
+            if (!box || !CHAT.open) return;
+            const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+            const hint = document.getElementById('chatHint');
+            if (hint) hint.textContent = NET.chat ? `在線 ${NET.room ? NET.room.peers().filter(p => p.kind === 'viewer').length : 1} 人・請友善發言` : '目前為單機模式，連線後才能聊天';
+            document.getElementById('chatInput').disabled = !NET.chat;
+            box.innerHTML = CHAT.list.length ? CHAT.list.map(m => {
+                const hidden = m.by && CHAT.blocked.has(m.by) && !m.isMe;
+                const time = new Date(m.t).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+                const nameBtn = m.isMe ? '<span class="text-amber-300 font-bold">我</span>'
+                    : `<button onclick="toggleBlock(${JSON.stringify(m.by).replace(/"/g, '&quot;')}, ${JSON.stringify(m.name).replace(/"/g, '&quot;')})" class="text-sky-300 font-bold hover:underline" title="點名字可封鎖／取消封鎖">${escapeHTML(m.name)}</button>`;
+                return `<div class="text-xs leading-snug" style="text-align:${m.isMe ? 'right' : 'left'}">${nameBtn} <span class="text-[10px] text-stone-500">${time}</span><div class="inline-block mt-0.5 px-2.5 py-1 rounded-2xl ${m.isMe ? 'bg-amber-500/25' : 'bg-white/10'} text-stone-100 break-words max-w-[90%] text-left">${hidden ? '<span class="text-stone-500">（已封鎖的訊息）</span>' : escapeHTML(m.text)}</div></div>`;
+            }).join('') : '<div class="text-xs text-stone-400 text-center mt-6">還沒有人說話，打聲招呼吧 🙏</div>';
+            if (atBottom) box.scrollTop = box.scrollHeight;
+        }
+        function renderChatQuick() {
+            const q = document.getElementById('chatQuick');
+            if (q) q.innerHTML = CHAT_QUICK.map(t => `<button type="button" onclick="sendChat(${JSON.stringify(t).replace(/"/g, '&quot;')})" class="shrink-0 px-2 py-0.5 rounded-full text-[11px] border border-amber-300/40 text-amber-100 hover:bg-amber-400/20">${escapeHTML(t)}</button>`).join('');
         }
 
         let scene, camera, renderer, templeGroup;
@@ -11113,8 +11482,8 @@
         // userData 介面與舊版相同（leftArm / rightArm / headGroup / incenseBundle / legs），動作不受影響
         // =====================================================================
         const _chibiFaceCache = {};
-        function createChibiFaceTexture(skinHex, eyeHex, mood) {
-            const key = skinHex + '|' + eyeHex + '|' + mood;
+        function createChibiFaceTexture(skinHex, eyeHex, mood, gender) {
+            const key = skinHex + '|' + eyeHex + '|' + mood + '|' + (gender || '');
             if (_chibiFaceCache[key]) return _chibiFaceCache[key];
             const W = 1024, H = 512;
             const c = document.createElement('canvas');
@@ -11146,18 +11515,40 @@
                     x.lineWidth = 4;
                     x.beginPath(); x.moveTo(ex + s * 27, ey - 22); x.lineTo(ex + s * 38, ey - 30); x.stroke();
                 }
-                // Short soft eyebrows
-                x.strokeStyle = 'rgba(70,40,25,0.75)'; x.lineWidth = 6;
-                x.beginPath(); x.moveTo(ex - 16, ey - 62); x.quadraticCurveTo(ex, ey - 70, ex + 16, ey - 63); x.stroke();
+                if (gender === 'f') {
+                    // 女偶：外眼角三根睫毛
+                    x.strokeStyle = '#1a0f0a'; x.lineWidth = 4.5; x.lineCap = 'round';
+                    const by = mood === 'smile' ? ey - 6 : ey - 20;
+                    [[24, 0, 40, -10], [28, 9, 45, 2], [20, -9, 32, -22]].forEach(([x0, y0, x1, y1]) => {
+                        x.beginPath(); x.moveTo(ex + s * x0, by + y0); x.lineTo(ex + s * x1, by + y1); x.stroke();
+                    });
+                }
+                if (gender === 'm') {
+                    // 男偶：粗一點、平一點的劍眉
+                    x.strokeStyle = 'rgba(45,25,15,0.9)'; x.lineWidth = 11; x.lineCap = 'round';
+                    x.beginPath(); x.moveTo(ex - s * 20, ey - 60); x.quadraticCurveTo(ex, ey - 70, ex + s * 22, ey - 70); x.stroke();
+                } else {
+                    // Short soft eyebrows
+                    x.strokeStyle = 'rgba(70,40,25,0.75)'; x.lineWidth = gender === 'f' ? 5 : 6;
+                    x.beginPath(); x.moveTo(ex - 16, ey - 62); x.quadraticCurveTo(ex, ey - 70, ex + 16, ey - 63); x.stroke();
+                }
                 // Blush
                 const bg = x.createRadialGradient(ex + s * 14, ey + 52, 0, ex + s * 14, ey + 52, 30);
                 bg.addColorStop(0, 'rgba(255,120,130,0.55)'); bg.addColorStop(1, 'rgba(255,120,130,0)');
                 x.fillStyle = bg;
                 x.fillRect(ex + s * 14 - 32, ey + 20, 64, 64);
             });
-            // Small smiling mouth
-            x.strokeStyle = '#8a3b2e'; x.lineWidth = 5; x.lineCap = 'round';
-            x.beginPath(); x.arc(cx, ey + 58, 12, Math.PI * 0.15, Math.PI * 0.85); x.stroke();
+            if (gender === 'f') {
+                // 女偶：小小的粉紅唇
+                x.fillStyle = '#e0607a';
+                x.beginPath(); x.ellipse(cx, ey + 66, 11, 6.5, 0, 0, Math.PI * 2); x.fill();
+                x.fillStyle = 'rgba(255,255,255,0.55)';
+                x.beginPath(); x.ellipse(cx - 3, ey + 64, 3.5, 1.8, 0, 0, Math.PI * 2); x.fill();
+            } else {
+                // Small smiling mouth
+                x.strokeStyle = '#8a3b2e'; x.lineWidth = 5; x.lineCap = 'round';
+                x.beginPath(); x.arc(cx, ey + 58, 12, Math.PI * 0.15, Math.PI * 0.85); x.stroke();
+            }
             const tex = new THREE.CanvasTexture(c);
             tex.anisotropy = 4;
             _chibiFaceCache[key] = tex;
@@ -11192,12 +11583,15 @@
 
             // Body: a soft robe / tunic that flares toward the hem (a long skirt when cfg.skirt)
             const hemY = cfg.skirt ? 0.12 : 0.38, hemR = cfg.skirt ? 0.4 : 0.33;
+            // 男偶肩膀寬一點、女偶腰身收一點（沒指定性別的 NPC 維持原樣）
+            const shW = cfg.gender === 'm' ? 1.1 : cfg.gender === 'f' ? 0.92 : 1;
+            const waistW = cfg.gender === 'f' ? 0.9 : 1;
             const torso = new THREE.Mesh(new THREE.LatheGeometry([
-                [0, hemY], [hemR, hemY], [hemR - 0.03, hemY + 0.05], [0.29, 0.62], [0.26, 0.82], [0.22, 0.97], [0.12, 1.04], [0, 1.06]
+                [0, hemY], [hemR, hemY], [hemR - 0.03, hemY + 0.05], [0.29 * waistW, 0.62], [0.26 * (shW + waistW) / 2, 0.82], [0.22 * shW, 0.97], [0.12 * shW, 1.04], [0, 1.06]
             ].map(([r, y]) => new THREE.Vector2(r, y)), 28), clothesMat);
             torso.castShadow = true;
             group.add(torso);
-            const sash = new THREE.Mesh(new THREE.CylinderGeometry(0.295, 0.3, 0.07, 28), accentMat);
+            const sash = new THREE.Mesh(new THREE.CylinderGeometry(0.295 * waistW, 0.3 * waistW, 0.07, 28), accentMat);
             sash.position.y = 0.66;
             const collarL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.02), accentMat);
             collarL.position.set(-0.05, 0.93, 0.205);
@@ -11210,7 +11604,7 @@
             // Arms hang from shoulder pivots
             const makeArm = s => {
                 const arm = new THREE.Group();
-                arm.position.set(s * 0.25, 0.94, 0);
+                arm.position.set(s * 0.25 * shW, 0.94, 0);
                 const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.095, 0.34, 12), clothesMat);
                 sleeve.position.y = -0.17;
                 sleeve.castShadow = true;
@@ -11232,7 +11626,7 @@
             const R = 0.46;
             const head = new THREE.Mesh(
                 new THREE.SphereGeometry(R, 40, 28),
-                new THREE.MeshStandardMaterial({ map: createChibiFaceTexture(skinHex, cfg.eyeColor || 0x6b3a1f, cfg.mood || 'open'), roughness: 0.55 })
+                new THREE.MeshStandardMaterial({ map: createChibiFaceTexture(skinHex, cfg.eyeColor || 0x6b3a1f, cfg.mood || 'open', cfg.gender), roughness: 0.55 })
             );
             head.scale.set(1.0, 0.94, 0.95);
             head.castShadow = true;
@@ -11257,6 +11651,24 @@
                 bang.position.set(Math.sin(a) * R * 0.86, 0.2 - Math.abs(i) * 0.03, Math.cos(a) * R * 0.86);
                 bang.rotation.set(-0.25, a, i * -0.12);
                 headGroup.add(bang);
+            }
+            if (cfg.gender === 'f' && (!cfg.hat || cfg.hat === 'none')) {
+                // 女偶：耳上一朵小花髮飾
+                const petalMat = new THREE.MeshStandardMaterial({ color: 0xf9a8c9, roughness: 0.5 });
+                const flower = new THREE.Group();
+                for (let k = 0; k < 5; k++) {
+                    const pt = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 6), petalMat);
+                    pt.scale.set(1, 0.55, 1);
+                    const a = k / 5 * Math.PI * 2;
+                    pt.position.set(Math.cos(a) * 0.06, 0, Math.sin(a) * 0.06);
+                    flower.add(pt);
+                }
+                const heart = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), new THREE.MeshStandardMaterial({ color: 0xfde047, roughness: 0.5 }));
+                heart.position.y = 0.02;
+                flower.add(heart);
+                flower.position.set(R * 0.72, R * 0.62, R * 0.32);
+                flower.rotation.set(0.5, 0, -0.9);
+                headGroup.add(flower);
             }
             const style = cfg.hairStyle || 'short';
             if (style === 'bun') {
@@ -11324,7 +11736,7 @@
         }
 
         function buildWoodenDollPilgrims() {
-            playerAvatarGroup = createWoodenDollCharacter(Object.assign(lookToDollCfg(getMyLook()), { pantsColor: 0x3b2a4a, holdingIncense: false }));
+            playerAvatarGroup = createLookDoll(getMyLook(), { holdingIncense: false });
             playerAvatarGroup.position.set(0.2, 0, 9.8);
             playerAvatarGroup.rotation.y = Math.PI * 0.92;
             playerIncenseGroup = playerAvatarGroup.userData.incenseBundle;
@@ -12786,6 +13198,7 @@
                 loadCustomPilgrims();
                 updatePoseButtons();
                 initCamGroups();
+                renderChatQuick();
                 setTimeout(initMultiplayer, 2000);
                 setTimeout(prefetchStatueBytes, 12000);   // connect once the first frames are on screen
                 animate3DTemple();
