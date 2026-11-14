@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@700&text=%E9%85%92%E8%82%89%E7%A9%BF%E8%85%B8%E9%81%8E%E6%BF%9F%E9%A1%9B&display=swap" rel="stylesheet">
     <style>
         * {
             box-sizing: border-box;
@@ -3388,6 +3389,7 @@
 
         function isOnSideHallFloor(pos) {
             if (isOnDaxiongFloor(pos)) return true;
+            if (typeof isOnMiaozhuFloor === 'function' && isOnMiaozhuFloor(pos)) return true;
             return SIDE_HALLS.some(h => {
                 const r = h.rot || 0, dx = pos.x - h.x, dz = pos.z - h.z;
                 const lx = dx * Math.cos(r) - dz * Math.sin(r), lz = dx * Math.sin(r) + dz * Math.cos(r);
@@ -7149,7 +7151,12 @@
         // 小神龕、盆栽、睡在蒲團上的廟貓。門口燈籠：有廟公（管理員）在線時點亮，牌子顯示「廟祝在廟」
         // =====================================================================
         const MIAOZHU_POS = { x: -54, z: 41, rot: Math.PI / 2 };   // front door faces +x, toward the courtyard
-        const MIAOZHU = { lantern: null, glowSprite: null, sign: null, texIn: null, texOut: null, online: null, cat: null, steam: null };
+        const MIAOZHU = { lantern: null, glowSprite: null, sign: null, texIn: null, texOut: null, online: null, cat: null, steam: null, lotus: [], W: 7, D: 6 };
+        function isOnMiaozhuFloor(pos) {
+            const dx = pos.x - MIAOZHU_POS.x, dz = pos.z - MIAOZHU_POS.z, r = MIAOZHU_POS.rot;
+            const lx = dx * Math.cos(r) - dz * Math.sin(r), lz = dx * Math.sin(r) + dz * Math.cos(r);
+            return Math.abs(lx) < MIAOZHU.W / 2 && Math.abs(lz) < MIAOZHU.D / 2;
+        }
         function buildMiaozhuLodge(goldMat, greenTrimMat) {
             const P = MIAOZHU_POS, M = propMats();
             const g = new THREE.Group();
@@ -7158,7 +7165,7 @@
             templeGroup.add(g);
             const rc = Math.cos(P.rot), rs = Math.sin(P.rot);
             const hw = (lx, lz) => ({ x: P.x + lx * rc + lz * rs, z: P.z - lx * rs + lz * rc });
-            const W = 7, D = 6, H = 3.2, F = 0.18, front = D / 2, back = -D / 2;
+            const W = MIAOZHU.W, D = MIAOZHU.D, H = 3.2, F = SIDE_HALL_FLOOR, front = D / 2, back = -D / 2;
             const add = (geo, mat, x, y, z, parent = g) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
             const tagAll = (obj, ud) => obj.traverse(o => { if (o.isMesh) { o.userData = { ...ud }; clickableMeshes.push(o); } });
             const brick = createRedBrickWallTexture(); brick.repeat.set(3, 1.5);
@@ -7253,15 +7260,45 @@
                 }
             });
             tagAll(shelf, { interactType: 'miaozhu_books', label: '📚 廟祝的書櫃（經書・籤詩解・農民曆）' });
-            // small shrine shelf on the left wall with a 福德正神 tablet, a tiny censer and a lamp
-            const sh = new THREE.Group(); sh.position.set(-W / 2 + 0.4, F, -1.6); sh.rotation.y = Math.PI / 2; g.add(sh);
-            add(new THREE.BoxGeometry(0.9, 0.05, 0.35), red, 0, 1.6, 0, sh);
-            add(new THREE.BoxGeometry(0.06, 0.3, 0.3), red, -0.4, 1.45, 0, sh); add(new THREE.BoxGeometry(0.06, 0.3, 0.3), red, 0.4, 1.45, 0, sh);
-            add(new THREE.BoxGeometry(0.18, 0.36, 0.04), new THREE.MeshStandardMaterial({ map: createSignboardTexture('福德正神', 60, 200, '#b91c1c', '#facc15', '#fef08a', true, 34) }), 0, 1.81, -0.08, sh);
-            add(new THREE.CylinderGeometry(0.06, 0.05, 0.07, 12), M.bronze, 0, 1.66, 0.08, sh);
-            const shLamp = add(new THREE.SphereGeometry(0.035, 10, 8), new THREE.MeshStandardMaterial({ color: 0xff4040, emissive: 0xff2020, emissiveIntensity: 0.8 }), 0.28, 1.67, 0.05, sh);
-            registerNightEmissive(shLamp.material, 0.8, 1.6);
-            tagAll(sh, { interactType: 'miaozhu_shrine', label: '🙏 廟祝家裡的小神龕' });
+            // tablet, little censer and lamp inside the shrine cabinet (cabinet itself is built with the interior finish below)
+            const sh = new THREE.Group(); sh.position.set(-W / 2 + 0.42, F, -1.6); sh.rotation.y = Math.PI / 2; g.add(sh);
+            add(new THREE.BoxGeometry(0.2, 0.42, 0.04), new THREE.MeshStandardMaterial({ map: createSignboardTexture('福德正神', 60, 200, '#b91c1c', '#facc15', '#fef08a', true, 34) }), 0, 1.79, -0.08, sh);
+            add(new THREE.BoxGeometry(0.26, 0.05, 0.12), goldMat, 0, 1.57, -0.08, sh);
+            add(new THREE.CylinderGeometry(0.06, 0.05, 0.07, 12), M.bronze, 0, 1.6, 0.1, sh);
+            [-0.02, 0.02].forEach(ix => add(new THREE.CylinderGeometry(0.005, 0.005, 0.16, 5), new THREE.MeshStandardMaterial({ color: 0xdc2626 }), ix, 1.7, 0.1, sh));
+            tagAll(sh, { interactType: 'miaozhu_shrine', label: '🙏 廟祝家裡的小神龕（點擊上香）' });
+            // 上香: a bronze floor censer on a small stand in front of the shrine; uses the shared incense flow
+            const cz = -1.6, cxL = -W / 2 + 1.25;
+            const cen = new THREE.Group(); cen.position.set(cxL, F, cz); g.add(cen);
+            add(new THREE.BoxGeometry(0.6, 0.55, 0.6), red, 0, 0.275, 0, cen);
+            add(new THREE.BoxGeometry(0.66, 0.04, 0.66), goldMat, 0, 0.57, 0, cen);
+            const bowl = add(new THREE.CylinderGeometry(0.22, 0.17, 0.2, 22), M.bronze, 0, 0.69, 0, cen);
+            const rim = add(new THREE.TorusGeometry(0.22, 0.02, 8, 24), goldMat, 0, 0.79, 0, cen); rim.rotation.x = Math.PI / 2;
+            [-1, 1].forEach(e => { const ear = add(new THREE.TorusGeometry(0.05, 0.012, 6, 12), goldMat, e * 0.24, 0.76, 0, cen); ear.rotation.y = Math.PI / 2; });
+            const inc = new THREE.Group(); inc.position.set(0, 0.79, 0); cen.add(inc);
+            [-0.04, 0, 0.04].forEach(ix => { const st = add(new THREE.CylinderGeometry(0.008, 0.008, 0.3, 6), new THREE.MeshStandardMaterial({ color: 0xdc2626 }), ix, 0.14, 0, inc); st.castShadow = false; });
+            tagAll(cen, { interactType: 'censer_miaozhu', label: '🔥 廟祝香爐（點擊點香、插香）' });
+            const cw = hw(cxL, cz), fw = hw(cxL + 0.95, cz);
+            addSmokeEmitter(cw.x, F + 1.15, cw.z, 4, 0.3, 0.9, 0xf1f5f9, 0.1);
+            EXTRA_CENSERS.miaozhu = { pos: cw, front: fw, floorY: F, inc, cam: { r: 3.6, dTheta: -0.5, phi: 1.3 }, name: '廟祝香爐', deity: '福德正神',
+                toast: '🙏 已在廟祝的小神龕前插香，恭請福德正神保佑闔家平安、出入順利！' };
+            colliders.push({ x: cw.x, z: cw.z, r: 0.45 });
+            // 打坐: one straw meditation cushion facing the shrine
+            const straw = new THREE.MeshStandardMaterial({ color: 0xa8742e, roughness: 0.92 });
+            [[-0.3, -0.95]].forEach(([px, pz]) => {
+                const c2 = new THREE.Group(); c2.position.set(px, F, pz); g.add(c2);
+                add(new THREE.CylinderGeometry(0.42, 0.42, 0.02, 28), new THREE.MeshStandardMaterial({ color: 0x7f1d1d, roughness: 0.9 }), 0, 0.01, 0, c2);
+                const cu = add(new THREE.SphereGeometry(0.3, 26, 14), straw, 0, 0.09, 0, c2); cu.scale.set(1, 0.3, 1);
+                [[0.27, 0.1], [0.19, 0.16]].forEach(([r2, y2]) => { const rg = add(new THREE.TorusGeometry(r2, 0.01, 6, 32), new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.95 }), 0, y2, 0, c2); rg.rotation.x = Math.PI / 2; });
+                const idx = MIAOZHU.lotus.length;
+                const wp = hw(px, pz);
+                // camera for this cushion: from the room's front-right corner, looking past the sitter at the shrine
+                const camP = hw(2.0, 1.6), tgt = { x: (wp.x + cw.x) / 2, z: (wp.z + cw.z) / 2 };
+                const hd = Math.hypot(camP.x - tgt.x, camP.z - tgt.z), up = 1.3;
+                MIAOZHU.lotus.push({ x: wp.x, z: wp.z, top: F + 0.18, face: Math.atan2(cw.x - wp.x, cw.z - wp.z),
+                    cam: { tx: tgt.x, tz: tgt.z, theta: Math.atan2(camP.x - tgt.x, camP.z - tgt.z), r: Math.hypot(hd, up), phi: Math.atan2(hd, up) } });
+                tagAll(c2, { interactType: 'miaozhu_lotus', label: '🧘 蒲團（點擊盤腿打坐）', idx });
+            });
             // bamboo lounge chair near the right wall
             const lc = new THREE.Group(); lc.position.set(W / 2 - 0.8, F, 0.8); lc.rotation.y = -Math.PI / 2; g.add(lc);
             const bamboo = new THREE.MeshStandardMaterial({ color: 0xc8a25a, roughness: 0.6 });
@@ -7295,6 +7332,133 @@
             tagAll(cat, { interactType: 'miaozhu_cat', label: '🐈 廟貓（正在睡午覺）' });
             MIAOZHU.cat = { body, base: 0.7 };
 
+            // ---- finer interior: wood wainscot + cream plaster walls, painted ceiling beams, hanging palace lanterns,
+            //      a proper shrine cabinet with an altar table, calligraphy and a landscape scroll, rugs and a tatami mat
+            const plaster = new THREE.MeshStandardMaterial({ color: 0xefe3c8, roughness: 0.9 });
+            const wains = new THREE.MeshStandardMaterial({ color: 0x4a2412, roughness: 0.45 });
+            const wainsH = 1.0;
+            // back wall
+            add(new THREE.BoxGeometry(W - 0.5, H - 0.02, 0.02), plaster, 0, F + H / 2, back + 0.25);
+            add(new THREE.BoxGeometry(W - 0.5, wainsH, 0.04), wains, 0, F + wainsH / 2, back + 0.27);
+            add(new THREE.BoxGeometry(W - 0.5, 0.04, 0.06), goldMat, 0, F + wainsH, back + 0.28);
+            // side walls
+            [-1, 1].forEach(sx => {
+                add(new THREE.BoxGeometry(0.02, H - 0.02, D - 0.5), plaster, sx * (W / 2 - 0.25), F + H / 2, 0);
+                add(new THREE.BoxGeometry(0.04, wainsH, D - 0.5), wains, sx * (W / 2 - 0.27), F + wainsH / 2, 0);
+                add(new THREE.BoxGeometry(0.06, 0.04, D - 0.5), goldMat, sx * (W / 2 - 0.28), F + wainsH, 0);
+                // vertical panel strips on the wainscot
+                for (let z = back + 0.6; z < front - 0.4; z += 0.7) add(new THREE.BoxGeometry(0.05, wainsH - 0.15, 0.03), darkWood, sx * (W / 2 - 0.3), F + wainsH / 2, z);
+            });
+            for (let x = -W / 2 + 0.6; x < W / 2 - 0.4; x += 0.7) add(new THREE.BoxGeometry(0.03, wainsH - 0.15, 0.05), darkWood, x, F + wainsH / 2, back + 0.3);
+            // painted ceiling beams
+            const beamTex2 = createPaintedBeamTexture(); beamTex2.repeat.set(2, 1);
+            const beamMat2 = new THREE.MeshStandardMaterial({ map: beamTex2, roughness: 0.5 });
+            [-1.8, 0, 1.8].forEach(z => add(new THREE.BoxGeometry(W - 0.5, 0.2, 0.22), beamMat2, 0, F + H - 0.1, z));
+            add(new THREE.BoxGeometry(0.22, 0.16, D - 0.5), darkWood, 0, F + H - 0.26, 0);
+            // hanging palace lanterns: red silk body, gold caps, tassel, warm glow at night
+            const palaceLantern = (lx, lz) => {
+                const pl = new THREE.Group(); pl.position.set(lx, F + H - 0.62, lz); g.add(pl);
+                const silk = new THREE.MeshStandardMaterial({ color: 0xc81e1e, emissive: 0xff5a2a, emissiveIntensity: 0.35, roughness: 0.6 });
+                registerNightEmissive(silk, 0.35, 1.3);
+                const bodyL = add(new THREE.CylinderGeometry(0.2, 0.2, 0.34, 6), silk, 0, 0, 0, pl);
+                [0.19, -0.19].forEach(y => add(new THREE.CylinderGeometry(0.23, 0.23, 0.05, 6), goldMat, 0, y, 0, pl));
+                for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + Math.PI / 6; add(new THREE.BoxGeometry(0.02, 0.34, 0.02), darkWood, Math.cos(a) * 0.2, 0, Math.sin(a) * 0.2, pl); }
+                add(new THREE.CylinderGeometry(0.008, 0.008, 0.3, 6), goldMat, 0, 0.36, 0, pl);
+                const tas = add(new THREE.ConeGeometry(0.05, 0.22, 8), new THREE.MeshStandardMaterial({ color: 0xc81e1e, roughness: 0.8 }), 0, -0.33, 0, pl); tas.rotation.x = Math.PI;
+                addNightGlow(pl, new THREE.Vector3(0, 0, 0), 0xff7a3c, 1.3);
+            };
+            palaceLantern(-1.9, 0.9);
+            palaceLantern(-0.3, -1.0);
+            palaceLantern(1.7, -1.6);
+            // shrine cabinet (神龕) on the left wall: red lacquer box with gold trim, a small tiled roof and two hanging lamps
+            const cab = new THREE.Group(); cab.position.set(-W / 2 + 0.42, F, -1.6); cab.rotation.y = Math.PI / 2; g.add(cab);
+            const lacq2 = new THREE.MeshStandardMaterial({ color: 0x8f1414, roughness: 0.3, metalness: 0.05 });
+            add(new THREE.BoxGeometry(1.05, 0.06, 0.42), lacq2, 0, 1.52, 0.02, cab);
+            add(new THREE.BoxGeometry(1.05, 0.75, 0.04), new THREE.MeshStandardMaterial({ color: 0x3b0d0a, roughness: 0.5 }), 0, 1.9, -0.17, cab);
+            [-1, 1].forEach(e => {
+                add(new THREE.BoxGeometry(0.06, 0.8, 0.42), lacq2, e * 0.5, 1.9, 0.02, cab);
+                add(new THREE.BoxGeometry(0.02, 0.7, 0.02), goldMat, e * 0.47, 1.9, 0.24, cab);
+                const lampH = add(new THREE.SphereGeometry(0.045, 12, 10), new THREE.MeshStandardMaterial({ color: 0xff3b3b, emissive: 0xff2020, emissiveIntensity: 0.8 }), e * 0.36, 2.05, 0.18, cab);
+                registerNightEmissive(lampH.material, 0.8, 1.8);
+            });
+            add(new THREE.BoxGeometry(1.25, 0.06, 0.55), lacq2, 0, 2.32, 0.04, cab);
+            const cabRoof = add(new THREE.BoxGeometry(1.35, 0.05, 0.62), new THREE.MeshStandardMaterial({ map: createRoofTileTexture(), roughness: 0.55 }), 0, 2.4, 0.03, cab); cabRoof.rotation.x = -0.12;
+            add(new THREE.BoxGeometry(1.3, 0.03, 0.04), goldMat, 0, 2.29, 0.3, cab);
+            add(new THREE.BoxGeometry(1.0, 0.06, 0.06), goldMat, 0, 1.56, 0.24, cab);
+            // altar table under the cabinet: fruit, flowers, candles
+            add(new THREE.BoxGeometry(1.2, 0.06, 0.48), lacq2, 0, 0.86, 0.06, cab);
+            add(new THREE.BoxGeometry(1.24, 0.03, 0.5), goldMat, 0, 0.83, 0.06, cab);
+            [[-0.55, -0.15], [0.55, -0.15], [-0.55, 0.26], [0.55, 0.26]].forEach(([lx, lz]) => add(new THREE.BoxGeometry(0.06, 0.83, 0.06), lacq2, lx, 0.415, lz, cab));
+            const skirt2 = add(new THREE.BoxGeometry(1.1, 0.35, 0.01), new THREE.MeshStandardMaterial({ map: createSignboardTexture('合 境 平 安', 400, 128, '#8f1414', '#e8b923', '#fcd34d', false, 60), roughness: 0.7 }), 0, 0.62, 0.32, cab);
+            skirt2.castShadow = false;
+            [-0.42, 0.42].forEach(lx => buildCandleStand(cab, lx, 0.89, 0.1, 0.65, goldMat));
+            const plate2 = add(new THREE.CylinderGeometry(0.12, 0.09, 0.03, 18), goldMat, -0.18, 0.905, 0.12, cab);
+            [[0, 0.05, 0], [0.05, 0.05, 0.03], [-0.05, 0.05, 0.03], [0, 0.1, 0.01]].forEach(([ax, ay, az]) => add(new THREE.SphereGeometry(0.04, 12, 10), new THREE.MeshStandardMaterial({ color: 0xf28c28, roughness: 0.45 }), -0.18 + ax, 0.9 + ay, 0.12 + az, cab));
+            buildLotusVase(cab, 0.2, 0.89, 0.05, 0.55, goldMat);
+            tagAll(cab, { interactType: 'miaozhu_shrine', label: '🙏 廟祝家裡的小神龕（點擊上香）' });
+            // calligraphy scroll over the desk and a landscape scroll on the right wall
+            const scroll = (text, painting, wx, wy, wz, rotY, w, h) => {
+                const sg = new THREE.Group(); sg.position.set(wx, wy, wz); sg.rotation.y = rotY; g.add(sg);
+                const CH = Math.round(200 * h / w);
+                const c = document.createElement('canvas'); c.width = 200; c.height = CH;
+                const x = c.getContext('2d');
+                const tex = new THREE.CanvasTexture(c);
+                const draw = () => {
+                    x.clearRect(0, 0, 200, CH);
+                    x.fillStyle = '#7a5a2f'; x.fillRect(0, 0, 200, CH);
+                    x.fillStyle = '#f4ead2'; x.fillRect(16, 40, 168, CH - 80);
+                    // faint aged-paper mottling
+                    for (let k = 0; k < 160; k++) { x.fillStyle = `rgba(150,120,70,${Math.random() * 0.06})`; x.fillRect(16 + Math.random() * 160, 40 + Math.random() * (CH - 90), 6, 6); }
+                    if (painting) {
+                        const m = (y0, col) => { x.fillStyle = col; x.beginPath(); x.moveTo(16, y0 + 80); for (let i = 0; i <= 8; i++) x.lineTo(16 + i * 21, y0 + (i % 2 ? 0 : 50) + Math.sin(i) * 14); x.lineTo(184, y0 + 80); x.fill(); };
+                        m(150, 'rgba(70,80,90,0.35)'); m(220, 'rgba(40,50,60,0.55)'); m(300, 'rgba(25,30,35,0.75)');
+                        x.fillStyle = 'rgba(30,40,40,0.8)'; x.fillRect(46, 360, 4, 60);
+                        for (let k = 0; k < 4; k++) { x.beginPath(); x.ellipse(48, 360 + k * 12, 26 - k * 4, 6, 0, 0, Math.PI * 2); x.fill(); }
+                        x.beginPath(); x.moveTo(110, 430); x.lineTo(150, 430); x.lineTo(140, 438); x.lineTo(118, 438); x.fill();
+                        x.fillStyle = '#b91c1c'; x.fillRect(150, 440, 18, 18);
+                    } else {
+                        // brush calligraphy in 楷書 (霞鶩文楷 TC), with a slight ink shadow
+                        const n = [...text].length, step = (CH - 170) / n, fs = Math.min(110, step * 0.9);
+                        x.font = `700 ${fs}px "LXGW WenKai TC", "BiauKai", "DFKai-SB", "Kaiti TC", "STKaiti", "KaiTi", "Noto Serif TC", serif`;
+                        x.textAlign = 'center'; x.textBaseline = 'middle';
+                        [...text].forEach((ch, i) => {
+                            const cy = 78 + step * (i + 0.5);
+                            x.fillStyle = 'rgba(20,14,10,0.35)'; x.fillText(ch, 97, cy + 2);
+                            x.fillStyle = '#16100b'; x.fillText(ch, 96, cy);
+                        });
+                        x.font = `700 22px "LXGW WenKai TC", "Kaiti TC", serif`; x.fillStyle = '#2a1f16';
+                        x.fillText('濟', 160, CH - 94); x.fillText('顛', 160, CH - 70);
+                        x.fillStyle = '#b91c1c'; x.fillRect(150, CH - 56, 20, 20);
+                        x.fillRect(28, 52, 16, 26);
+                        x.fillStyle = '#f4ead2'; x.font = '700 12px serif'; x.fillText('印', 160, CH - 46);
+                    }
+                    tex.needsUpdate = true;
+                };
+                draw();
+                if (!painting && document.fonts && document.fonts.load) document.fonts.load('700 92px "LXGW WenKai TC"', text + '濟顛').then(draw).catch(() => {});
+                const face = add(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.85 }), 0, 0, 0, sg);
+                face.castShadow = false;
+                [h / 2 + 0.02, -h / 2 - 0.02].forEach(y => { const rod = add(new THREE.CylinderGeometry(0.018, 0.018, w + 0.1, 8), darkWood, 0, y, 0.01, sg); rod.rotation.z = Math.PI / 2; });
+            };
+            scroll('酒肉穿腸過', false, 1.7, F + 1.85, back + 0.27, 0, 0.5, 1.55);
+            scroll('', true, W / 2 - 0.27, F + 1.9, -1.0, -Math.PI / 2, 0.55, 1.4);
+            // rugs: a round rug under the tea table, a runner at the door, a tatami mat for meditation
+            const rc2 = document.createElement('canvas'); rc2.width = rc2.height = 256;
+            const rx = rc2.getContext('2d');
+            rx.fillStyle = '#8f1023'; rx.fillRect(0, 0, 256, 256);
+            rx.strokeStyle = '#d4a64a'; rx.lineWidth = 10; rx.beginPath(); rx.arc(128, 128, 118, 0, Math.PI * 2); rx.stroke();
+            rx.lineWidth = 3; rx.beginPath(); rx.arc(128, 128, 100, 0, Math.PI * 2); rx.stroke();
+            rx.fillStyle = '#d4a64a'; rx.font = 'bold 90px "Noto Serif TC", serif'; rx.textAlign = 'center'; rx.textBaseline = 'middle'; rx.fillText('壽', 128, 134);
+            for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; rx.beginPath(); rx.arc(128 + Math.cos(a) * 82, 128 + Math.sin(a) * 82, 6, 0, Math.PI * 2); rx.fill(); }
+            const rug = add(new THREE.CircleGeometry(1.35, 48), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(rc2), roughness: 0.95 }), -1.9, F + 0.012, 0.9);
+            rug.rotation.x = -Math.PI / 2; rug.castShadow = false;
+            addCarpetRunner(g, 0, F + 0.004, front - 1.4, front - 0.2, 1.3);
+            const tat = add(new THREE.BoxGeometry(2.4, 0.03, 1.1), new THREE.MeshStandardMaterial({ color: 0xc9b37a, roughness: 0.95 }), -0.3, F + 0.015, -0.95);
+            tat.castShadow = false;
+            [[-1.5, 0], [0.9, 0]].forEach(([ex]) => add(new THREE.BoxGeometry(0.06, 0.035, 1.1), new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.7 }), ex, F + 0.017, -0.95));
+            [-1.5, 0.95].forEach(ez => add(new THREE.BoxGeometry(2.4, 0.035, 0.06), new THREE.MeshStandardMaterial({ color: 0x1c1917, roughness: 0.7 }), -0.3, F + 0.017, -0.95 + (ez < 0 ? -0.52 : 0.52)));
+            // a tea tray under the pot and cups
+            add(new THREE.BoxGeometry(0.62, 0.03, 0.62), darkWood, -1.9, F + 0.54, 0.9).castShadow = false;
             // warm light inside, and the lantern by the door that is lit when a 廟公 is online
             addNightLight(hw(0, 0).x, F + 2.6, hw(0, 0).z, 0xffd59e, 1.2, 8, false, 0.7);
             const lan = add(new THREE.SphereGeometry(0.26, 16, 14), new THREE.MeshStandardMaterial({ color: 0xdc2626, emissive: 0x991b1b, emissiveIntensity: 0.1 }), doorW / 2 + 0.55, F + H - 1.0, front + 0.35);
@@ -7340,7 +7504,7 @@
             MIAOZHU.sign.material.map = on ? MIAOZHU.texIn : MIAOZHU.texOut;
             MIAOZHU.sign.material.needsUpdate = true;
         }
-        function miaozhuInteract(type) {
+        function miaozhuInteract(type, ud) {
             if (type === 'miaozhu') {
                 showToast(MIAOZHU.online ? '🏮 廟祝在廟！門口燈籠亮著——有事可在廟埕聊天室找廟公。' : '🏠 廟祝外出雲遊中，門口燈籠沒亮。屋裡有茶，自己倒一杯坐坐吧～');
                 moveCameraPreset('miaozhu');
@@ -7357,8 +7521,22 @@
             } else if (type === 'miaozhu_books') {
                 showToast('📚 書櫃裡有《金剛經》《心經》、六十甲子籤詩解、農民曆，還有廟祝手抄的祭典流程。');
             } else if (type === 'miaozhu_shrine') {
-                playTempleBellSound(587);
-                showToast('🙏 廟祝每天早晚在自家小神龕前上一炷香，感謝土地公照顧。');
+                plantIncenseIntoCenser('miaozhu');
+            } else if (type === 'miaozhu_lotus') {
+                const spot = MIAOZHU.lotus[(ud && ud.idx) || 0];
+                if (spot && playerAvatarGroup) {
+                    playerAvatarGroup.userData.kowtowToken = null;
+                    setPlayerPose('stand');
+                    playerAvatarGroup.position.set(spot.x, SIDE_HALL_FLOOR, spot.z);
+                    setPlayerPose('lotus', true);
+                    playerAvatarGroup.position.set(spot.x, spot.top, spot.z);
+                    playerAvatarGroup.rotation.y = spot.face;
+                    playBronzeBowlSound();
+                    state.followCam = false;
+                    camControl.desiredTarget.set(spot.cam.tx, 1.0, spot.cam.tz);
+                    Object.assign(camControl.desiredSpherical, { radius: spot.cam.r, theta: spot.cam.theta, phi: spot.cam.phi });
+                    showToast('🧘 在廟祝的窩盤腿打坐，面向小神龕，聽著窗外的鐘聲靜心。移動搖桿即可起身。');
+                }
             } else if (type === 'miaozhu_chair') {
                 showToast('🪑 竹躺椅涼涼的，廟祝中午最愛在這裡搧扇子小睡。');
             }
@@ -7928,7 +8106,7 @@
             }
             if (state.vel) state.vel.x = state.vel.z = 0;
             // snap onto a nearby kneeler / lotus cushion when one is close
-            const spots = pose === 'kneel' ? BAIDIAN.kneelers.concat(DAXIONG.kneelers) : BAIDIAN.lotus.concat(DAXIONG.lotus);
+            const spots = pose === 'kneel' ? BAIDIAN.kneelers.concat(DAXIONG.kneelers) : BAIDIAN.lotus.concat(DAXIONG.lotus, MIAOZHU.lotus);
             const p = playerAvatarGroup.position;
             let best = null, bd = 1.6;
             spots.forEach(s => { const d = Math.hypot(s.x - p.x, s.z - p.z); if (d < bd && !s.npc) { bd = d; best = s; } });
@@ -13238,7 +13416,7 @@
             const extra = EXTRA_CENSERS[targetType];
             if (extra && extra.inc) {
                 if (playerAvatarGroup) {
-                    playerAvatarGroup.position.set(extra.front.x, 0, extra.front.z);
+                    playerAvatarGroup.position.set(extra.front.x, extra.floorY || 0, extra.front.z);
                     playerAvatarGroup.rotation.y = Math.atan2(extra.pos.x - extra.front.x, extra.pos.z - extra.front.z);
                     playerAvatarGroup.userData.headGroup.rotation.x = 0.35;
                     setTimeout(() => { if (playerAvatarGroup) playerAvatarGroup.userData.headGroup.rotation.x = 0; }, 900);
@@ -13670,7 +13848,7 @@
             else if (type === 'jubaopen') triggerJubaopen();
             else if (type === 'blacktiger') tigerRoar();
             else if (type === 'xiaoren') openXiaorenModal();
-            else if (type && type.startsWith('miaozhu')) miaozhuInteract(type);
+            else if (type && type.startsWith('miaozhu')) miaozhuInteract(type, ud);
             else if (type === 'baihu') { playTempleBellSound(392); showToast('🐯 白虎爺：主掌是非口舌。打小人前先以肥豬肉、雞蛋祭白虎，白虎吃飽便不再傷人。'); }
             else if (type === 'fireworks') openFireworksModal();
             else if (type === 'offerings') openOfferingsModal();
@@ -14736,7 +14914,8 @@
             if (!document.fonts || !document.fonts.load) return Promise.resolve();
             const loads = Promise.all([
                 document.fonts.load('900 48px "Noto Serif TC"', '問心堂道濟群生天公爐金'),
-                document.fonts.load('700 24px "Noto Serif TC"', '五營將軍')
+                document.fonts.load('700 24px "Noto Serif TC"', '五營將軍'),
+                document.fonts.load('700 92px "LXGW WenKai TC"', '酒肉穿腸過濟顛')
             ]).catch(() => {});
             const timeout = new Promise(res => setTimeout(res, 2500));
             return Promise.race([loads, timeout]);
