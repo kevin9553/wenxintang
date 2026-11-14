@@ -2031,6 +2031,7 @@
                 scene.add(sp, sp.target);
                 nightLights.push({ light: sp, day: 1.6, night: 2.0, flicker: false, phase: 0, isJinlu: false });
             });
+            if (o.carpetTo !== undefined) addCarpetRunner(g, cx, FLOOR - 0.004, -1.2, o.carpetTo, 2.0);
             // Lamps keep the hall softly lit by day as well as at night
             addNightLight(cx, FLOOR + 2.7, -2.0 + dz, 0xffd59e, 1.5, 9, false, 0.6);
             addNightLight(cx - 3.9, FLOOR + 2.4, -2.6 + dz, 0xffd59e, 0.8, 6, false, 0.6);
@@ -2092,6 +2093,7 @@
             // Hollow hall: wooden floor, back wall, brick gable sides, coffered ceiling
             const floor = new THREE.Mesh(new THREE.BoxGeometry(W - 0.2, 0.1, D - 0.1), new THREE.MeshStandardMaterial({ color: 0x6b4226, roughness: 0.6 }));
             floor.position.set(cx, floorY + 0.05, zc);
+            addTileFloor(g, cx, FLOOR + 0.004, zc, W - 0.2, D - 0.1);
             const backWall = new THREE.Mesh(new THREE.BoxGeometry(W, roomH, 0.3), lacquer);
             backWall.position.set(cx, floorY + roomH / 2, zB + 0.15);
             backWall.material = new THREE.MeshStandardMaterial({ map: createPeonyMuralTexture(), roughness: 0.85 });
@@ -2207,7 +2209,7 @@
             });
 
             // ---- Interior (shared with the ground-floor 大雄寶殿): dais, mandorlas, altar, lamps — here the 三官大帝
-            buildShrineInterior(g, { cx, FLOOR, W, y1, dz: 0, goldMat, lacquer, figs: SANGUAN, makeFigure: makeSanguanFigure });
+            buildShrineInterior(g, { cx, FLOOR, W, y1, dz: 0, carpetTo: 0.55, goldMat, lacquer, figs: SANGUAN, makeFigure: makeSanguanFigure });
 
             // Upper swallowtail roof carrying the twin dragons and pagoda
             buildSwallowtailRoof(goldMat, greenTrimMat, {
@@ -3096,6 +3098,7 @@
             // Two-step stone terrace (月台) with wide front stairs and a stone approach
             add(new THREE.BoxGeometry(W + 1.6, 0.12, D + 1.6), M.darkStone, 0, 0.06, 0);
             add(new THREE.BoxGeometry(W + 0.8, F, D + 0.8), M.stone, 0, F / 2, 0);
+            addTileFloor(hg, 0, F + 0.004, 0, W + 0.8, D + 0.8);
             add(new THREE.BoxGeometry(W * 0.45, 0.15, 0.7), M.stone, 0, 0.075, front + 0.75);
             add(new THREE.BoxGeometry(4.2, 0.03, 7.5), M.stone, 0, 0.015, front + 4.6);
             // Brick back and side walls; round gold lattice windows
@@ -3159,7 +3162,7 @@
             });
 
             // Interior: the three Buddhas, moved down from the old upper hall
-            buildShrineInterior(templeGroup, { cx: X, FLOOR: F, W: 14, y1: top, dz: Z, goldMat, lacquer, figs: SANBAO,
+            buildShrineInterior(templeGroup, { cx: X, FLOOR: F, W: 14, y1: top, carpetTo: 4.35, dz: Z, goldMat, lacquer, figs: SANBAO,
                 makeFigure: (b, grp) => { b.fallback = buildFallbackBuddha(b); grp.add(b.fallback); } });
             // Swap the stand-ins for the Blender-sculpted Buddhas (loaded when visitors come near)
             upgradeStatuesFromGLB(SANBAO.map(b => ({
@@ -3420,15 +3423,100 @@
             });
         }
 
-        function buildRedCarpet(goldMat) {
-            const carpet = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.02, 4.9), new THREE.MeshStandardMaterial({ color: 0x9f1239, roughness: 0.9 }));
-            carpet.position.set(-1.5, 0.47, -0.1);
-            templeGroup.add(carpet);
-            [-0.85, 0.85].forEach(dx => {
-                const b = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.025, 4.9), goldMat);
-                b.position.set(-1.5 + dx, 0.475, -0.1);
-                templeGroup.add(b);
+        // 紅地毯：深紅絨面、兩側金色滾邊與回紋帶、中間淡淡的團花；z0 → z1 沿 z 方向鋪設（父物件的座標）
+        function createCarpetTexture() {
+            if (createCarpetTexture.tex) return createCarpetTexture.tex;
+            const c = document.createElement('canvas');
+            c.width = 256; c.height = 256;
+            const x = c.getContext('2d');
+            x.fillStyle = '#8f1023'; x.fillRect(0, 0, 256, 256);
+            for (let i = 0; i < 900; i++) { x.fillStyle = `rgba(${Math.random() < 0.5 ? '60,0,10' : '190,40,60'},0.08)`; x.fillRect(Math.random() * 256, Math.random() * 256, 2, 2); }
+            // gold edge bands with a key-fret (回紋) line
+            [[0, 1], [256, -1]].forEach(([ex, d]) => {
+                x.fillStyle = '#c9971f'; x.fillRect(ex === 0 ? 0 : 256 - 14, 0, 14, 256);
+                x.fillStyle = '#6e0c18'; x.fillRect(ex === 0 ? 14 : 256 - 30, 0, 16, 256);
+                x.strokeStyle = '#d4a64a'; x.lineWidth = 2;
+                const bx = ex === 0 ? 16 : 256 - 28;
+                for (let y = 0; y < 256; y += 16) { x.beginPath(); x.moveTo(bx, y + 2); x.lineTo(bx + 10, y + 2); x.lineTo(bx + 10, y + 12); x.lineTo(bx + 3, y + 12); x.lineTo(bx + 3, y + 6); x.stroke(); }
+                x.fillStyle = '#c9971f'; x.fillRect(ex === 0 ? 30 : 256 - 33, 0, 3, 256);
             });
+            // a faint round medallion (團花) in the middle of each tile
+            x.strokeStyle = 'rgba(220,150,60,0.35)'; x.lineWidth = 3;
+            x.beginPath(); x.arc(128, 128, 34, 0, Math.PI * 2); x.stroke();
+            for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; x.beginPath(); x.arc(128 + Math.cos(a) * 22, 128 + Math.sin(a) * 22, 9, 0, Math.PI * 2); x.stroke(); }
+            const t = new THREE.CanvasTexture(c);
+            t.wrapS = t.wrapT = THREE.RepeatWrapping;
+            t.anisotropy = 4;
+            return createCarpetTexture.tex = t;
+        }
+        // 殿內地磚：暖灰米色花崗石磚（每塊 0.6 m），灰縫細線、每塊略有色差與石紋；一張貼圖 = 4×4 塊
+        // 地磚款式：base 磚色、grout 灰縫、fleck 斑點、vein 石紋、tiles 一張貼圖幾塊（每塊 2.4/tiles 公尺）
+        const FLOOR_TILE_STYLES = {
+            granite: { name: '米灰花崗石', base: [196, 186, 170], vary: 18, grout: '#6f665b', fleck: ['120,105,90', '235,225,210'], vein: 'rgba(140,125,108,0.18)', tiles: 4, rough: 0.38 },
+            redbrick: { name: '傳統紅尺磚', base: [168, 78, 52], vary: 26, grout: '#d8cbb4', fleck: ['90,30,18', '205,120,85'], vein: null, tiles: 6, rough: 0.7 },
+            white: { name: '白玉大理石', base: [236, 232, 224], vary: 8, grout: '#b9b2a6', fleck: ['170,165,158', '255,255,252'], vein: 'rgba(150,140,130,0.35)', tiles: 3, rough: 0.22 },
+            dark: { name: '墨色石材', base: [58, 56, 54], vary: 10, grout: '#a8873c', fleck: ['25,24,22', '110,105,98'], vein: 'rgba(160,150,135,0.18)', tiles: 4, rough: 0.28 },
+            jade: { name: '青石板', base: [104, 122, 116], vary: 16, grout: '#4a524e', fleck: ['70,85,80', '150,165,158'], vein: 'rgba(60,75,70,0.25)', tiles: 4, rough: 0.6 }
+        };
+        let FLOOR_TILE_STYLE = 'dark';
+        try { const q = new URLSearchParams(location.search).get('floor'); if (q && FLOOR_TILE_STYLES[q]) FLOOR_TILE_STYLE = q; } catch (e) {}
+        function createFloorTileTexture() {
+            if (createFloorTileTexture.tex) return createFloorTileTexture.tex;
+            const S = FLOOR_TILE_STYLES[FLOOR_TILE_STYLE];
+            const N = 512, n = S.tiles, T = N / n;
+            const c = document.createElement('canvas');
+            c.width = c.height = N;
+            const x = c.getContext('2d');
+            x.fillStyle = S.grout; x.fillRect(0, 0, N, N);
+            for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+                const dv = (Math.random() - 0.5) * S.vary;
+                x.fillStyle = `rgb(${(S.base[0] + dv) | 0},${(S.base[1] + dv) | 0},${(S.base[2] + dv) | 0})`;
+                x.fillRect(i * T + 2, j * T + 2, T - 4, T - 4);
+                for (let k = 0; k < 260 * 16 / (n * n); k++) {
+                    x.fillStyle = `rgba(${S.fleck[Math.random() < 0.5 ? 0 : 1]},${0.12 + Math.random() * 0.2})`;
+                    x.fillRect(i * T + 3 + Math.random() * (T - 6), j * T + 3 + Math.random() * (T - 6), 1.5, 1.5);
+                }
+                if (S.vein) {
+                    x.strokeStyle = S.vein; x.lineWidth = 1.2;
+                    x.beginPath(); x.moveTo(i * T + 4, j * T + Math.random() * T);
+                    x.bezierCurveTo(i * T + T * 0.3, j * T + Math.random() * T, i * T + T * 0.7, j * T + Math.random() * T, i * T + T - 4, j * T + Math.random() * T); x.stroke();
+                }
+                x.fillStyle = 'rgba(255,250,240,0.2)'; x.fillRect(i * T + 2, j * T + 2, T - 4, 2);
+                x.fillStyle = 'rgba(40,30,20,0.15)'; x.fillRect(i * T + 2, j * T + T - 4, T - 4, 2);
+            }
+            const t = new THREE.CanvasTexture(c);
+            t.wrapS = t.wrapT = THREE.RepeatWrapping;
+            t.anisotropy = 8;
+            return createFloorTileTexture.tex = t;
+        }
+        // lays a tiled floor (w × d metres) whose top sits at y; carpets go just above it
+        function addTileFloor(parent, x, y, z, w, d) {
+            const tex = createFloorTileTexture().clone();
+            tex.needsUpdate = true;
+            tex.repeat.set(w / 2.4, d / 2.4);
+            const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.02, d), new THREE.MeshStandardMaterial({ map: tex, roughness: FLOOR_TILE_STYLES[FLOOR_TILE_STYLE].rough, metalness: 0.05 }));
+            m.position.set(x, y - 0.006, z);
+            m.receiveShadow = true;
+            parent.add(m);
+            return m;
+        }
+
+        function addCarpetRunner(parent, x, y, z0, z1, w) {
+            const len = Math.abs(z1 - z0);
+            if (len < 0.2) return null;
+            const tex = createCarpetTexture().clone();
+            tex.needsUpdate = true;
+            tex.repeat.set(1, Math.max(1, Math.round(len / w)));
+            const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.016, len), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.92 }));
+            m.position.set(x, y + 0.008, (z0 + z1) / 2);
+            m.receiveShadow = true;
+            parent.add(m);
+            return m;
+        }
+
+        function buildRedCarpet(goldMat) {
+            // main hall: patterned runner from the altar to the doorway
+            addCarpetRunner(templeGroup, -1.5, 0.46, -2.55, 2.35, 1.8);
         }
 
         function spawnSkyLantern(fromPos) {
@@ -4366,6 +4454,7 @@
             // Stone podium with front steps
             const podium = new THREE.Mesh(new THREE.BoxGeometry(W + 0.4, F, D + 0.4), M.stone);
             podium.position.y = F / 2;
+            addTileFloor(g, 0, F + 0.004, 0, W + 0.4, D + 0.4);
             const step = new THREE.Mesh(new THREE.BoxGeometry(W * 0.5, 0.15, 0.6), M.stone);
             step.position.set(0, 0.075, front + 0.5);
             g.add(podium, step);
@@ -4511,6 +4600,7 @@
                 addNightLight(hw(0, shrineZ + 2.6).x, F + 3.2, hw(0, shrineZ + 2.6).z, 0xffd59e, 1.0, 7, false, 0.45);
             }
 
+            addCarpetRunner(g, 0, F, shrineZ + 2.2, front - 0.15, 1.6);
             if (h.deity && h.deity.extras) h.deity.extras(g, { F, shrineZ, hw, goldMat, h });
 
             // Walls are solid for walking
@@ -5476,7 +5566,7 @@
         // =====================================================================
         // 後殿五層樓閣：逐層內收、四周迴廊、每層空神龕（待安座）；右側大樓梯塔以天橋連通各層
         // =====================================================================
-        const REAR = { x: -1.5, z: -28, H: 4.4, base: 0.6, floors: 5 };
+        const REAR = { x: -1.5, z: -28, H: 5.6, base: 0.6, floors: 5 };
         const REAR_STAIR = { laneA: 13.4, laneB: 15.6, x0: 12.4, x1: 16.6, zFront: -24, zBack: -32, landF: -22.4, landB: -33.6, bridgeZ: -23.2 };
         function rearFloor(f) {   // f = 1..5
             const W = 24 - (f - 1) * 2, D = 12 - (f - 1);
@@ -6018,6 +6108,7 @@
             // Stone podium with a broad front stair
             const f1 = rearFloor(1);
             box(f1.W + 6, REAR.base, f1.D + 6, M.stone, REAR.x, REAR.base / 2, REAR.z);
+            addTileFloor(g, REAR.x, REAR.base + 0.004, REAR.z, f1.W + 6, f1.D + 6);
             box(f1.W + 6.4, 0.08, f1.D + 6.4, M.darkStone, REAR.x, 0.04, REAR.z);
             for (let k = 0; k < 3; k++) box(10 - k * 0.6, 0.2, 0.5, M.stone, REAR.x, 0.1 + k * 0.2, REAR.z + f1.D / 2 + 3 + 0.25 + (2 - k) * 0.5);
 
@@ -6026,6 +6117,7 @@
                 // Floor slab (with gallery all round)
                 if (f > 1) {
                     box(F.W + 2.4, 0.3, F.D + 2.4, floorMat, REAR.x, y - 0.15, REAR.z);
+                    addTileFloor(g, REAR.x, y + 0.004, REAR.z, F.W + 2.4, F.D + 2.4);
                     box(F.W + 2.5, 0.08, F.D + 2.5, goldMat, REAR.x, y - 0.32, REAR.z);
                 }
                 // Back and side walls
@@ -6076,6 +6168,7 @@
                     addNightGlow(g, lan.position, 0xff5a3c, 2.0);
                 });
                 // 五樓：三清殿；其餘樓層：空神龕待安座
+                addCarpetRunner(g, REAR.x, y, f === REAR.floors ? F.back + 2.5 : F.back + 3.35, F.front - 0.2, f === 1 ? 2.4 : 2.0);
                 if (f === REAR.floors) buildSanqingShrine(g, F, goldMat, lacquer);
                 else if (REAR_DEITIES[f]) buildRearShrine(g, F, REAR_DEITIES[f], goldMat, lacquer);
                 else {
@@ -10144,6 +10237,7 @@
             step2.position.set(-1.5, 0.34, -2.5);
             step2.receiveShadow = true;
             templeGroup.add(step2);
+            addTileFloor(templeGroup, -1.5, 0.464, -2.5, 18.8, 9.8);
 
             const backWall = new THREE.Mesh(new THREE.BoxGeometry(18.6, 5.6, 0.4), darkRedWallMat);
             backWall.position.set(-1.5, 3.1, -6.8);
@@ -12868,7 +12962,7 @@
             presets.sanqing = { r: 7.2, theta: 0, phi: 1.42, tx: REAR.x, ty: rearFloor(REAR.floors).y + 2.0, tz: rearFloor(REAR.floors).back + 1.2 };
             presets.xiaoren = { r: 7.5, theta: XIAOREN_POS.rot + 0.35, phi: 1.2, tx: XIAOREN_POS.x, ty: 1.0, tz: XIAOREN_POS.z };
             presets.fireworks = { r: 33.4, theta: -1.297, phi: 1.98, tx: FIREWORK_POS.x, ty: 24, tz: FIREWORK_POS.z - 2 };
-            presets.rearhall = { r: 52, theta: 0.35, phi: 1.32, tx: REAR.x + 3, ty: 9, tz: REAR.z };
+            presets.rearhall = { r: 70, theta: 0.35, phi: 1.4, tx: REAR.x + 3, ty: 16, tz: REAR.z };
             presets.stairs = { r: 18, theta: 0.9, phi: 1.2, tx: 11, ty: 4.5, tz: -3 };
             presets.festival = { r: 36, theta: 0.1, phi: 1.66, tx: -1.5, ty: 10.5, tz: -2 };
             presets.upper = { r: 17, theta: 0.05, phi: 1.36, tx: -1.5, ty: 11.0, tz: 0.5 };
