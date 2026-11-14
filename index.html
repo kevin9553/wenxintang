@@ -7272,10 +7272,13 @@
             const cen = new THREE.Group(); cen.position.set(cxL, F, cz); g.add(cen);
             add(new THREE.BoxGeometry(0.6, 0.55, 0.6), red, 0, 0.275, 0, cen);
             add(new THREE.BoxGeometry(0.66, 0.04, 0.66), goldMat, 0, 0.57, 0, cen);
-            const bowl = add(new THREE.CylinderGeometry(0.22, 0.17, 0.2, 22), M.bronze, 0, 0.69, 0, cen);
-            const rim = add(new THREE.TorusGeometry(0.22, 0.02, 8, 24), goldMat, 0, 0.79, 0, cen); rim.rotation.x = Math.PI / 2;
-            [-1, 1].forEach(e => { const ear = add(new THREE.TorusGeometry(0.05, 0.012, 6, 12), goldMat, e * 0.24, 0.76, 0, cen); ear.rotation.y = Math.PI / 2; });
-            const inc = new THREE.Group(); inc.position.set(0, 0.79, 0); cen.add(inc);
+            const bowl = add(new THREE.CylinderGeometry(0.22, 0.17, 0.2, 22), M.bronze, 0, 0.73, 0, cen);
+            const rim = add(new THREE.TorusGeometry(0.22, 0.02, 8, 24), goldMat, 0, 0.83, 0, cen); rim.rotation.x = Math.PI / 2;
+            // two upright ears on the left and right as seen by the worshipper (the shrine is along -x), not front/back
+            [-1, 1].forEach(e => { const ear = add(new THREE.TorusGeometry(0.05, 0.012, 6, 12), goldMat, 0, 0.8, e * 0.235, cen); ear.rotation.y = Math.PI / 2; });
+            // three short legs (三足) under the bowl
+            [0, 1, 2].forEach(k => { const a = k / 3 * Math.PI * 2 + Math.PI; add(new THREE.CylinderGeometry(0.025, 0.018, 0.08, 8), M.bronze, Math.cos(a) * 0.13, 0.6, Math.sin(a) * 0.13, cen); });
+            const inc = new THREE.Group(); inc.position.set(0, 0.83, 0); cen.add(inc);
             [-0.04, 0, 0.04].forEach(ix => { const st = add(new THREE.CylinderGeometry(0.008, 0.008, 0.3, 6), new THREE.MeshStandardMaterial({ color: 0xdc2626 }), ix, 0.14, 0, inc); st.castShadow = false; });
             tagAll(cen, { interactType: 'censer_miaozhu', label: '🔥 廟祝香爐（點擊點香、插香）' });
             const cw = hw(cxL, cz), fw = hw(cxL + 0.95, cz);
