@@ -6213,8 +6213,10 @@
                 // Back and side walls
                 tag(box(F.W, wallH, 0.3, brickMat, REAR.x, y + wallH / 2, F.back + 0.15));
                 [F.L + 0.15, F.R - 0.15].forEach(wx => tag(box(0.3, wallH, F.D, brickMat, wx, y + wallH / 2, REAR.z)));
-                // Front: columns, lattice in the outer bays, middle bays open
-                const bays = 6, bw = F.W / bays;
+                // Front: 7 bays so the middle of the hall is an opening (no column in front of the deity);
+                // the middle three bays are open (five on the 五恩主 floor), the outer ones carry lattice doors
+                const bays = 7, bw = F.W / bays;
+                const openBay = b => f === 1 ? (b >= 1 && b <= 5) : (b >= 2 && b <= 4);
                 for (let b = 0; b <= bays; b++) {
                     const cx = F.L + b * bw;
                     const col = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, wallH, 14), red);
@@ -6223,16 +6225,17 @@
                     if (f === 1) colliders.push({ x: cx, z: F.front + 0.2, r: 0.3 });
                 }
                 for (let b = 0; b < bays; b++) {
-                    if (b === 2 || b === 3) continue;
+                    if (openBay(b)) continue;
                     tag(box(bw - 0.4, wallH - 0.9, 0.1, latticeMat, F.L + (b + 0.5) * bw, y + 0.45 + (wallH - 0.9) / 2, F.front));
                     box(bw - 0.4, 0.8, 0.12, lacquer, F.L + (b + 0.5) * bw, y + 0.4, F.front);
                 }
                 box(F.W + 0.4, 0.45, 0.35, beamMat, REAR.x, y + wallH - 0.2, F.front + 0.2);
                 // Plaque
                 const name = f === REAR.floors ? '三 清 殿' : (REAR_DEITIES[f] ? REAR_DEITIES[f].hall : '後 殿');
-                const plaque = new THREE.Mesh(new THREE.BoxGeometry(f === 1 ? 3.0 : 2.2, f === 1 ? 0.9 : 0.65, 0.1),
-                    new THREE.MeshStandardMaterial({ map: createSignboardTexture(name, 420, 130, '#2a0806', '#facc15', '#fef08a', false, 80), roughness: 0.35 }));
-                plaque.position.set(REAR.x, y + wallH - 0.95, F.front + 0.45);
+                // hung high against the lintel so it doesn't hide the statue from the courtyard
+                const plaque = new THREE.Mesh(new THREE.BoxGeometry(f === 1 ? 3.4 : 2.6, f === 1 ? 0.7 : 0.55, 0.1),
+                    new THREE.MeshStandardMaterial({ map: createSignboardTexture(name, 480, 110, '#2a0806', '#facc15', '#fef08a', false, 72), roughness: 0.35 }));
+                plaque.position.set(REAR.x, y + wallH - (f === 1 ? 0.3 : 0.25), F.front + 0.45);
                 g.add(plaque);
                 // Gallery railing (front and both sides; the right side opens onto the bridge)
                 if (f > 1) {
@@ -13096,6 +13099,18 @@
                 // Minor name tags (長椅、淨手台…) only appear when the camera is near
                 if (item.maxDist && _labelVec.distanceTo(camera.position) > item.maxDist) { item.el.style.display = 'none'; return; }
                 if (item.minDist && _labelVec.distanceTo(camera.position) < item.minDist) { item.el.style.display = 'none'; return; }
+                // 後殿：名字標籤只顯示你所在（或正在看的）那一層，不會穿過樓板疊到別層
+                if (item.maxDist) {
+                    if (item.rearFloor === undefined) {
+                        const inRear = Math.abs(_labelVec.x - REAR.x) < 15 && Math.abs(_labelVec.z - REAR.z) < 9 && _labelVec.y > REAR.base - 0.5;
+                        item.rearFloor = inRear ? Math.floor((_labelVec.y - REAR.base + 0.5) / REAR.H) + 1 : 0;
+                    }
+                    if (item.rearFloor) {
+                        const t = camControl.target;
+                        const viewFloor = Math.max(1, Math.min(REAR.floors, Math.floor((t.y - REAR.base + 1.5) / REAR.H) + 1));
+                        if (item.rearFloor !== viewFloor) { item.el.style.display = 'none'; return; }
+                    }
+                }
                 _labelVec.y += item.heightOffset;
                 _labelVec.project(camera);
                 if (_labelVec.z > 1) { item.el.style.display = 'none'; return; }
