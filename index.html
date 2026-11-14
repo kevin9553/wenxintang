@@ -172,7 +172,7 @@
             <button onclick="moveCameraPreset('fortune')" id="camBtn-fortune" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🔮 算命館</button>
             <button onclick="moveCameraPreset('xiaoren')" id="camBtn-xiaoren" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">👡 打小人</button>
             <button onclick="moveCameraPreset('fireworks')" id="camBtn-fireworks" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🎆 煙火區</button>
-            <button onclick="moveCameraPreset('guandi')" id="camBtn-guandi" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">⚔️ 關帝</button>
+            <button onclick="moveCameraPreset('guandi')" id="camBtn-guandi" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">⚔️ 五恩主</button>
             <button onclick="moveCameraPreset('tianshi')" id="camBtn-tianshi" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🗡️ 張天師</button>
             <button onclick="moveCameraPreset('xuantian')" id="camBtn-xuantian" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🐢 玄天上帝</button>
             <button onclick="moveCameraPreset('yuhuang')" id="camBtn-yuhuang" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">👑 玉皇上帝</button>
@@ -3408,8 +3408,8 @@
                      toast: '🙏 已將清香插入斗姥爐，恭請斗姥元君消災解厄、延壽添福！' },
             mile:  { pos: { x: -32.5, z: 22 }, rotY: Math.PI / 2, plaque: '彌 勒 爐', name: '彌勒爐', deity: '彌勒佛',
                      toast: '🙏 已將清香插入彌勒爐，恭請彌勒佛笑納，煩惱全消、歡喜自在！' },
-            rear:  { pos: { x: -1.5, z: -14.6 }, rotY: 0, plaque: '後 殿 爐', name: '後殿爐', deity: '後殿諸神（關聖帝君・張天師・玄天上帝・玉皇上帝・三清道祖）',
-                     toast: '🙏 已將清香插入後殿大爐，恭請關聖帝君、張天師、玄天上帝、玉皇上帝與三清道祖鑒納！' }
+            rear:  { pos: { x: -1.5, z: -14.6 }, rotY: 0, plaque: '後 殿 爐', name: '後殿爐', deity: '後殿諸神（五恩主・張天師・玄天上帝・玉皇上帝・三清道祖）',
+                     toast: '🙏 已將清香插入後殿大爐，恭請五恩主、張天師、玄天上帝、玉皇上帝與三清道祖鑒納！' }
         };
         function buildExtraCensers(goldMat) {
             const S = 1.5;
@@ -5754,11 +5754,11 @@
         }
 
         // =====================================================================
-        // 後殿一至四樓神尊：武聖殿（關聖帝君）、天師殿（張天師）、北極殿（玄天上帝）、凌霄寶殿（玉皇上帝）
+        // 後殿一至四樓神尊：五恩主殿（關聖帝君・孚佑帝君・司命真君・王天君・岳武穆王）、天師殿（張天師）、北極殿（玄天上帝）、凌霄寶殿（玉皇上帝）
         // =====================================================================
         const REAR_DEITIES = {
-            1: { key: 'guandi', pre: 'GD', hall: '武 聖 殿', preset: 'guandi', name: '關聖帝君', interact: 'guandi',
-                 label: '⚔️ 關聖帝君（點擊祈求忠義護佑・事業順遂）', robe: ['#1f5a37', '#d4a017', '#fde68a'], skin: '#a8352a', mandorla: 0x14532d, offering: 0xc0262d,
+            1: { key: 'guandi', pre: 'GD', hall: '五 恩 主 殿', preset: 'guandi', name: '關聖帝君', interact: 'guandi',
+                 label: '⚔️ 關聖帝君（五恩主之首・點擊祈求忠義護佑・事業順遂）', robe: ['#1f5a37', '#d4a017', '#fde68a'], skin: '#a8352a', mandorla: 0x14532d, offering: 0xc0262d,
                  face: { browColor: '#120c08', browWidth: 10, browArch: 14, longBrow: true, eyes: 'downcast', mouth: 'small', blush: 0.1 } },
             2: { key: 'tianshi', pre: 'TS', hall: '天 師 殿', preset: 'tianshi', name: '張天師', interact: 'tianshi',
                  label: '🗡️ 張天師（正一祖天師・點擊祈求驅邪鎮宅）', robe: ['#1e2a4a', '#d4a017', '#b91c1c'], skin: '#edc9a8', mandorla: 0x1e3a5f, offering: 0xfacc15,
@@ -5771,7 +5771,7 @@
                  face: { browColor: '#1c140d', browWidth: 6, browArch: 6, eyes: 'downcast', mouth: 'small', blush: 0.25 } }
         };
         const REAR_DEITY_TOASTS = {
-            guandi: '⚔️ 關聖帝君：忠義千秋，夜讀《春秋》。祈求事業順遂、貴人相助、正氣護身。',
+            guandi: '⚔️ 關聖帝君（五恩主之首）：忠義千秋，夜讀《春秋》。祈求事業順遂、貴人相助、正氣護身。',
             tianshi: '🗡️ 張天師：正一道祖天師，手持七星寶劍、天師印，坐騎黑虎。祈求驅邪鎮宅、平安順利。',
             xuantian: '🐢 玄天上帝：北極真武大帝，披髮跣足、腳踏龜蛇，手持七星劍。祈求消災解厄、身體健康。',
             yuhuang: '👑 玉皇上帝（天公）：統御三界萬神，頭戴冕旒、手執玉笏。祈求天官賜福、闔家平安。'
@@ -5838,6 +5838,93 @@
             parent.add(flag, pole, tip);
         }
 
+        // 五恩主殿：關聖帝君居中；龍邊孚佑帝君（呂洞賓）、虎邊司命真君（張單・灶君）；外側龍邊王天君（豁落靈官）、虎邊岳武穆王（岳飛）
+        // 四尊各有專屬雕像模型：呂洞賓（純陽巾・背劍・拂塵）、司命真君（通天冠・司命牌）、王天君（火焰盔・金鞭・三目）、岳飛（帥盔紅纓・銀甲・瀝泉槍）
+        const ENZHU = [
+            { key: 'fuyou', glb: 'lvdongbin', pre: 'LD', x: 2.85, name: '孚佑帝君', mandorla: 0x1e3a5f, offering: 0xfacc15,
+              label: '🗡️ 孚佑帝君・呂洞賓（純陽祖師・點擊祈求智慧開運）', robe: ['#d6dee8', '#c9a227', '#2f5f8f'], skin: '#f0d2b6',
+              face: { browColor: '#1c140d', browWidth: 6, browArch: 12, longBrow: true, eyes: 'downcast', mouth: 'small', blush: 0.22 },
+              toast: '🗡️ 孚佑帝君（呂洞賓・純陽祖師）：背負純陽寶劍、手持拂塵，度化眾生。祈求智慧開通、考運亨通、身心清明。' },
+            { key: 'siming', glb: 'siming', pre: 'SM', x: -2.85, name: '司命真君', mandorla: 0x7c2d12, offering: 0xf28c28,
+              label: '🔥 司命真君・張單（灶君・點擊祈求家宅平安）', robe: ['#c99a16', '#fde68a', '#9b1c1c'], skin: '#ecc8a6',
+              face: { browColor: '#1c140d', browWidth: 6, browArch: 8, eyes: 'open', eyeW: 18, eyeH: 7, mouth: 'smile', blush: 0.3 },
+              toast: '🔥 司命真君（灶君張單）：司掌人間善惡、一家禍福，每年上天奏報。祈求家宅平安、三餐溫飽、闔家和樂。' },
+            { key: 'wangtianjun', glb: 'wangtianjun', pre: 'WT', x: 5.6, name: '王天君', mandorla: 0x7f1d1d, offering: 0xc0262d,
+              label: '👁️ 豁落靈官・王天君（三眼護法・點擊祈求驅邪除煞）', robe: ['#8f1d1d', '#d4a017', '#1f2937'], skin: '#b8392b',
+              face: Object.assign({}, ZHAO_FACE, { browColor: '#0a0806', iris: '#0a0806', thirdEye: true }),
+              toast: '👁️ 豁落靈官王天君：赤面三目、手執金鞭，為道教護法靈官，糾察善惡。祈求驅邪除煞、出入平安。' },
+            { key: 'yuefei', glb: 'yuefei', pre: 'YF', x: -5.6, name: '岳武穆王', mandorla: 0x7f1d1d, offering: 0xfacc15,
+              label: '🛡️ 精忠岳武穆王・岳飛（點擊祈求精忠正氣）', robe: ['#7f1d1d', '#d4a017', '#fde68a'], skin: '#efcfb0',
+              face: { browColor: '#120c08', browWidth: 9, browArch: 12, eyes: 'open', eyeW: 18, eyeH: 7, iris: '#120c08', mouth: 'small', blush: 0.2 },
+              toast: '🛡️ 精忠岳武穆王（岳飛）：精忠報國、正氣凜然。祈求正直護身、事業有成、逢凶化吉。' }
+        ];
+        const ENZHU_TOASTS = {};
+        ENZHU.forEach(e => { ENZHU_TOASTS['enzhu_' + e.key] = e.toast; });
+
+        function buildEnzhuCompanions(g, F, goldMat, lacquer, shrineZ, az) {
+            const y = F.y, S = 0.78, PED = 0.32, SEAT = 0.42, PH = 0.78;
+            const box = (w, h, dd, mat, px, py, pz) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, dd), mat); m.position.set(px, py, pz); g.add(m); return m; };
+            // two lower side platforms flanking 關聖帝君's shrine, each carrying two 恩主
+            [-1, 1].forEach(sx => {
+                box(5.2, PH, 1.6, lacquer, REAR.x + sx * 4.6, y + PH / 2, shrineZ);
+                box(5.3, 0.06, 1.7, goldMat, REAR.x + sx * 4.6, y + PH + 0.02, shrineZ);
+                // side altar in front, with fruit and candles
+                const alt = box(5.0, 0.8, 0.6, new THREE.MeshStandardMaterial({ color: 0x5c240e, roughness: 0.45 }), REAR.x + sx * 4.6, y + 0.4, az);
+                alt.userData = { interactType: 'guandi', label: '🙏 五恩主供桌' };
+                clickableMeshes.push(alt);
+                box(5.1, 0.05, 0.66, goldMat, REAR.x + sx * 4.6, y + 0.825, az);
+                for (let x = 2.5; x <= 6.9; x += 0.9) colliders.push({ x: REAR.x + sx * x, z: az, r: 0.45 });
+                for (let x = 2.4; x <= 6.9; x += 0.9) colliders.push({ x: REAR.x + sx * x, z: shrineZ, r: 0.9 });
+            });
+            ENZHU.forEach(e => {
+                const shrine = new THREE.Group();
+                shrine.position.set(REAR.x + e.x, y + PH + 0.05, shrineZ);
+                shrine.scale.setScalar(S);
+                g.add(shrine);
+                shrine.add(buildDeityPedestal(1.9, 1.3, goldMat, lacquer));
+                const plate = buildFlameBackplate(1.0, 2.5, SEAT + 0.9 + 0.23, goldMat, e.mandorla);
+                plate.position.set(0, PED, -0.58);
+                const throne = buildDeityThrone(1.15, 1.05, SEAT, goldMat, lacquer);
+                throne.position.y = PED;
+                shrine.add(plate, throne);
+                const body = buildSeatedDeityBody(simpleDeityBody(e.pre, e.robe, e.skin, e.face)());
+                body.group.position.y = PED + SEAT;
+                shrine.add(body.group);
+                const interact = { interactType: 'enzhu_' + e.key, label: e.label };
+                body.group.traverse(o => { if (o.isMesh) { o.userData = { ...interact }; clickableMeshes.push(o); } });
+                const textures = Object.assign({
+                    [e.pre + '_Face']: () => createStatueFaceTexture(Object.assign({ skin: e.skin }, e.face)),
+                    [e.pre + '_Robe']: () => { const t = createBrocadeTexture(...e.robe); t.repeat.set(4, 2); return t; }
+                }, e.extra || {});
+                upgradeStatuesFromGLB([{ key: e.glb, container: shrine, figure: body.group, offsetY: PED + SEAT, interact, textures }]);
+                const anchor = new THREE.Object3D();
+                anchor.position.set(REAR.x + e.x, y + PH + 2.75, shrineZ);
+                templeGroup.add(anchor);
+                registerMinorLabel(anchor, 0, e.name, () => moveCameraPreset('guandi'));
+                // a small censer, candles and fruit for each 恩主 on the side altars
+                const cz = az, top = y + 0.85;
+                const censer = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.1, 0.16, 16), propMats().bronze);
+                censer.position.set(REAR.x + e.x, top + 0.08, cz);
+                g.add(censer);
+                [-0.03, 0.03].forEach(ix => {
+                    const st = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.28, 6), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
+                    st.position.set(REAR.x + e.x + ix, top + 0.28, cz);
+                    g.add(st);
+                });
+                const pl = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.11, 0.04, 16), goldMat);
+                pl.position.set(REAR.x + e.x + 0.55, top + 0.02, cz);
+                g.add(pl);
+                for (let i = 0; i < 3; i++) {
+                    const fr = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 10), new THREE.MeshStandardMaterial({ color: e.offering, roughness: 0.45 }));
+                    fr.position.set(REAR.x + e.x + 0.55 + (i - 1) * 0.07, top + 0.08 + (i === 1 ? 0.05 : 0), cz);
+                    g.add(fr);
+                }
+                buildCandleStand(g, REAR.x + e.x - 0.55, top, cz, 0.8, goldMat);
+            });
+            addNightLight(REAR.x - 4.6, y + 2.6, F.back + 3.2, 0xffe0b0, 0.9, 7, false, 0.6);
+            addNightLight(REAR.x + 4.6, y + 2.6, F.back + 3.2, 0xffe0b0, 0.9, 7, false, 0.6);
+        }
+
         function buildRearShrine(g, F, d, goldMat, lacquer) {
             const y = F.y, back = F.back, S = 0.9, PED = 0.32, SEAT = 0.42;
             const shrineZ = back + 1.5;
@@ -5894,7 +5981,7 @@
                 }
             });
             // deity-specific companions
-            if (d.key === 'guandi') buildGuandao(g, REAR.x + 2.6, y, shrineZ + 0.2, goldMat);
+            if (d.key === 'guandi') { buildGuandao(g, REAR.x + 8.3, y, shrineZ + 0.4, goldMat); buildEnzhuCompanions(g, F, goldMat, lacquer, shrineZ, az); }
             if (d.key === 'tianshi') {
                 buildBlackTiger(g, REAR.x - 1.45, y + 0.95, shrineZ + 0.5, 0.35, { interact: { interactType: 'tianshi', label: '🐯 天師座騎黑虎' } });
                 blackTigers[blackTigers.length - 1].g.scale.setScalar(0.65);
@@ -6020,7 +6107,7 @@
             const anchor = new THREE.Object3D();
             anchor.position.set(REAR.x, F5.y + REAR.H + 3.6, REAR.z);
             templeGroup.add(anchor);
-            register3DLabel(anchor, 0, '🏯 後殿五層樓（武聖・天師・北極・凌霄・三清）', '#fbbf24', () => moveCameraPreset('rearhall'));
+            register3DLabel(anchor, 0, '🏯 後殿五層樓（五恩主・天師・北極・凌霄・三清）', '#fbbf24', () => moveCameraPreset('rearhall'));
             tracked3DLabels[tracked3DLabels.length - 1].minDist = 40;
         }
 
@@ -10784,6 +10871,18 @@
                 x.beginPath(); x.arc(cx, ey - 50, 6, 0, Math.PI * 2); x.fill();
                 x.strokeStyle = '#b7791f'; x.lineWidth = 2; x.stroke();
             }
+            if (o.thirdEye) {
+                // vertical third eye in the middle of the forehead (王靈官)
+                const ty = ey - 44;
+                x.fillStyle = '#f8f1e3';
+                x.beginPath(); x.ellipse(cx, ty, 7, 16, 0, 0, Math.PI * 2); x.fill();
+                x.fillStyle = o.iris || '#120a06';
+                x.beginPath(); x.ellipse(cx, ty, 5, 8, 0, 0, Math.PI * 2); x.fill();
+                x.fillStyle = '#ffffff';
+                x.beginPath(); x.arc(cx - 1.5, ty - 3, 1.8, 0, Math.PI * 2); x.fill();
+                x.strokeStyle = '#120a06'; x.lineWidth = 2.6;
+                x.beginPath(); x.ellipse(cx, ty, 7, 16, 0, 0, Math.PI * 2); x.stroke();
+            }
             if (o.redDot) {
                 soft(cx, ey - 56, 12, '220,38,38', 0.5);
                 x.fillStyle = '#d62828';
@@ -12765,6 +12864,7 @@
             presets.shitou = { r: 6.5, theta: Math.PI / 2 + 0.25, phi: 1.3, tx: SHITOU_TREE.x + 3.4, ty: 1.2, tz: SHITOU_TREE.z };
             presets.puppet = { r: 9, theta: Math.PI + 0.1, phi: 1.4, tx: PUPPET_STAGE.x, ty: 2.0, tz: PUPPET_STAGE.z - 1 };
             Object.values(REAR_DEITIES).forEach(d => { const F = rearFloor(+Object.keys(REAR_DEITIES).find(k => REAR_DEITIES[k] === d)); presets[d.preset] = { r: 5.4, theta: 0, phi: 1.45, tx: REAR.x, ty: F.y + 2.2, tz: F.back + 1.5 }; });
+            presets.guandi = { r: 9.5, theta: 0, phi: 1.46, tx: REAR.x, ty: rearFloor(1).y + 1.9, tz: rearFloor(1).back + 1.5, fov: 70 };
             presets.sanqing = { r: 7.2, theta: 0, phi: 1.42, tx: REAR.x, ty: rearFloor(REAR.floors).y + 2.0, tz: rearFloor(REAR.floors).back + 1.2 };
             presets.xiaoren = { r: 7.5, theta: XIAOREN_POS.rot + 0.35, phi: 1.2, tx: XIAOREN_POS.x, ty: 1.0, tz: XIAOREN_POS.z };
             presets.fireworks = { r: 33.4, theta: -1.297, phi: 1.98, tx: FIREWORK_POS.x, ty: 24, tz: FIREWORK_POS.z - 2 };
@@ -12984,7 +13084,8 @@
                 }[type]);
             }
             else if (REAR_DEITY_TOASTS[type]) { playTempleBellSound(523); showToast(REAR_DEITY_TOASTS[type]); }
-            else if (type === 'rearhall') showToast('🏯 後殿五層樓：一樓武聖殿（關聖帝君）、二樓天師殿（張天師）、三樓北極殿（玄天上帝）、四樓凌霄寶殿（玉皇上帝）、五樓三清殿。點右側樓梯可上樓參拜。');
+            else if (ENZHU_TOASTS[type]) { playTempleBellSound(523); showToast(ENZHU_TOASTS[type]); }
+            else if (type === 'rearhall') showToast('🏯 後殿五層樓：一樓五恩主殿（關聖帝君等五恩主）、二樓天師殿（張天師）、三樓北極殿（玄天上帝）、四樓凌霄寶殿（玉皇上帝）、五樓三清殿。點右側樓梯可上樓參拜。');
             else if (type === 'caishen' || type === 'caishen_wen' || type === 'caishen_wu') { playTempleBellSound(784); showToast(type === 'caishen_wen' ? '📜 文財神比干：公正無私，佑你正財穩進、事業亨通。' : (type === 'caishen_wu' ? '🐯 武財神趙公明：黑虎玄壇，佑你偏財廣進、招財納福。' : '💰 恭請文武財神：財源廣進、招財進寶！')); }
             else if (type === 'dizang') { playTempleBellSound(440); showToast('🪷 南無大願地藏王菩薩：「地獄不空，誓不成佛；眾生度盡，方證菩提。」祈求超薦先亡、消災延壽。'); }
             else if (type === 'baiwu') { playTempleBellSound(523); showToast('⚪ 白無常・謝必安（七爺）：帽上「一見大吉」，見之者得好運。主掌勾攝、明察善惡。'); }
