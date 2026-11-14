@@ -811,6 +811,26 @@
             osc.stop(now + 1.55);
         }
 
+        // 銅缽（頌缽）：a few slightly detuned partials ringing out slowly
+        function playBronzeBowlSound() {
+            const ctx = ensureAudioCtx();
+            if (!ctx) return;
+            const now = ctx.currentTime;
+            [[196, 0.13, 7], [199.5, 0.07, 6], [531, 0.06, 4.5], [1012, 0.035, 3], [1630, 0.015, 2]].forEach(([f, g0, len]) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(f, now);
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.exponentialRampToValueAtTime(g0, now + 0.012);
+                gain.gain.exponentialRampToValueAtTime(0.0005, now + len);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + len + 0.05);
+            });
+        }
+
         function playWoodenFishSound() {
             const ctx = ensureAudioCtx();
             if (!ctx) return;
@@ -1160,6 +1180,77 @@
                 }
             }
             return new THREE.CanvasTexture(cvs);
+        }
+
+        // =====================================================================
+        // 燭台：金色旋柱燭台（底座・燭柄・承盤）＋紅燭（金箍、蠟淚、燭芯）＋會搖曳的發光燭火
+        // =====================================================================
+        const candleFlames = [];
+        const _candleGeo = {};
+        function candleGeos() {
+            if (_candleGeo.stand) return _candleGeo;
+            const V = pts => pts.map(([r, y]) => new THREE.Vector2(r, y));
+            _candleGeo.stand = new THREE.LatheGeometry(V([[0, 0], [0.11, 0], [0.118, 0.018], [0.095, 0.036], [0.045, 0.062], [0.03, 0.1], [0.052, 0.128], [0.052, 0.142], [0.028, 0.168], [0.024, 0.228],
+                [0.042, 0.244], [0.108, 0.256], [0.116, 0.272], [0.1, 0.28], [0.045, 0.282], [0, 0.284]]), 28);
+            _candleGeo.candle = new THREE.LatheGeometry(V([[0, 0], [0.042, 0], [0.042, 0.286], [0.039, 0.298], [0.026, 0.3], [0.018, 0.293], [0, 0.292]]), 24);
+            _candleGeo.band = new THREE.CylinderGeometry(0.0435, 0.0435, 0.024, 24, 1, true);
+            _candleGeo.drip = new THREE.SphereGeometry(0.011, 8, 6);
+            _candleGeo.wick = new THREE.CylinderGeometry(0.0035, 0.004, 0.03, 6);
+            _candleGeo.flame = new THREE.LatheGeometry(V([[0, 0], [0.012, 0.004], [0.02, 0.018], [0.022, 0.032], [0.017, 0.052], [0.009, 0.072], [0, 0.088]]), 16);
+            _candleGeo.redMat = new THREE.MeshStandardMaterial({ color: 0xc81e1e, roughness: 0.42, emissive: 0x3a0505, emissiveIntensity: 0.4 });
+            _candleGeo.wickMat = new THREE.MeshStandardMaterial({ color: 0x1c1410, roughness: 0.9 });
+            _candleGeo.outerMat = new THREE.MeshBasicMaterial({ color: 0xff9a2e, transparent: true, opacity: 0.88, depthWrite: false, toneMapped: false });
+            _candleGeo.coreMat = new THREE.MeshBasicMaterial({ color: 0xfff4c8, toneMapped: false });
+            return _candleGeo;
+        }
+        // x, y, z in the parent's own frame; y is the top of the table it stands on
+        function buildCandleStand(parent, x, y, z, s, goldMat) {
+            const G = candleGeos();
+            const g = new THREE.Group();
+            g.position.set(x, y, z);
+            g.scale.setScalar(s || 1);
+            const stand = new THREE.Mesh(G.stand, goldMat);
+            stand.castShadow = true;
+            const candle = new THREE.Mesh(G.candle, G.redMat);
+            candle.position.y = 0.282;
+            const band = new THREE.Mesh(G.band, goldMat);
+            band.position.y = 0.282 + 0.22;
+            g.add(stand, candle, band);
+            // a few wax drips running down from the rim
+            [[0.4, 0.27, 1.6], [2.3, 0.255, 2.4], [4.4, 0.262, 1.9]].forEach(([a, dy, len]) => {
+                const d = new THREE.Mesh(G.drip, G.redMat);
+                d.scale.set(1, len, 0.8);
+                d.position.set(Math.cos(a) * 0.041, 0.282 + dy, Math.sin(a) * 0.041);
+                g.add(d);
+            });
+            const wick = new THREE.Mesh(G.wick, G.wickMat);
+            wick.position.y = 0.282 + 0.3 + 0.006;
+            g.add(wick);
+            // flame: soft orange outer, bright core, and a small glow sprite; it sways in the render loop
+            const fl = new THREE.Group();
+            fl.position.y = 0.282 + 0.298;
+            const outer = new THREE.Mesh(G.flame, G.outerMat);
+            const core = new THREE.Mesh(G.flame, G.coreMat);
+            core.scale.set(0.5, 0.62, 0.5);
+            core.position.y = 0.004;
+            const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: getPuffTexture(), color: 0xffa040, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+            glow.scale.set(0.24, 0.3, 1);
+            glow.position.y = 0.04;
+            fl.add(outer, core, glow);
+            g.add(fl);
+            candleFlames.push({ fl, glow, phase: Math.random() * 10 });
+            parent.add(g);
+            return g;
+        }
+        function updateCandleFlames(t) {
+            const k = t * 0.001;
+            for (let i = 0; i < candleFlames.length; i++) {
+                const c = candleFlames[i], p = c.phase;
+                const f = Math.sin(k * 11 + p) * 0.06 + Math.sin(k * 23.7 + p * 2.1) * 0.04;
+                c.fl.scale.set(1 - f * 0.5, 1 + f, 1 - f * 0.5);
+                c.fl.rotation.z = Math.sin(k * 3.1 + p) * 0.07;
+                c.glow.material.opacity = 0.5 + f * 1.5;
+            }
         }
 
         function getPuffTexture() {
@@ -1885,6 +1976,7 @@
                 g.add(st);
             });
             addSmokeEmitter(cx, T + 0.6, -1.7 + dz, 5, 0.35, 0.9, 0xf1f5f9, 0.1);
+            [-1, 1].forEach(s => buildCandleStand(g, cx + s * 4.3, T, -1.7, 1.25, goldMat));
             [-1, 1].forEach(s => {
                 // Lotus lamps (蓮花燈) and vases of lotus on the altar
                 const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), new THREE.MeshStandardMaterial({ color: 0xffd1dc, emissive: 0xff8fab, emissiveIntensity: 0.5 }));
@@ -2613,10 +2705,378 @@
         // =====================================================================
         // 大雄寶殿（平地新建・重簷）：位於廟區右後方，殿門朝前面向廟埕；安奉三寶佛
         // =====================================================================
-        const DAXIONG = { x: 40, z: -24, W: 18, D: 12, wallH: 5.2 };
+        const DAXIONG = { x: 40, z: -24, W: 18, D: 12, wallH: 5.2, kneelers: [], lotus: [], muyu: null, bowl: null };
         function isOnDaxiongFloor(pos) {
             return Math.abs(pos.x - DAXIONG.x) < DAXIONG.W / 2 + 0.4 && Math.abs(pos.z - DAXIONG.z) < DAXIONG.D / 2 + 0.4;
         }
+
+        // 大雄寶殿內：拜墊（跪拜）、蒲團（打坐）、木魚與銅缽（可敲）
+        function buildDaxiongWorship(hg, goldMat) {
+            const { x: X, z: Z } = DAXIONG, F = SIDE_HALL_FLOOR;
+            const wood = new THREE.MeshStandardMaterial({ color: 0x4a1a10, roughness: 0.55 });
+            const velvet = new THREE.MeshStandardMaterial({ color: 0xa3122a, roughness: 0.85 });
+            const saffron = new THREE.MeshStandardMaterial({ color: 0xa8742e, roughness: 0.92 });
+            const tagAll = (grp, ud) => grp.traverse(m => { if (m.isMesh) { m.userData = { ...ud }; clickableMeshes.push(m); m.castShadow = true; } });
+            // long red carpet down the middle
+            const carpet = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.02, 3.4), new THREE.MeshStandardMaterial({ color: 0x9f1239, roughness: 0.9 }));
+            carpet.position.set(0, F + 0.01, 0.95);
+            hg.add(carpet);
+            // two rows of five 拜墊
+            [0.3, 1.5].forEach(kz => [-2.4, -1.2, 0, 1.2, 2.4].forEach(kx => {
+                const k = new THREE.Group();
+                k.position.set(kx, F + 0.02, kz);
+                k.rotation.x = 0.06;
+                hg.add(k);
+                const base = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.08, 0.6), wood);
+                base.position.y = 0.04;
+                const pad = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.1, 0.54), velvet);
+                pad.position.y = 0.13;
+                const puff = new THREE.Mesh(new THREE.SphereGeometry(0.3, 18, 10), velvet);
+                puff.scale.set(1.05, 0.13, 0.86);
+                puff.position.y = 0.18;
+                const pipe = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.02, 0.56), goldMat);
+                pipe.position.y = 0.085;
+                k.add(base, pad, puff, pipe);
+                const idx = DAXIONG.kneelers.length;
+                tagAll(k, { interactType: 'dx_kneeler', label: '🙇 拜墊（點擊跪拜三寶佛）', idx });
+                DAXIONG.kneelers.push({ x: X + kx, z: Z + kz, top: F + 0.2 });
+            }));
+            // 蒲團 for sitting meditation, two by two on each side
+            [-1, 1].forEach(sx => [[4.6, 0.4], [5.8, 0.4], [4.6, 1.7], [5.8, 1.7]].forEach(([px, pz]) => {
+                const c = new THREE.Group();
+                c.position.set(sx * px, F + 0.02, pz);
+                hg.add(c);
+                // round woven-straw 蒲團: a plump squashed bun with darker woven rings, on a small mat
+                const mat = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.025, 28), new THREE.MeshStandardMaterial({ color: 0x7f1d1d, roughness: 0.9 }));
+                const cushion = new THREE.Mesh(new THREE.SphereGeometry(0.34, 28, 16), saffron);
+                cushion.scale.set(1, 0.34, 1);
+                cushion.position.y = 0.11;
+                const top = new THREE.Mesh(new THREE.CircleGeometry(0.16, 24), new THREE.MeshStandardMaterial({ color: 0x7c4a1e, roughness: 0.95 }));
+                top.rotation.x = -Math.PI / 2;
+                top.position.y = 0.226;
+                [[0.3, 0.13], [0.22, 0.2], [0.33, 0.07]].forEach(([r, y]) => {
+                    const ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.012, 6, 36), new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.95 }));
+                    ring.rotation.x = Math.PI / 2;
+                    ring.position.y = y;
+                    c.add(ring);
+                });
+                c.add(mat, cushion, top);
+                const idx = DAXIONG.lotus.length;
+                tagAll(c, { interactType: 'dx_lotus', label: '🧘 蒲團（點擊盤腿打坐・靜心觀想）', idx });
+                DAXIONG.lotus.push({ x: X + sx * px, z: Z + pz, top: F + 0.2 });
+            }));
+
+            // 木魚（左）與銅缽（右）：各置於掛桌裙的雕花小供桌上
+            const muyuTop = buildRitualStand(hg, -5.7, F, -1.3, '法 輪 常 轉', goldMat);
+            DAXIONG.muyu = buildGrandMuyu(hg, -5.7, muyuTop, -1.3, goldMat);
+            const bowlTop = buildRitualStand(hg, 5.7, F, -1.3, '法 音 宣 流', goldMat);
+            DAXIONG.bowl = buildBronzeBowl(hg, 5.7, bowlTop, -1.3, goldMat);
+            tagAll(DAXIONG.muyu.g, { interactType: 'muyu', label: '🐟 木魚（點擊敲木魚・念佛）' });
+            tagAll(DAXIONG.bowl.g, { interactType: 'tongbo', label: '🔔 銅缽（點擊敲缽・餘音靜心）' });
+            colliders.push({ x: X - 5.7, z: Z - 1.3, r: 0.6 }, { x: X + 5.7, z: Z - 1.3, r: 0.6 });
+        }
+        // small carved offering stand with an embroidered table skirt; returns the height of its top
+        function buildRitualStand(parent, x, y, z, skirtText, goldMat) {
+            const g = new THREE.Group();
+            g.position.set(x, y, z);
+            parent.add(g);
+            const wood = new THREE.MeshStandardMaterial({ color: 0x3a120b, roughness: 0.45 });
+            const H = 0.62, W = 1.0, D = 0.86;
+            const top = new THREE.Mesh(new THREE.BoxGeometry(W, 0.05, D), wood);
+            top.position.y = H - 0.025;
+            const edge = new THREE.Mesh(new THREE.BoxGeometry(W + 0.04, 0.025, D + 0.04), goldMat);
+            edge.position.y = H - 0.06;
+            g.add(top, edge);
+            [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, H - 0.07, 10), wood);
+                leg.position.set(sx * (W / 2 - 0.06), (H - 0.07) / 2, sz * (D / 2 - 0.06));
+                const foot = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), goldMat);
+                foot.position.set(sx * (W / 2 - 0.06), 0.03, sz * (D / 2 - 0.06));
+                g.add(leg, foot);
+            });
+            // 桌裙: red brocade with a gold border and embroidered words in front, plain red at the sides
+            const skirtTex = createSignboardTexture(skirtText, 512, 220, '#8f1414', '#e8b923', '#fcd34d', false, 70);
+            const skirt = new THREE.Mesh(new THREE.BoxGeometry(W - 0.02, 0.4, 0.015), new THREE.MeshStandardMaterial({ map: skirtTex, roughness: 0.75 }));
+            skirt.position.set(0, H - 0.29, D / 2 + 0.012);
+            g.add(skirt);
+            const red = new THREE.MeshStandardMaterial({ color: 0x8f1414, roughness: 0.8 });
+            [-1, 1].forEach(sx => {
+                const side = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.4, D - 0.02), red);
+                side.position.set(sx * (W / 2 + 0.008), H - 0.29, 0);
+                g.add(side);
+            });
+            // gold tassel fringe along the skirt hem
+            for (let k = -6; k <= 6; k++) {
+                const t = new THREE.Mesh(new THREE.ConeGeometry(0.014, 0.06, 6), goldMat);
+                t.rotation.x = Math.PI;
+                t.position.set(k * 0.075, H - 0.52, D / 2 + 0.016);
+                g.add(t);
+            }
+            return y + H;
+        }
+
+        // deep red lacquer with a faint carved fish-scale pattern (mostly felt in the relief, barely in colour)
+        function createFishScaleTexture() {
+            if (createFishScaleTexture.tex) return createFishScaleTexture.tex;
+            const c = document.createElement('canvas');
+            c.width = 1024; c.height = 512;
+            const x = c.getContext('2d');
+            const gr = x.createLinearGradient(0, 0, 0, 512);
+            gr.addColorStop(0, '#4a0f08'); gr.addColorStop(0.5, '#6e180c'); gr.addColorStop(1, '#5a1209');
+            x.fillStyle = gr; x.fillRect(0, 0, 1024, 512);
+            // fine wood grain under the lacquer
+            for (let i = 0; i < 70; i++) {
+                x.strokeStyle = `rgba(30,6,2,${0.02 + Math.random() * 0.03})`; x.lineWidth = 1 + Math.random() * 1.5;
+                const yy = Math.random() * 512;
+                x.beginPath(); x.moveTo(0, yy); x.bezierCurveTo(300, yy + 8, 700, yy - 8, 1024, yy); x.stroke();
+            }
+            // scales only on the upper body (canvas top = top of the lathe profile)
+            const R = 34;
+            for (let row = 0; row < 6; row++) {
+                const yy = 60 + row * R * 0.6;
+                for (let col = -1; col * R < 1024 + R; col++) {
+                    const xx = col * R + (row % 2 ? R / 2 : 0);
+                    x.strokeStyle = 'rgba(15,3,1,0.45)'; x.lineWidth = 3;
+                    x.beginPath(); x.arc(xx, yy, R * 0.52, 0.12 * Math.PI, 0.88 * Math.PI); x.stroke();
+                    x.strokeStyle = 'rgba(230,160,90,0.16)'; x.lineWidth = 1.5;
+                    x.beginPath(); x.arc(xx, yy + 2, R * 0.52, 0.15 * Math.PI, 0.85 * Math.PI); x.stroke();
+                }
+            }
+            const t = new THREE.CanvasTexture(c);
+            t.wrapS = THREE.RepeatWrapping;
+            t.anisotropy = 4;
+            return createFishScaleTexture.tex = t;
+        }
+
+        // A temple 木魚: a squat, rounded body in glossy deep-red lacquer; a mouth slot round the front ending in two round
+        // sound holes; small carved eyes; a low twin-fish ridge with a gilt pearl on top; on a velvet cushion with tassels.
+        function buildGrandMuyu(parent, x, y, z, goldMat) {
+            const g = new THREE.Group();
+            g.position.set(x, y, z);
+            parent.add(g);
+            const env = typeof getStatueEnvMap === 'function' ? getStatueEnvMap() : null;
+            const gold = goldMat.clone();
+            if (env) { gold.envMap = env; gold.envMapIntensity = 0.9; }
+            // velvet cushion (圓墊) with gold piping and four tassels
+            const velvet = new THREE.MeshStandardMaterial({ color: 0xc9a227, roughness: 0.85 });
+            const cush = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.38, 0.07, 40), velvet);
+            cush.position.y = 0.035;
+            const puff = new THREE.Mesh(new THREE.SphereGeometry(0.36, 40, 10, 0, Math.PI * 2, 0, Math.PI / 2), velvet);
+            puff.scale.y = 0.1;
+            puff.position.y = 0.07;
+            g.add(cush, puff);
+            const pipe = new THREE.Mesh(new THREE.TorusGeometry(0.37, 0.011, 6, 56), new THREE.MeshStandardMaterial({ color: 0x9b1c1c, roughness: 0.7 }));
+            pipe.rotation.x = Math.PI / 2;
+            pipe.position.y = 0.07;
+            g.add(pipe);
+            [0, 1, 2, 3].forEach(k => {
+                const a = Math.PI / 4 + k * Math.PI / 2;
+                const tas = new THREE.Mesh(new THREE.ConeGeometry(0.022, 0.1, 8), new THREE.MeshStandardMaterial({ color: 0x9b1c1c, roughness: 0.8 }));
+                tas.position.set(Math.cos(a) * 0.38, -0.01, Math.sin(a) * 0.38);
+                const bead = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 6), gold);
+                bead.position.set(Math.cos(a) * 0.38, 0.045, Math.sin(a) * 0.38);
+                g.add(tas, bead);
+            });
+            // body: a rounded lathe shape, wider just below the middle, gently flattened on top
+            const base = 0.075, H = 0.42;
+            const prof = [[0, 0], [0.16, 0.004], [0.26, 0.03], [0.33, 0.09], [0.358, 0.16], [0.356, 0.22], [0.33, 0.29], [0.27, 0.35], [0.18, 0.395], [0.08, 0.415], [0, H]];
+            const lac = new THREE.MeshPhysicalMaterial({ map: createFishScaleTexture(), bumpMap: createFishScaleTexture(), bumpScale: 0.01, roughness: 0.32, clearcoat: 0.85, clearcoatRoughness: 0.18 });
+            if (env) { lac.envMap = env; lac.envMapIntensity = 0.25; }
+            const body = new THREE.Mesh(new THREE.LatheGeometry(prof.map(([r, h]) => new THREE.Vector2(r, h)), 64), lac);
+            body.position.y = base;
+            body.scale.z = 0.94;
+            body.castShadow = true;
+            g.add(body);
+            const cy = base + 0.18;
+            // mouth slot round the front (a dark groove), ending in two round sound holes
+            const dark = new THREE.MeshStandardMaterial({ color: 0x0d0302, roughness: 0.95 });
+            const slotY = base + 0.15, slotR = 0.357, half = 0.36 * Math.PI;
+            const slot = new THREE.Mesh(new THREE.TorusGeometry(slotR, 0.016, 10, 56, half * 2), dark);
+            slot.rotation.set(Math.PI / 2, 0, Math.PI / 2 - half);
+            slot.scale.set(1, 0.94, 1);
+            slot.position.y = slotY;
+            g.add(slot);
+            [-1, 1].forEach(sx => {
+                const a = sx * half;
+                const px = Math.sin(a) * slotR, pz = Math.cos(a) * slotR * 0.94;
+                const hole = new THREE.Mesh(new THREE.SphereGeometry(0.035, 16, 12), dark);
+                hole.scale.set(1, 1, 0.35);
+                hole.position.set(px, slotY, pz);
+                hole.lookAt(px * 2, slotY, pz * 2);
+                const rim = new THREE.Mesh(new THREE.TorusGeometry(0.038, 0.006, 6, 24), gold);
+                rim.position.copy(hole.position);
+                rim.lookAt(px * 2, slotY, pz * 2);
+                g.add(hole, rim);
+                // a small carved eye above each end of the mouth
+                const ea = sx * 0.55, ey = base + 0.27;
+                const er = 0.318;
+                const eye = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.006, 6, 20), gold);
+                eye.position.set(Math.sin(ea) * er, ey, Math.cos(ea) * er * 0.94);
+                eye.lookAt(eye.position.x * 2, ey, eye.position.z * 2);
+                const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.014, 10, 8), dark);
+                pupil.position.copy(eye.position);
+                g.add(eye, pupil);
+            });
+            // a thin gilt line along the upper lip only
+            const lip = new THREE.Mesh(new THREE.TorusGeometry(slotR - 0.001, 0.005, 6, 56, half * 2), gold);
+            lip.rotation.copy(slot.rotation);
+            lip.scale.set(1, 0.94, 1);
+            lip.position.y = slotY + 0.026;
+            g.add(lip);
+            // low twin-fish ridge (handle) across the top, holding a small gilt pearl
+            const topY = base + H - 0.03;
+            const ridge = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.03, 12, 32, Math.PI), lac);
+            ridge.scale.set(1, 0.55, 0.8);
+            ridge.position.y = topY;
+            g.add(ridge);
+            const pearl = new THREE.Mesh(new THREE.SphereGeometry(0.03, 18, 14), gold);
+            pearl.position.y = topY + 0.055 + 0.026;
+            g.add(pearl);
+            [-1, 1].forEach(sx => {
+                const e = new THREE.Mesh(new THREE.SphereGeometry(0.009, 8, 6), gold);
+                e.position.set(sx * 0.085, topY + 0.04, 0.02);
+                g.add(e);
+            });
+            // mallet, its head wrapped in red cloth, resting on the stand in front (head is the group origin)
+            const mallet = new THREE.Group();
+            const wood = new THREE.MeshStandardMaterial({ color: 0x4a2412, roughness: 0.5 });
+            const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.018, 0.38, 10), wood);
+            handle.rotation.z = Math.PI / 2;
+            handle.position.x = 0.21;
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.045, 14, 12), new THREE.MeshStandardMaterial({ color: 0x8f1414, roughness: 0.9 }));
+            head.scale.set(1.25, 1, 1);
+            const tie = new THREE.Mesh(new THREE.TorusGeometry(0.026, 0.006, 6, 14), gold);
+            tie.rotation.y = Math.PI / 2;
+            tie.position.x = 0.055;
+            const cap = new THREE.Mesh(new THREE.SphereGeometry(0.02, 10, 8), gold);
+            cap.position.x = 0.4;
+            mallet.add(handle, head, tie, cap);
+            g.add(mallet);
+            const rest = { p: new THREE.Vector3(0.03, 0.045, 0.42), r: new THREE.Euler(0, -0.25, 0) };
+            const lift = { p: new THREE.Vector3(0.06, cy + 0.42, 0.42), r: new THREE.Euler(0, -0.35, 0.75) };
+            const hit = { p: new THREE.Vector3(0.03, base + 0.3, 0.36), r: new THREE.Euler(0, -0.35, 0.55) };
+            const put = st => { mallet.position.copy(st.p); mallet.rotation.copy(st.r); };
+            put(rest);
+            return { g, mallet, body, put, rest, lift, hit, cy };
+        }
+
+        // engraved bronze for the bowl: dark bands, a lotus-petal frieze under the rim, polished inside
+        function createBronzeBowlTexture() {
+            if (createBronzeBowlTexture.tex) return createBronzeBowlTexture.tex;
+            const c = document.createElement('canvas');
+            c.width = 1024; c.height = 512;
+            const x = c.getContext('2d');
+            // v runs along the lathe profile (v = 0 at the canvas bottom): outer base → outer wall → rim (~y 236) → inside
+            const gr = x.createLinearGradient(0, 0, 0, 512);
+            gr.addColorStop(0, '#7a5626'); gr.addColorStop(0.36, '#b98a3c'); gr.addColorStop(0.45, '#f3d27c'); gr.addColorStop(0.5, '#d9a94e');
+            gr.addColorStop(0.7, '#a8762f'); gr.addColorStop(1, '#5a3c1a');
+            x.fillStyle = gr; x.fillRect(0, 0, 1024, 512);
+            const band = (y, h, col) => { x.fillStyle = col; x.fillRect(0, y, 1024, h); };
+            band(262, 4, 'rgba(50,30,10,0.6)'); band(356, 4, 'rgba(50,30,10,0.6)'); band(410, 3, 'rgba(50,30,10,0.5)');
+            // lotus petals frieze on the upper outer wall, tips toward the rim
+            for (let i = 0; i < 24; i++) {
+                const cx = i * (1024 / 24) + 21;
+                x.strokeStyle = 'rgba(60,35,10,0.75)'; x.lineWidth = 3;
+                x.beginPath(); x.moveTo(cx - 16, 350); x.quadraticCurveTo(cx - 14, 300, cx, 284); x.quadraticCurveTo(cx + 14, 300, cx + 16, 350); x.stroke();
+                x.beginPath(); x.moveTo(cx, 292); x.lineTo(cx, 340); x.stroke();
+            }
+            // 卍 band below it
+            x.fillStyle = 'rgba(60,35,10,0.7)'; x.font = 'bold 30px serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+            for (let i = 0; i < 8; i++) x.fillText('卍', i * 128 + 64, 384);
+            const t = new THREE.CanvasTexture(c);
+            t.wrapS = THREE.RepeatWrapping;
+            t.anisotropy = 4;
+            return createBronzeBowlTexture.tex = t;
+        }
+
+        // 銅缽 (大磬): thick-walled engraved bronze bowl on a tasselled 磬墊; its striker lies on the stand, clear of the cushion
+        function buildBronzeBowl(parent, x, y, z, goldMat) {
+            const g = new THREE.Group();
+            g.position.set(x, y, z);
+            parent.add(g);
+            const env = typeof getStatueEnvMap === 'function' ? getStatueEnvMap() : null;
+            const gold = goldMat.clone();
+            if (env) { gold.envMap = env; gold.envMapIntensity = 0.9; }
+            const cushMat = new THREE.MeshStandardMaterial({ map: createBrocadeTexture('#a16207', '#fde68a', '#b91c1c'), roughness: 0.7 });
+            const cush = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.35, 0.13, 36), cushMat);
+            cush.position.y = 0.065;
+            const CT = 0.13;
+            g.add(cush);
+            [CT, 0.004].forEach(py => {
+                const pipe = new THREE.Mesh(new THREE.TorusGeometry(py > 0.05 ? 0.33 : 0.35, 0.012, 6, 48), gold);
+                pipe.rotation.x = Math.PI / 2;
+                pipe.position.y = py;
+                g.add(pipe);
+            });
+            [0, 1, 2, 3].forEach(k => {
+                const a = Math.PI / 4 + k * Math.PI / 2;
+                const tas = new THREE.Mesh(new THREE.ConeGeometry(0.028, 0.11, 8), new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.8 }));
+                tas.position.set(Math.cos(a) * 0.355, 0.0, Math.sin(a) * 0.355);
+                const bead = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), gold);
+                bead.position.set(Math.cos(a) * 0.35, 0.06, Math.sin(a) * 0.35);
+                g.add(tas, bead);
+            });
+            // the bowl sits ON the cushion (no overlap), thick wall drawn as one closed lathe profile
+            const prof = [[0, 0], [0.12, 0], [0.2, 0.025], [0.27, 0.08], [0.305, 0.16], [0.312, 0.23], [0.308, 0.262], [0.296, 0.27], [0.287, 0.255],
+                          [0.29, 0.2], [0.265, 0.12], [0.2, 0.06], [0.1, 0.035], [0, 0.03]];
+            const bronze = new THREE.MeshPhysicalMaterial({ map: createBronzeBowlTexture(), bumpMap: createBronzeBowlTexture(), bumpScale: 0.015, metalness: 0.88, roughness: 0.3, clearcoat: 0.3, clearcoatRoughness: 0.3 });
+            if (env) { bronze.envMap = env; bronze.envMapIntensity = 1.0; }
+            const bowl = new THREE.Mesh(new THREE.LatheGeometry(prof.map(([r, h]) => new THREE.Vector2(r, h)), 64), bronze);
+            bowl.position.y = CT + 0.002;
+            bowl.castShadow = true;
+            g.add(bowl);
+            const rim = new THREE.Mesh(new THREE.TorusGeometry(0.302, 0.008, 8, 64), gold);
+            rim.rotation.x = Math.PI / 2;
+            rim.position.y = CT + 0.002 + 0.268;
+            g.add(rim);
+            // striker: wooden rod with a red felt-wrapped end (felt end is the group origin), lying on the stand top
+            const striker = new THREE.Group();
+            const wood = new THREE.MeshStandardMaterial({ color: 0x4a2412, roughness: 0.5 });
+            const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.02, 0.36, 10), wood);
+            rod.rotation.z = Math.PI / 2;
+            rod.position.x = 0.2;
+            const felt = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.1, 14), new THREE.MeshStandardMaterial({ color: 0x8f1414, roughness: 0.95 }));
+            felt.rotation.z = Math.PI / 2;
+            felt.position.x = 0.03;
+            const capB = new THREE.Mesh(new THREE.SphereGeometry(0.02, 10, 8), gold);
+            capB.position.x = 0.38;
+            striker.add(rod, felt, capB);
+            g.add(striker);
+            const rest = { p: new THREE.Vector3(-0.3, 0.032, 0.39), r: new THREE.Euler(0, 0.12, 0) };
+            // striking: the rod points away from the bowl (turned half round) so only the felt end meets the outer wall
+            const lift = { p: new THREE.Vector3(-0.5, CT + 0.5, 0.16), r: new THREE.Euler(0, Math.PI - 0.3, 0.45) };
+            const hit = { p: new THREE.Vector3(-0.375, CT + 0.2, 0.11), r: new THREE.Euler(0, Math.PI - 0.3, 0.2) };
+            const put = st => { striker.position.copy(st.p); striker.rotation.copy(st.r); };
+            put(rest);
+            return { g, striker, bowl, put, rest, lift, hit };
+        }
+
+        function strikeMuyu(times) {
+            const m = DAXIONG.muyu;
+            if (!m) return;
+            clearTimeout(m.endT);
+            const n = times || 3;
+            m.put(m.lift);
+            for (let i = 0; i < n; i++) {
+                setTimeout(() => {
+                    m.put(m.hit);
+                    playWoodenFishSound();
+                    m.body.scale.set(1.012, 0.99, 0.95);
+                    setTimeout(() => { m.body.scale.set(1, 1, 0.94); m.put(m.lift); }, 110);
+                }, 180 + i * 520);
+            }
+            m.endT = setTimeout(() => m.put(m.rest), 180 + n * 520 + 200);
+        }
+        function strikeBronzeBowl() {
+            const b = DAXIONG.bowl;
+            if (!b) return;
+            clearTimeout(b.endT);
+            b.put(b.lift);
+            setTimeout(() => { b.put(b.hit); playBronzeBowlSound(); }, 220);
+            setTimeout(() => b.put(b.lift), 360);
+            b.endT = setTimeout(() => b.put(b.rest), 900);
+        }
+
         function buildDaxiongHall(goldMat, greenTrimMat) {
             const { x: X, z: Z, W, D, wallH } = DAXIONG;
             const F = SIDE_HALL_FLOOR, front = D / 2, back = -D / 2, top = F + wallH;
@@ -2710,6 +3170,7 @@
 
                 }
             })));
+            buildDaxiongWorship(hg, goldMat);
             // Walls, dais and altar are solid for walking
             for (let x = -W / 2 + 0.5; x <= W / 2 - 0.5; x += 1.0) colliders.push({ x: X + x, z: Z + back + 0.25, r: 0.5 });
             [-1, 1].forEach(sx => { for (let z = back + 0.5; z <= colZ; z += 1.0) colliders.push({ x: X + sx * (W / 2 - 0.15), z: Z + z, r: 0.45 }); });
@@ -4015,6 +4476,7 @@
                     fruit.position.set(s * 0.95, F + 1.13, shrineZ + 1.7);
                     g.add(plate, fruit);
                 });
+                [-1, 1].forEach(s => buildCandleStand(g, s * 1.32, F + 1.01, shrineZ + 1.62, 0.95, goldMat));
                 addNightLight(hw(0, shrineZ + 2.6).x, F + 3.2, hw(0, shrineZ + 2.6).z, 0xffd59e, 1.2, 7, false, 0.55);
             } else {
                 // 尚未安神：空神龕平台（覆紅布）與空供桌，前立「神尊待安座」牌
@@ -4043,6 +4505,7 @@
                         g.add(st);
                     });
                     addSmokeEmitter(hw(0, shrineZ + 1.7).x, F + 1.65, hw(0, shrineZ + 1.7).z, 5, 0.4, 1.0, 0xf1f5f9, 0.12);
+                    [-1, 1].forEach(s => buildCandleStand(g, s * 1.32, F + 1.01, shrineZ + 1.62, 0.95, goldMat));
                 }
                 colliders.push({ ...hw(0, shrineZ), r: 1.2 }, { ...hw(0 - 1.0, shrineZ + 1.7), r: 0.6 }, { ...hw(0 + 1.0, shrineZ + 1.7), r: 0.6 }, { ...hw(0, shrineZ + 1.7), r: 0.6 });
                 addNightLight(hw(0, shrineZ + 2.6).x, F + 3.2, hw(0, shrineZ + 2.6).z, 0xffd59e, 1.0, 7, false, 0.45);
@@ -5275,14 +5738,7 @@
             });
             addSmokeEmitter(REAR.x, y + 1.55, back + 2.15, 5, 0.4, 1.0, 0xf1f5f9, 0.12);
             [-1, 1].forEach(s => {
-                const holder = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.11, 0.3, 14), goldMat);
-                holder.position.set(REAR.x + s * 0.9, y + 1.04, back + 2.15);
-                const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.32, 12), new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.5 }));
-                candle.position.set(REAR.x + s * 0.9, y + 1.35, back + 2.15);
-                const flame = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffd27a }));
-                flame.scale.y = 1.8;
-                flame.position.set(REAR.x + s * 0.9, y + 1.56, back + 2.15);
-                g.add(holder, candle, flame);
+                buildCandleStand(g, REAR.x + s * 0.9, y + 0.895, back + 2.15, 1.05, goldMat);
                 [1.9, 2.9].forEach((fx, k) => {
                     const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.14, 0.05, 18), goldMat);
                     plate.position.set(REAR.x + s * fx, y + 0.92, back + 2.15);
@@ -5427,15 +5883,10 @@
             });
             addSmokeEmitter(REAR.x, y + 1.6, az, 5, 0.4, 1.0, 0xf1f5f9, 0.12);
             [-1, 1].forEach(s => {
-                const holder = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.1, 0.28, 14), goldMat);
-                holder.position.set(REAR.x + s * 0.65, y + 1.08, az);
-                const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.28, 12), new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.5 }));
-                candle.position.set(REAR.x + s * 0.65, y + 1.36, az);
-                const flame = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 8), new THREE.MeshBasicMaterial({ color: 0xffd27a }));
-                flame.scale.y = 1.8; flame.position.set(REAR.x + s * 0.65, y + 1.54, az);
+                buildCandleStand(g, REAR.x + s * 0.65, y + 0.945, az, 1, goldMat);
                 const pl = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.13, 0.05, 18), goldMat);
                 pl.position.set(REAR.x + s * 1.2, y + 0.97, az);
-                g.add(holder, candle, flame, pl);
+                g.add(pl);
                 for (let i = 0; i < 3; i++) {
                     const fr = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 10), new THREE.MeshStandardMaterial({ color: d.offering, roughness: 0.45 }));
                     fr.position.set(REAR.x + s * 1.2 + (i - 1) * 0.08, y + 1.06 + (i === 1 ? 0.07 : 0), az);
@@ -6948,7 +7399,7 @@
             }
             if (state.vel) state.vel.x = state.vel.z = 0;
             // snap onto a nearby kneeler / lotus cushion when one is close
-            const spots = pose === 'kneel' ? BAIDIAN.kneelers : BAIDIAN.lotus;
+            const spots = pose === 'kneel' ? BAIDIAN.kneelers.concat(DAXIONG.kneelers) : BAIDIAN.lotus.concat(DAXIONG.lotus);
             const p = playerAvatarGroup.position;
             let best = null, bd = 1.6;
             spots.forEach(s => { const d = Math.hypot(s.x - p.x, s.z - p.z); if (d < bd && !s.npc) { bd = d; best = s; } });
@@ -10979,6 +11430,7 @@
             templeGroup.add(mainHallIncenseGroup);
             addSmokeEmitter(-1.5, 2.7, -3.05, 6, 0.45, 1.1, 0xf1f5f9, 0.1);
 
+            [-1, 1].forEach(s => buildCandleStand(templeGroup, -1.5 + s * 5.6, 1.895, -3.25, 1.6, goldMat));
             altarOfferingsGroup = new THREE.Group();
             altarOfferingsGroup.position.set(-1.5, 1.92, -3.05);
             templeGroup.add(altarOfferingsGroup);
@@ -12324,6 +12776,7 @@
             presets.sanguan = { r: 4.5, theta: 0, phi: 1.52, tx: -1.5, ty: 10.85, tz: -4.4, fov: 72 };
             // ground-floor 大雄寶殿: stand inside, wide lens on the three Buddhas
             presets.sanbao = { r: 5.6, theta: 0, phi: 1.5, tx: DAXIONG.x, ty: SIDE_HALL_FLOOR + 1.95, tz: DAXIONG.z - 4.4, fov: 72 };
+            presets.dx_worship = { r: 7.2, theta: 0.12, phi: 1.33, tx: DAXIONG.x, ty: SIDE_HALL_FLOOR + 1.5, tz: DAXIONG.z - 1.5, fov: 66 };
             presets.daxiong = { r: 30, theta: 0.25, phi: 1.3, tx: DAXIONG.x, ty: 4.5, tz: DAXIONG.z + 1 };
             const p = presets[presetName] || presets.overview;
             if (camera) {
@@ -12490,6 +12943,20 @@
             else if (type === 'lampwall_gm') toggleBlessingWallModal(true);
             else if (type === 'lampwall_ts') openTaisuiModal();
             else if (type === 'guanyin_pond') { playTempleBellSound(587); showToast('🪷 南無觀世音菩薩：手持淨瓶、楊柳枝灑甘露，大慈大悲、尋聲救苦。可在岸邊觀音爐插香，或點池水餵錦鯉。'); }
+            else if (type === 'dx_kneeler' || type === 'dx_lotus') {
+                const spot = (type === 'dx_kneeler' ? DAXIONG.kneelers : DAXIONG.lotus)[ud.idx];
+                if (spot && playerAvatarGroup && !state.upstairs) {
+                    playerAvatarGroup.userData.kowtowToken = null;
+                    setPlayerPose('stand');
+                    playerAvatarGroup.position.set(spot.x, SIDE_HALL_FLOOR, spot.z);
+                    setPlayerPose(type === 'dx_kneeler' ? 'kneel' : 'lotus', true);
+                    moveCameraPreset('dx_worship');
+                    if (type === 'dx_kneeler') { playTempleBellSound(432); showToast('🙇 跪於拜墊，合十頂禮三寶佛。可點木魚、銅缽；移動搖桿即可起身。'); }
+                    else { playBronzeBowlSound(); showToast('🧘 盤腿端坐蒲團，調息觀想、靜心入定。點銅缽可聽餘音；移動搖桿即可起身。'); }
+                }
+            }
+            else if (type === 'muyu') { strikeMuyu(4); showToast('🐟 叩、叩、叩……木魚聲聲，南無本師釋迦牟尼佛'); }
+            else if (type === 'tongbo') { strikeBronzeBowl(); showToast('🔔 噹——銅缽餘音繚繞，隨聲息安住當下'); }
             else if (type === 'kneeler' || type === 'lotusseat') {
                 const spot = (type === 'kneeler' ? BAIDIAN.kneelers : BAIDIAN.lotus)[ud.idx];
                 if (spot && spot.npc) { showToast('🙏 這個位置已有香客，請選旁邊的位置'); }
@@ -12853,6 +13320,7 @@
             update3DLabelsProjection();
             updatePerformanceTuning(t);
             updateStatueLoading();
+            updateCandleFlames(t);
             renderer.render(scene, camera);
         }
 
