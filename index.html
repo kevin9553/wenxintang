@@ -539,7 +539,7 @@
     <div id="nickModal" class="hidden fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
         <div class="xinxiang-modal max-w-sm w-full p-5">
             <h3 class="text-lg font-bold text-amber-300 tracking-wider mb-1">🙏 歡迎來到問心堂</h3>
-            <p class="text-xs text-stone-300 mb-3">請輸入您在廟裡的名字（最多 10 字），其他在線香客會看到。請勿使用真實全名。之後點右上角「在線」可以改名。</p>
+            <p class="text-xs text-stone-300 mb-3">請輸入您在廟裡的名字（最多 10 字），其他在線香客會看到。請勿使用真實全名。之後可在 🎨 捏偶或點右上角「在線」改名。</p>
             <input id="nickInput" maxlength="10" placeholder="例：阿明" class="w-full px-3 py-2 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white mb-3">
             <button id="nickOk" class="w-full py-2.5 btn-warm-gold text-sm tracking-widest">進入廟埕</button>
         </div>
@@ -612,6 +612,10 @@
         <div class="xinxiang-modal max-w-lg w-full p-4 relative max-h-[92vh] overflow-y-auto">
             <button onclick="closeAvatarEditor()" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-bold">✕</button>
             <h3 class="text-lg font-bold text-amber-300 tracking-wider mb-2">🎨 捏偶・我的人物</h3>
+            <label class="flex items-center gap-2 mb-3">
+                <span class="text-[11px] text-amber-200 shrink-0">🪪 我的名字</span>
+                <input id="avatarNick" maxlength="10" placeholder="例：阿明（最多 10 字）" class="flex-1 min-w-0 px-3 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white">
+            </label>
             <div class="flex flex-col sm:flex-row gap-3">
                 <canvas id="avatarPreview" class="mx-auto sm:mx-0 shrink-0 rounded-xl bg-gradient-to-b from-amber-900/40 to-black/40 border border-amber-300/25" style="width:180px;height:220px"></canvas>
                 <div id="avatarOptions" class="flex-1 space-y-2"></div>
@@ -7869,12 +7873,36 @@
                 inp.onkeydown = e => { if (e.key === 'Enter') done(); };
             });
         }
+        // set my name (both versions): saved on this device, sent with my presence, shown over my head
+        function applyNick(raw, quiet) {
+            const n = cleanNick(raw);
+            if (!n) return false;
+            const changed = n !== getNick();
+            SESSION_NICK = n;
+            try { localStorage.setItem('temple.nick', n); } catch (e) {}
+            if (typeof NET !== 'undefined') {
+                if (NET.fb) NET.fb.nick = n;
+                NET.lastPres = {};           // resend everything with the new name
+            }
+            updateMyLabel();
+            if (changed && !quiet) showToast(`🪪 已改名為「${n}」，在線香客會看到新名字`);
+            return true;
+        }
+        function updateMyLabel() {
+            const item = typeof tracked3DLabels !== 'undefined' && tracked3DLabels.find(l => l.obj === playerAvatarGroup && l.isPlayer);
+            if (!item) return;
+            const t = `🙏 ${getNick() || '善信'} (您)`;
+            item.origText = t;
+            if (!item.el.textContent.startsWith('💬')) item.el.textContent = t;
+        }
         async function changeNick() {
-            if (!NET.fb) return;
+            const ok = document.getElementById('nickOk');
+            const old = ok.textContent;
+            ok.textContent = '確定改名';
             const n = await askNick();
-            NET.fb.nick = n;
-            NET.lastPres = {};               // resend everything with the new name
-            showToast(`🪪 已改名為「${n}」`);
+            ok.textContent = old;
+            applyNick(n);
+            showToast(`🪪 現在的名字：「${n}」`);
         }
 
         async function createFirebaseBackend(cfg) {
@@ -8061,6 +8089,8 @@
                 on: h => r.on('chat', msg => h({ by: msg.by, peer: msg.peer, name: msg.isMe ? '我' : peerName(msg.by, msg.peer), text: msg.data && msg.data.text, t: Date.now(), isMe: msg.isMe && msg.sameTab }), () => {})
             });
             r.onPeers(onPeersChange, () => { NET.room = null; clearRemotePeers(); updateOnlineLabel(); });
+            const lab = document.getElementById('netRoomLabel');
+            if (lab && !lab.onclick) { lab.style.cursor = 'pointer'; lab.title = '點擊修改您在廟裡的名字'; lab.onclick = changeNick; }
             r.on('act', onNetAct, () => {});
         }
 
@@ -8075,6 +8105,8 @@
                 const patch = {};
                 Object.keys(cur).forEach(k => { if (NET.lastPres[k] !== cur[k]) patch[k] = cur[k]; });
                 if (!NET.lastPres.look) patch.look = getMyLook();
+                const myNick = getNick();
+                if (!NET.fb && myNick && NET.lastPres.nick !== myNick) patch.nick = myNick;
                 if (Object.keys(patch).length) {
                     NET.lastSentAt = now;
                     Object.assign(NET.lastPres, patch);
@@ -8100,7 +8132,7 @@
                 const pose = ['stand', 'kneel', 'lotus'].includes(pr.pose) ? pr.pose : 'stand';
                 if (pose !== e.pose) { e.pose = pose; setDollPose(e.mesh, pose); }
                 if (e.mesh.userData.incenseBundle) e.mesh.userData.incenseBundle.visible = !!pr.inc;
-                if (NET.fb && typeof pr.nick === 'string') { const n = cleanNick(pr.nick); if (n && n !== e.name) { e.name = n; if (!e.bubbleUntil) e.labelItem.el.textContent = n; } }
+                if (typeof pr.nick === 'string') { const n = cleanNick(pr.nick); if (n && n !== e.name) { e.name = n; e.customNick = true; if (!e.bubbleUntil) e.labelItem.el.textContent = n; } }
             });
             if (!NET.joinedToastShown && change.peers.length) {
                 NET.joinedToastShown = true;
@@ -8125,7 +8157,7 @@
             if (p.by && NET.user && NET.user.profiles) {
                 NET.user.profiles([p.by]).then(ps => {
                     const nm = (ps && ps[p.by] && ps[p.by].name) || '';
-                    if (nm) { e.name = nm.slice(0, 12); e.labelItem.el.textContent = e.name; }
+                    if (nm && !e.customNick) { e.name = nm.slice(0, 12); if (!e.bubbleUntil) e.labelItem.el.textContent = e.name; }
                 }).catch(() => {});
             }
             return e;
@@ -9060,6 +9092,7 @@
         const avEdit = { look: null, r: null, scene: null, cam: null, doll: null, raf: 0 };
         function openAvatarEditor() {
             avEdit.look = Object.assign({}, getMyLook());
+            document.getElementById('avatarNick').value = getNick();
             renderAvatarOptions();
             document.getElementById('avatarModal').classList.remove('hidden');
             const cv = document.getElementById('avatarPreview');
@@ -9119,6 +9152,8 @@
         }
         function saveAvatar() {
             try { localStorage.setItem('temple.myLook', JSON.stringify(avEdit.look)); } catch (e) {}
+            const nickVal = document.getElementById('avatarNick').value;
+            if (cleanNick(nickVal) && cleanNick(nickVal) !== getNick()) applyNick(nickVal, true);
             rebuildPlayerAvatar();
             closeAvatarEditor();
             playTempleBellSound(660);
@@ -11742,6 +11777,7 @@
             playerIncenseGroup = playerAvatarGroup.userData.incenseBundle;
             templeGroup.add(playerAvatarGroup);
             register3DLabel(playerAvatarGroup, 2.25, '🙏 善信 (您)', '#fbbf24', () => openDivinationModal(), true);
+            updateMyLabel();
 
             const npcConfigs = [
                 { x: -1.15, z: 7.4, rotY: 0.15, shirtColor: 0xf5f0e6, accentColor: 0x1f2937, pantsColor: 0x1f2937, skirt: true, hairColor: 0x5a3a22, hairStyle: 'twin' },
