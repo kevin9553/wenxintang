@@ -6976,10 +6976,10 @@
         }
 
         // =====================================================================
-        // 打小人區（廟埕左前方・虎邊）：白虎爺小祠、打小人石、神婆、化紙桶
+        // 打小人區（算命館旁・虎邊）：白虎爺小祠、打小人石、神婆、化紙桶
         // 煙火施放區（廟埕右前方）：發射架、鞭炮竿、點火台；夜空煙火粒子系統
         // =====================================================================
-        const XIAOREN_POS = { x: -48, z: 40, rot: Math.PI / 2 };   // area faces +x (toward the courtyard centre)
+        const XIAOREN_POS = { x: -26, z: 41.5, rot: Math.PI / 2 };   // beside the 算命館 (west of it), facing +x toward the stall and path
         const FIREWORK_POS = { x: 45, z: 40, rot: -Math.PI / 2 };  // area faces -x
         const XIAOREN_TYPES = ['是非小人', '口舌是非', '職場小人', '霉運退散', '病符退散', '爛桃花'];
         const XIAOREN_CHANTS = [
@@ -12960,7 +12960,7 @@
             Object.values(REAR_DEITIES).forEach(d => { const F = rearFloor(+Object.keys(REAR_DEITIES).find(k => REAR_DEITIES[k] === d)); presets[d.preset] = { r: 5.4, theta: 0, phi: 1.45, tx: REAR.x, ty: F.y + 2.2, tz: F.back + 1.5 }; });
             presets.guandi = { r: 9.5, theta: 0, phi: 1.46, tx: REAR.x, ty: rearFloor(1).y + 1.9, tz: rearFloor(1).back + 1.5, fov: 70 };
             presets.sanqing = { r: 7.2, theta: 0, phi: 1.42, tx: REAR.x, ty: rearFloor(REAR.floors).y + 2.0, tz: rearFloor(REAR.floors).back + 1.2 };
-            presets.xiaoren = { r: 7.5, theta: XIAOREN_POS.rot + 0.35, phi: 1.2, tx: XIAOREN_POS.x, ty: 1.0, tz: XIAOREN_POS.z };
+            presets.xiaoren = { r: 7.5, theta: XIAOREN_POS.rot - 0.9, phi: 1.2, tx: XIAOREN_POS.x, ty: 1.0, tz: XIAOREN_POS.z };
             presets.fireworks = { r: 33.4, theta: -1.297, phi: 1.98, tx: FIREWORK_POS.x, ty: 24, tz: FIREWORK_POS.z - 2 };
             presets.rearhall = { r: 70, theta: 0.35, phi: 1.4, tx: REAR.x + 3, ty: 16, tz: REAR.z };
             presets.stairs = { r: 18, theta: 0.9, phi: 1.2, tx: 11, ty: 4.5, tz: -3 };
