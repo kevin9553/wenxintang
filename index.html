@@ -1934,6 +1934,100 @@
             return new THREE.CanvasTexture(c);
         }
 
+        // 青花瓷瓶：白瓷底、青花纏枝紋，口沿描金；插三枝蓮花（盛開・半開・花苞）與兩片荷葉
+        function createBlueWhiteTexture() {
+            if (createBlueWhiteTexture.tex) return createBlueWhiteTexture.tex;
+            const c = document.createElement('canvas');
+            c.width = 512; c.height = 256;
+            const x = c.getContext('2d');
+            x.fillStyle = '#f4f1ea'; x.fillRect(0, 0, 512, 256);
+            x.strokeStyle = '#1e3a8a'; x.fillStyle = '#1e3a8a';
+            // bands at the foot and the shoulder
+            x.fillRect(0, 226, 512, 8); x.fillRect(0, 40, 512, 6); x.fillRect(0, 20, 512, 3);
+            // lotus-petal panels at the foot
+            x.lineWidth = 3;
+            for (let i = 0; i < 12; i++) { const cx = i * 512 / 12 + 21; x.beginPath(); x.moveTo(cx - 16, 224); x.quadraticCurveTo(cx, 180, cx + 16, 224); x.stroke(); }
+            // scrolling vine with flowers across the belly
+            x.lineWidth = 4;
+            x.beginPath();
+            for (let t = 0; t <= 512; t += 4) { const y = 120 + Math.sin(t / 512 * Math.PI * 6) * 34; t ? x.lineTo(t, y) : x.moveTo(t, y); }
+            x.stroke();
+            for (let i = 0; i < 6; i++) {
+                const fx = (i + 0.25) * 512 / 6, fy = 120 + Math.sin((i + 0.25) / 6 * Math.PI * 6) * 34;
+                for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; x.beginPath(); x.ellipse(fx + Math.cos(a) * 11, fy + Math.sin(a) * 11, 9, 5, a, 0, Math.PI * 2); x.fill(); }
+                x.fillStyle = '#f4f1ea'; x.beginPath(); x.arc(fx, fy, 5, 0, Math.PI * 2); x.fill(); x.fillStyle = '#1e3a8a';
+                const lx = fx + 30, ly = fy + (i % 2 ? -22 : 22);
+                x.beginPath(); x.ellipse(lx, ly, 12, 5, i % 2 ? -0.6 : 0.6, 0, Math.PI * 2); x.fill();
+            }
+            const t = new THREE.CanvasTexture(c);
+            t.wrapS = THREE.RepeatWrapping;
+            return createBlueWhiteTexture.tex = t;
+        }
+        function buildLotusVase(parent, x, y, z, s, goldMat) {
+            const g = new THREE.Group();
+            g.position.set(x, y, z);
+            g.scale.setScalar(s || 1);
+            parent.add(g);
+            const porcelain = new THREE.MeshStandardMaterial({ map: createBlueWhiteTexture(), roughness: 0.18, metalness: 0.05 });
+            const V = pts => pts.map(([r, h]) => new THREE.Vector2(r, h));
+            // 梅瓶-like profile: foot, swelling belly, narrow neck, flared mouth
+            const vase = new THREE.Mesh(new THREE.LatheGeometry(V([[0, 0], [0.075, 0], [0.08, 0.02], [0.11, 0.1], [0.125, 0.18], [0.115, 0.26], [0.075, 0.33], [0.045, 0.37], [0.045, 0.4], [0.065, 0.43], [0.06, 0.435], [0.04, 0.41], [0, 0.4]]), 36), porcelain);
+            vase.castShadow = true;
+            const rim = new THREE.Mesh(new THREE.TorusGeometry(0.063, 0.006, 6, 28), goldMat);
+            rim.rotation.x = Math.PI / 2;
+            rim.position.y = 0.433;
+            // small rosewood stand
+            const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.035, 24), new THREE.MeshStandardMaterial({ color: 0x3a120b, roughness: 0.45 }));
+            stand.position.y = -0.0175;
+            g.add(stand, vase, rim);
+            vase.position.y = 0.0;
+            const stemMat = new THREE.MeshStandardMaterial({ color: 0x3f6b2a, roughness: 0.7 });
+            const pink = new THREE.MeshStandardMaterial({ color: 0xf6a5c0, roughness: 0.55, side: THREE.DoubleSide });
+            const pinkTip = new THREE.MeshStandardMaterial({ color: 0xe0608a, roughness: 0.55, side: THREE.DoubleSide });
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x2f6b3a, roughness: 0.6, side: THREE.DoubleSide });
+            const petalGeo = new THREE.SphereGeometry(0.05, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+            const stem = (to, bend) => {
+                const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 0.4, 0), new THREE.Vector3(to.x * 0.4 + bend, 0.4 + (to.y - 0.4) * 0.6, to.z * 0.4), to);
+                const m = new THREE.Mesh(new THREE.TubeGeometry(curve, 10, 0.006, 5), stemMat);
+                g.add(m);
+            };
+            const bloom = (pos, open, size) => {
+                const f = new THREE.Group();
+                f.position.copy(pos);
+                f.scale.setScalar(size);
+                const rings = open > 0.6 ? [[8, 0.9, 0], [6, 0.55, 0.4]] : open > 0.2 ? [[6, 0.4, 0]] : [[5, 0.12, 0]];
+                rings.forEach(([n, tilt, off]) => {
+                    for (let k = 0; k < n; k++) {
+                        const a = (k + off) / n * Math.PI * 2;
+                        const p = new THREE.Mesh(petalGeo, k % 2 ? pink : pinkTip);
+                        p.scale.set(0.55, 1.6, 0.35);
+                        p.rotation.set(0, -a, 0);
+                        p.rotateX(tilt);
+                        p.position.set(Math.cos(a) * 0.012, 0, Math.sin(a) * 0.012);
+                        f.add(p);
+                    }
+                });
+                if (open > 0.6) {
+                    const pod = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.016, 0.02, 12), new THREE.MeshStandardMaterial({ color: 0xd9c24a, roughness: 0.6 }));
+                    pod.position.y = 0.045;
+                    f.add(pod);
+                }
+                g.add(f);
+            };
+            const tops = [[new THREE.Vector3(0.0, 0.78, 0.02), 1, 1.0, 0.0], [new THREE.Vector3(-0.11, 0.68, 0.04), 0.4, 0.85, -0.03], [new THREE.Vector3(0.1, 0.72, -0.02), 0.0, 0.75, 0.03]];
+            tops.forEach(([p, open, sz, bend]) => { stem(p, bend); bloom(p, open, sz); });
+            // two lotus leaves on curving stems, tilted outward
+            [[-1, 0.6], [1, 0.56]].forEach(([sx, hy]) => {
+                const to = new THREE.Vector3(sx * 0.16, hy, 0.05);
+                stem(to, sx * 0.04);
+                const leaf = new THREE.Mesh(new THREE.CircleGeometry(0.08, 18), leafMat);
+                leaf.position.copy(to);
+                leaf.rotation.set(-Math.PI / 2 + 0.5, 0, sx * 0.6);
+                g.add(leaf);
+            });
+            return g;
+        }
+
         // Shrine interior for a hall facing +z: dais, three figures with gold mandorlas, altar, lotus lamps, spotlights.
         // Built in a sub-group shifted by dz so the same layout serves the upper 三官殿 (dz 0) and the ground-floor 大雄寶殿.
         function buildShrineInterior(parent, o) {
@@ -1984,11 +2078,7 @@
                 lamp.position.set(cx + s * 1.4, T + 0.1, -1.7);
                 registerNightEmissive(lamp.material, 0.5, 1.4);
                 // (old pink lamp glow removed)
-                const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.4, 16), new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.3 }));
-                vase.position.set(cx + s * 2.6, T + 0.2, -1.7);
-                const flower = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), new THREE.MeshStandardMaterial({ color: 0xf9a8d4, roughness: 0.5 }));
-                flower.position.set(cx + s * 2.6, T + 0.55, -1.7);
-                g.add(vase, flower);
+                buildLotusVase(g, cx + s * 2.6, T, -1.7, 1, goldMat);
             });
             // Hanging lotus lamps between the Buddhas (not in front of their faces)
             [-1.95, 1.95, -5.6, 5.6].forEach(lxp => {
