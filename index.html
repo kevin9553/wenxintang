@@ -151,6 +151,8 @@
             <button onclick="enterLanternFestival()" id="camBtn-festival" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏮 天燈夜景</button>
             <button onclick="moveCameraPreset('upper')" id="camBtn-upper" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">二樓</button>
             <button onclick="toggleStairs()" id="camBtn-stairs" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🪜 上二樓</button>
+            <button onclick="moveCameraPreset('sanguan')" id="camBtn-sanguan" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">三官大帝</button>
+            <button onclick="moveCameraPreset('daxiong')" id="camBtn-daxiong" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">大雄寶殿</button>
             <button onclick="moveCameraPreset('sanbao')" id="camBtn-sanbao" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">三寶佛</button>
             <button onclick="moveCameraPreset('shrine')" id="camBtn-shrine" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">濟公活佛</button>
             <button onclick="moveCameraPreset('altar')" id="camBtn-altar" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">大殿供桌</button>
@@ -1513,10 +1515,10 @@
         }
 
         // =====================================================================
-        // 主殿二樓・大雄寶殿（重簷樓閣）：安奉三寶佛
-        // 平座殿基從一樓屋頂升起，殿內地板高於一樓屋脊；中間三間雕花門敞開，可從迴廊看見三寶佛
+        // 主殿二樓・三官殿（重簷樓閣）：安奉三官大帝（天官・地官・水官）；三寶佛已移至平地新建的大雄寶殿
+        // 平座殿基從一樓屋頂升起，殿內地板高於一樓屋脊；中間三間雕花門敞開，可從迴廊看見三官大帝
         // =====================================================================
-        const UPPER_HALL = { cx: -1.5, W: 14, zF: 0.6, zB: -6.0, y0: 6.0, floorY: 9.0, y1: 13.0, name: '大 雄 寶 殿' };
+        const UPPER_HALL = { cx: -1.5, W: 14, zF: 0.6, zB: -6.0, y0: 6.0, floorY: 9.0, y1: 13.0, name: '三 官 殿' };
         // 橫三世佛：中・釋迦牟尼佛；龍邊（佛的左手邊＝面向殿內右側）・藥師佛；虎邊・阿彌陀佛
         const SANBAO = [
             { key: 'shakya', pre: 'SK', x: 0, scale: 1.0, robe: ['rgba(150,40,30,A)', 'rgba(60,110,100,A)', '#fde68a'], kasaya: [0x9a2e22, '#3f7d6e'], label: '🪷 南無本師釋迦牟尼佛' },
@@ -1841,6 +1843,143 @@
             return new THREE.CanvasTexture(c);
         }
 
+        // Shrine interior for a hall facing +z: dais, three figures with gold mandorlas, altar, lotus lamps, spotlights.
+        // Built in a sub-group shifted by dz so the same layout serves the upper 三官殿 (dz 0) and the ground-floor 大雄寶殿.
+        function buildShrineInterior(parent, o) {
+            const { cx, FLOOR, W, y1, dz, goldMat, lacquer } = o;
+            const g = new THREE.Group();
+            g.position.z = dz;
+            parent.add(g);
+            const dais = new THREE.Mesh(new THREE.BoxGeometry(W - 1.6, 0.3, 2.4), lacquer);
+            dais.position.set(cx, FLOOR + 0.15, -4.5);
+            const daisTrim = new THREE.Mesh(new THREE.BoxGeometry(W - 1.5, 0.05, 2.5), goldMat);
+            daisTrim.position.set(cx, FLOOR + 0.3, -4.5);
+            g.add(dais, daisTrim);
+            const DAIS_TOP = FLOOR + 0.32;
+            o.figs.forEach(b => {
+                const grp = new THREE.Group();
+                grp.position.set(cx + b.x, DAIS_TOP, -4.45);
+                grp.scale.setScalar(b.scale);
+                o.makeFigure(b, grp, o);
+                b.group = grp;
+                g.add(grp);
+            });
+
+            // A low altar set forward so it doesn't hide the Buddhas' lotus thrones
+            const altar = new THREE.Mesh(new THREE.BoxGeometry(W - 4.4, 0.6, 0.8), lacquer);
+            altar.position.set(cx, FLOOR + 0.3, -1.7);
+            const altarTop = new THREE.Mesh(new THREE.BoxGeometry(W - 4.3, 0.05, 0.9), goldMat);
+            altarTop.position.set(cx, FLOOR + 0.62, -1.7);
+            g.add(altar, altarTop);
+            const T = FLOOR + 0.645;
+            const censer = new THREE.Mesh(new THREE.SphereGeometry(0.18, 20, 14), new THREE.MeshStandardMaterial({ color: 0x4a3b2c, metalness: 0.55, roughness: 0.38 }));
+            censer.scale.set(1.15, 0.7, 1.15);
+            censer.position.set(cx, T + 0.11, -1.7);
+            const censerRim = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.025, 10, 24), goldMat);
+            censerRim.rotation.x = Math.PI / 2;
+            censerRim.position.set(cx, T + 0.21, -1.7);
+            g.add(censer, censerRim);
+            [-0.06, 0, 0.06].forEach(ix => {
+                const st = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.4, 6), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
+                st.position.set(cx + ix, T + 0.38, -1.7);
+                g.add(st);
+            });
+            addSmokeEmitter(cx, T + 0.6, -1.7 + dz, 5, 0.35, 0.9, 0xf1f5f9, 0.1);
+            [-1, 1].forEach(s => {
+                // Lotus lamps (蓮花燈) and vases of lotus on the altar
+                const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), new THREE.MeshStandardMaterial({ color: 0xffd1dc, emissive: 0xff8fab, emissiveIntensity: 0.5 }));
+                lamp.scale.set(1, 0.7, 1);
+                lamp.position.set(cx + s * 1.4, T + 0.1, -1.7);
+                registerNightEmissive(lamp.material, 0.5, 1.4);
+                // (old pink lamp glow removed)
+                const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.4, 16), new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.3 }));
+                vase.position.set(cx + s * 2.6, T + 0.2, -1.7);
+                const flower = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), new THREE.MeshStandardMaterial({ color: 0xf9a8d4, roughness: 0.5 }));
+                flower.position.set(cx + s * 2.6, T + 0.55, -1.7);
+                g.add(vase, flower);
+            });
+            // Hanging lotus lamps between the Buddhas (not in front of their faces)
+            [-1.95, 1.95, -5.6, 5.6].forEach(lxp => {
+                const b = { x: lxp };
+                const hang = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), new THREE.MeshStandardMaterial({ color: 0xffc8d6, emissive: 0xff8fab, emissiveIntensity: 0.5 }));
+                hang.scale.set(1, 0.75, 1);
+                hang.position.set(cx + b.x, y1 - 0.75, -3.4);
+                registerNightEmissive(hang.material, 0.5, 1.5);
+                const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.6, 6), goldMat);
+                cord.position.set(cx + b.x, y1 - 0.4, -3.4);
+                g.add(hang, cord);
+                addNightGlow(g, hang.position, 0xffb3c6, 1.4);
+            });
+            // Gold relief mandorlas (背光) behind each Buddha
+            o.figs.forEach(b => {
+                const bp = buildGoldReliefBackplate(1.25, 3.0, 2.45);
+                bp.position.set(0, 0, -0.85);
+                b.group.add(bp);
+            });
+            // Rows of gilt lotus lamps along the dais front and on the altar
+            [-5.4, -4.3, -2.4, -1.2, 1.2, 2.4, 4.3, 5.4].forEach(lx => buildLotusLamp(g, cx + lx, DAIS_TOP, -3.42, 1.1));
+            [-3.4, -2.0, 2.0, 3.4].forEach(lx => buildLotusLamp(g, cx + lx, T, -1.7, 1.0));
+            // Fruit offerings (apples and oranges) on the altar
+            [-0.75, 0.75].forEach((fx, i) => {
+                const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.12, 0.05, 18), goldMat);
+                plate.position.set(cx + fx, T + 0.03, -1.7);
+                g.add(plate);
+                const col = i ? 0xf28c28 : 0xd23b2a;
+                [[0, 0.09, 0], [0.08, 0.09, 0.04], [-0.08, 0.09, 0.04], [0, 0.09, -0.08], [0, 0.18, 0]].forEach(([ax, ay, az]) => {
+                    const f = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 10), new THREE.MeshStandardMaterial({ color: col, roughness: 0.45 }));
+                    f.position.set(cx + fx + ax, T + ay, -1.7 + az);
+                    g.add(f);
+                });
+            });
+            // Warm spotlights from above the altar onto each Buddha's face and body (金身光澤)
+            o.figs.forEach(b => {
+                const sp = new THREE.SpotLight(0xffc27a, 1.6, 9, 0.42, 0.6, 1.4);
+                sp.position.set(cx + b.x, FLOOR + 3.6, -2.0 + dz);
+                sp.target.position.set(cx + b.x, FLOOR + 2.0, -4.45 + dz);
+                scene.add(sp, sp.target);
+                nightLights.push({ light: sp, day: 1.6, night: 2.0, flicker: false, phase: 0, isJinlu: false });
+            });
+            // Lamps keep the hall softly lit by day as well as at night
+            addNightLight(cx, FLOOR + 2.7, -2.0 + dz, 0xffd59e, 1.5, 9, false, 0.6);
+            addNightLight(cx - 3.9, FLOOR + 2.4, -2.6 + dz, 0xffd59e, 0.8, 6, false, 0.6);
+            addNightLight(cx + 3.9, FLOOR + 2.4, -2.6 + dz, 0xffd59e, 0.8, 6, false, 0.6);
+
+        }
+
+        // 三官大帝：中・上元天官（賜福，紅袍）；龍邊・中元地官（赦罪，綠袍）；虎邊・下元水官（解厄，玄藍袍）
+        const SANGUAN = [
+            { key: 'tianguan', x: 0, scale: 1.12, robe: ['#b91c1c', '#f5d76e', '#fde68a'], skin: '#f0d2b6', name: '天官大帝',
+              label: '🌟 上元一品賜福天官・紫微大帝（點擊祈求賜福）', face: { browColor: '#1c140d', browWidth: 6, browArch: 6, eyes: 'downcast', mouth: 'small', blush: 0.28 } },
+            { key: 'diguan', x: 3.9, scale: 1.0, robe: ['#1f6b4a', '#d4a017', '#fde68a'], skin: '#efcfb0', name: '地官大帝',
+              label: '🌏 中元二品赦罪地官・清虛大帝（點擊祈求赦罪消災）', face: { browColor: '#1c140d', browWidth: 7, browArch: 8, eyes: 'downcast', mouth: 'small', blush: 0.22 } },
+            { key: 'shuiguan', x: -3.9, scale: 1.0, robe: ['#1e2a4a', '#d4a017', '#93c5fd'], skin: '#e6c3a2', name: '水官大帝',
+              label: '🌊 下元三品解厄水官・洞陰大帝（點擊祈求解厄平安）', face: { browColor: '#120c08', browWidth: 8, browArch: 10, eyes: 'downcast', mouth: 'small', blush: 0.15 } }
+        ];
+        const SANGUAN_SEAT = 0.32 + 0.42;
+        // emperor on a throne (stand-in), later swapped for the sculpted emperor model recoloured per 官
+        function makeSanguanFigure(b, grp, o) {
+            const PED = 0.32, SEAT = 0.42;
+            grp.add(buildDeityPedestal(1.9, 1.3, o.goldMat, o.lacquer));
+            const throne = buildDeityThrone(1.15, 1.05, SEAT, o.goldMat, o.lacquer);
+            throne.position.y = PED;
+            grp.add(throne);
+            const body = buildSeatedDeityBody(simpleDeityBody('YH', b.robe, b.skin, b.face)());
+            body.group.position.y = PED + SEAT;
+            grp.add(body.group);
+            body.group.traverse(m => { if (m.isMesh) { m.userData = { interactType: 'sanguan', label: b.label }; clickableMeshes.push(m); } });
+            b.fallback = body.group;
+        }
+        function upgradeSanguanStatues() {
+            upgradeStatuesFromGLB(SANGUAN.map(b => ({
+                key: 'yuhuang', container: b.group, figure: b.fallback, offsetY: SANGUAN_SEAT,
+                interact: { interactType: 'sanguan', label: b.label },
+                textures: {
+                    YH_Face: () => createStatueFaceTexture(Object.assign({ skin: b.skin }, b.face)),
+                    YH_Robe: () => { const t = createBrocadeTexture(...b.robe); t.repeat.set(4, 2); return t; }
+                }
+            })));
+        }
+
         function buildSecondFloor(goldMat, greenTrimMat) {
             const { cx, W, zF, zB, y0, floorY, y1 } = UPPER_HALL;
             const D = zF - zB, zc = (zF + zB) / 2, roomH = y1 - floorY;
@@ -1850,7 +1989,7 @@
             const lacquer = new THREE.MeshStandardMaterial({ color: 0x7a1814, roughness: 0.5 });
             const red = new THREE.MeshStandardMaterial({ color: 0x9b1c16, roughness: 0.42 });
             const darkWood = new THREE.MeshStandardMaterial({ color: 0x4a1a10, roughness: 0.7 });
-            const click = { interactType: 'upperhall', label: '🏯 主殿二樓・大雄寶殿（安奉三寶佛）' };
+            const click = { interactType: 'upperhall', label: '🏯 主殿二樓・三官殿（安奉三官大帝）' };
             const tag = m => { m.userData = { ...click }; clickableMeshes.push(m); return m; };
 
             // Solid base storey (平座) rising out of the lower roof up to the upper floor
@@ -1975,101 +2114,8 @@
                 addNightGlow(g, lan.position, 0xff5a3c, 1.8);
             });
 
-            // ---- Interior: dais (須彌壇), mandorlas, the three Buddhas, altar with offerings, lotus lamps
-            const dais = new THREE.Mesh(new THREE.BoxGeometry(W - 1.6, 0.3, 2.4), lacquer);
-            dais.position.set(cx, FLOOR + 0.15, -4.5);
-            const daisTrim = new THREE.Mesh(new THREE.BoxGeometry(W - 1.5, 0.05, 2.5), goldMat);
-            daisTrim.position.set(cx, FLOOR + 0.3, -4.5);
-            g.add(dais, daisTrim);
-            const DAIS_TOP = FLOOR + 0.32;
-            SANBAO.forEach(b => {
-                const grp = new THREE.Group();
-                grp.position.set(cx + b.x, DAIS_TOP, -4.45);
-                grp.scale.setScalar(b.scale);
-                b.fallback = buildFallbackBuddha(b);
-                grp.add(b.fallback);
-                b.group = grp;
-                g.add(grp);
-            });
-
-            // A low altar set forward so it doesn't hide the Buddhas' lotus thrones
-            const altar = new THREE.Mesh(new THREE.BoxGeometry(W - 4.4, 0.6, 0.8), lacquer);
-            altar.position.set(cx, FLOOR + 0.3, -1.7);
-            const altarTop = new THREE.Mesh(new THREE.BoxGeometry(W - 4.3, 0.05, 0.9), goldMat);
-            altarTop.position.set(cx, FLOOR + 0.62, -1.7);
-            g.add(altar, altarTop);
-            const T = FLOOR + 0.645;
-            const censer = new THREE.Mesh(new THREE.SphereGeometry(0.18, 20, 14), new THREE.MeshStandardMaterial({ color: 0x4a3b2c, metalness: 0.55, roughness: 0.38 }));
-            censer.scale.set(1.15, 0.7, 1.15);
-            censer.position.set(cx, T + 0.11, -1.7);
-            const censerRim = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.025, 10, 24), goldMat);
-            censerRim.rotation.x = Math.PI / 2;
-            censerRim.position.set(cx, T + 0.21, -1.7);
-            g.add(censer, censerRim);
-            [-0.06, 0, 0.06].forEach(ix => {
-                const st = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.4, 6), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
-                st.position.set(cx + ix, T + 0.38, -1.7);
-                g.add(st);
-            });
-            addSmokeEmitter(cx, T + 0.6, -1.7, 5, 0.35, 0.9, 0xf1f5f9, 0.1);
-            [-1, 1].forEach(s => {
-                // Lotus lamps (蓮花燈) and vases of lotus on the altar
-                const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), new THREE.MeshStandardMaterial({ color: 0xffd1dc, emissive: 0xff8fab, emissiveIntensity: 0.5 }));
-                lamp.scale.set(1, 0.7, 1);
-                lamp.position.set(cx + s * 1.4, T + 0.1, -1.7);
-                registerNightEmissive(lamp.material, 0.5, 1.4);
-                // (old pink lamp glow removed)
-                const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.4, 16), new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.3 }));
-                vase.position.set(cx + s * 2.6, T + 0.2, -1.7);
-                const flower = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), new THREE.MeshStandardMaterial({ color: 0xf9a8d4, roughness: 0.5 }));
-                flower.position.set(cx + s * 2.6, T + 0.55, -1.7);
-                g.add(vase, flower);
-            });
-            // Hanging lotus lamps between the Buddhas (not in front of their faces)
-            [-1.95, 1.95, -5.6, 5.6].forEach(lxp => {
-                const b = { x: lxp };
-                const hang = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), new THREE.MeshStandardMaterial({ color: 0xffc8d6, emissive: 0xff8fab, emissiveIntensity: 0.5 }));
-                hang.scale.set(1, 0.75, 1);
-                hang.position.set(cx + b.x, y1 - 0.75, -3.4);
-                registerNightEmissive(hang.material, 0.5, 1.5);
-                const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.6, 6), goldMat);
-                cord.position.set(cx + b.x, y1 - 0.4, -3.4);
-                g.add(hang, cord);
-                addNightGlow(g, hang.position, 0xffb3c6, 1.4);
-            });
-            // Gold relief mandorlas (背光) behind each Buddha
-            SANBAO.forEach(b => {
-                const bp = buildGoldReliefBackplate(1.25, 3.0, 2.45);
-                bp.position.set(0, 0, -0.85);
-                b.group.add(bp);
-            });
-            // Rows of gilt lotus lamps along the dais front and on the altar
-            [-5.4, -4.3, -2.4, -1.2, 1.2, 2.4, 4.3, 5.4].forEach(lx => buildLotusLamp(g, cx + lx, DAIS_TOP, -3.42, 1.1));
-            [-3.4, -2.0, 2.0, 3.4].forEach(lx => buildLotusLamp(g, cx + lx, T, -1.7, 1.0));
-            // Fruit offerings (apples and oranges) on the altar
-            [-0.75, 0.75].forEach((fx, i) => {
-                const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.12, 0.05, 18), goldMat);
-                plate.position.set(cx + fx, T + 0.03, -1.7);
-                g.add(plate);
-                const col = i ? 0xf28c28 : 0xd23b2a;
-                [[0, 0.09, 0], [0.08, 0.09, 0.04], [-0.08, 0.09, 0.04], [0, 0.09, -0.08], [0, 0.18, 0]].forEach(([ax, ay, az]) => {
-                    const f = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 10), new THREE.MeshStandardMaterial({ color: col, roughness: 0.45 }));
-                    f.position.set(cx + fx + ax, T + ay, -1.7 + az);
-                    g.add(f);
-                });
-            });
-            // Warm spotlights from above the altar onto each Buddha's face and body (金身光澤)
-            SANBAO.forEach(b => {
-                const sp = new THREE.SpotLight(0xffc27a, 1.6, 9, 0.42, 0.6, 1.4);
-                sp.position.set(cx + b.x, FLOOR + 3.6, -2.0);
-                sp.target.position.set(cx + b.x, FLOOR + 2.0, -4.45);
-                scene.add(sp, sp.target);
-                nightLights.push({ light: sp, day: 1.6, night: 2.0, flicker: false, phase: 0, isJinlu: false });
-            });
-            // Lamps keep the hall softly lit by day as well as at night
-            addNightLight(cx, FLOOR + 2.7, -2.0, 0xffd59e, 1.5, 9, false, 0.6);
-            addNightLight(cx - 3.9, FLOOR + 2.4, -2.6, 0xffd59e, 0.8, 6, false, 0.6);
-            addNightLight(cx + 3.9, FLOOR + 2.4, -2.6, 0xffd59e, 0.8, 6, false, 0.6);
+            // ---- Interior (shared with the ground-floor 大雄寶殿): dais, mandorlas, altar, lamps — here the 三官大帝
+            buildShrineInterior(g, { cx, FLOOR, W, y1, dz: 0, goldMat, lacquer, figs: SANGUAN, makeFigure: makeSanguanFigure });
 
             // Upper swallowtail roof carrying the twin dragons and pagoda
             buildSwallowtailRoof(goldMat, greenTrimMat, {
@@ -2080,17 +2126,9 @@
             const labelAnchor = new THREE.Object3D();
             labelAnchor.position.set(cx, y1 + 0.2, zF + 1.4);
             templeGroup.add(labelAnchor);
-            register3DLabel(labelAnchor, 0, '🏯 二樓・大雄寶殿（三寶佛）', '#fbbf24', () => moveCameraPreset('sanbao'));
+            register3DLabel(labelAnchor, 0, '🏯 二樓・三官殿（三官大帝）', '#fbbf24', () => moveCameraPreset('sanguan'));
 
-            // Swap the stand-ins for the Blender-sculpted Buddhas
-            upgradeStatuesFromGLB(SANBAO.map(b => ({
-                key: b.key, container: b.group, figure: b.fallback, offsetY: 0,
-                interact: { interactType: 'buddha', label: b.label },
-                textures: {
-                    [b.pre + '_Face']: () => createStatueFaceTexture({ skin: b.key === 'yaoshi' ? '#3f7fdc' : '#d8ac52', browColor: '#3a2410', longBrow: true, eyes: 'downcast', mouth: 'serene', urna: true, blush: 0.1 }),
-
-                }
-            })));
+            upgradeSanguanStatues();
         }
 
         // Dragon carved around a stone column (螺旋石雕龍柱)
@@ -2572,6 +2610,122 @@
         ];
         const SIDE_HALL_FLOOR = 0.3;
 
+        // =====================================================================
+        // 大雄寶殿（平地新建・重簷）：位於廟區右後方，殿門朝前面向廟埕；安奉三寶佛
+        // =====================================================================
+        const DAXIONG = { x: 40, z: -24, W: 18, D: 12, wallH: 5.2 };
+        function isOnDaxiongFloor(pos) {
+            return Math.abs(pos.x - DAXIONG.x) < DAXIONG.W / 2 + 0.4 && Math.abs(pos.z - DAXIONG.z) < DAXIONG.D / 2 + 0.4;
+        }
+        function buildDaxiongHall(goldMat, greenTrimMat) {
+            const { x: X, z: Z, W, D, wallH } = DAXIONG;
+            const F = SIDE_HALL_FLOOR, front = D / 2, back = -D / 2, top = F + wallH;
+            const M = propMats();
+            const hg = new THREE.Group();
+            hg.position.set(X, 0, Z);
+            templeGroup.add(hg);
+            const red = new THREE.MeshStandardMaterial({ color: 0x9b1c16, roughness: 0.42 });
+            const lacquer = new THREE.MeshStandardMaterial({ color: 0x7a1814, roughness: 0.5 });
+            const brick = createRedBrickWallTexture();
+            brick.repeat.set(6, 2);
+            const brickMat = new THREE.MeshStandardMaterial({ map: brick, roughness: 0.6 });
+            const click = { interactType: 'daxiong', label: '🪷 大雄寶殿（安奉三寶佛・點擊入殿參拜）' };
+            const tag = m => { m.userData = { ...click }; clickableMeshes.push(m); return m; };
+            const add = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); hg.add(m); return m; };
+
+            // Two-step stone terrace (月台) with wide front stairs and a stone approach
+            add(new THREE.BoxGeometry(W + 1.6, 0.12, D + 1.6), M.darkStone, 0, 0.06, 0);
+            add(new THREE.BoxGeometry(W + 0.8, F, D + 0.8), M.stone, 0, F / 2, 0);
+            add(new THREE.BoxGeometry(W * 0.45, 0.15, 0.7), M.stone, 0, 0.075, front + 0.75);
+            add(new THREE.BoxGeometry(4.2, 0.03, 7.5), M.stone, 0, 0.015, front + 4.6);
+            // Brick back and side walls; round gold lattice windows
+            tag(add(new THREE.BoxGeometry(W, wallH, 0.3), brickMat, 0, F + wallH / 2, back + 0.15));
+            [-1, 1].forEach(sx => {
+                tag(add(new THREE.BoxGeometry(0.3, wallH, D - 1.6), brickMat, sx * (W / 2 - 0.15), F + wallH / 2, -0.8));
+                const win = add(new THREE.TorusGeometry(0.9, 0.09, 8, 30), goldMat, sx * (W / 2 - 0.08), F + 2.8, -0.8);
+                win.rotation.y = Math.PI / 2;
+            });
+            // Lacquered wood panelling inside (so the Buddhas sit against dark wood, not bare brick)
+            const panel = new THREE.MeshStandardMaterial({ color: 0x5a140f, roughness: 0.55 });
+            add(new THREE.BoxGeometry(W - 0.7, wallH - 0.1, 0.06), panel, 0, F + wallH / 2, back + 0.34);
+            [-1, 1].forEach(sx => add(new THREE.BoxGeometry(0.06, wallH - 0.1, D - 1.9), panel, sx * (W / 2 - 0.33), F + wallH / 2, -0.8));
+            for (let k = -3; k <= 3; k++) add(new THREE.BoxGeometry(0.12, wallH - 0.1, 0.08), goldMat, k * 2.5, F + wallH / 2, back + 0.38);
+            // Front colonnade: six red columns; the outer bays carry carved lattice door panels
+            const colZ = front - 0.8;
+            [-7.6, -4.6, -1.6, 1.6, 4.6, 7.6].forEach(cx => {
+                add(new THREE.CylinderGeometry(0.24, 0.27, wallH, 18), red, cx, F + wallH / 2, colZ);
+                add(new THREE.CylinderGeometry(0.36, 0.4, 0.28, 16), M.darkStone, cx, F + 0.14, colZ);
+                colliders.push({ x: X + cx, z: Z + colZ, r: 0.35 });
+            });
+            const latticeMat = new THREE.MeshStandardMaterial({ map: createLatticeWindowTexture(), roughness: 0.6 });
+            [-1, 1].forEach(sx => {
+                tag(add(new THREE.BoxGeometry(2.7, wallH - 1.3, 0.12), latticeMat, sx * 6.1, F + (wallH - 1.3) / 2 + 0.2, colZ));
+                for (let lx = 4.9; lx <= 7.4; lx += 0.8) colliders.push({ x: X + sx * lx, z: Z + colZ, r: 0.45 });
+                // wall stub from the outer column to the side wall
+                tag(add(new THREE.BoxGeometry(W / 2 - 7.6, wallH, 0.3), brickMat, sx * (7.6 + (W / 2 - 7.6) / 2), F + wallH / 2, colZ));
+            });
+            const beamTex = createPaintedBeamTexture();
+            beamTex.repeat.set(3, 1);
+            add(new THREE.BoxGeometry(W, 0.62, 0.42), new THREE.MeshStandardMaterial({ map: beamTex, roughness: 0.45 }), 0, top - 0.31, colZ);
+            add(new THREE.BoxGeometry(W, 0.14, D), new THREE.MeshStandardMaterial({ color: 0x4a1a10, roughness: 0.7 }), 0, top + 0.07, 0);
+            const plaque = tag(add(new THREE.BoxGeometry(3.8, 1.05, 0.14),
+                new THREE.MeshStandardMaterial({ map: createSignboardTexture('大 雄 寶 殿', 520, 150, '#2a0806', '#facc15', '#fef08a', false, 84), roughness: 0.35 }),
+                0, top - 1.25, colZ + 0.25));
+            const frame = add(new THREE.BoxGeometry(4.05, 1.3, 0.1), goldMat, 0, top - 1.25, colZ + 0.17);
+            // Red lanterns under the eaves
+            [-6.1, -3.1, 3.1, 6.1].forEach(lx => {
+                const lan = add(new THREE.SphereGeometry(0.34, 16, 14), new THREE.MeshStandardMaterial({ color: 0xdc2626, emissive: 0x991b1b, emissiveIntensity: 0.45 }), lx, top - 1.2, front + 0.1);
+                lan.scale.set(1, 1.2, 1);
+                registerNightEmissive(lan.material, 0.45, 1.7);
+                addNightGlow(hg, lan.position, 0xff5a3c, 2.0);
+            });
+
+            // 重簷：下簷一圈屋頂、上層樓身（窗櫺），再加燕尾上簷與雙龍護塔
+            buildSwallowtailRoof(goldMat, greenTrimMat, {
+                cx: X, W: W + 2.2, ridgeZ: Z, ridgeY: top + 1.7, eaveY: top + 0.15,
+                frontZ: Z + front + 1.3, backZ: Z + back - 1.3, lift: 0.75, ornaments: false, ceiling: false, sideWalls: false
+            });
+            const upW = W - 4.2, upD = D - 3.6, upY0 = top + 0.75, upY1 = top + 2.9;
+            add(new THREE.BoxGeometry(upW, upY1 - upY0, upD), lacquer, 0, (upY0 + upY1) / 2, 0);
+            [-1, 1].forEach(sz => {
+                for (let k = -2; k <= 2; k++) {
+                    const w = add(new THREE.BoxGeometry(2.0, 1.2, 0.06), latticeMat, k * 2.6, (upY0 + upY1) / 2 + 0.05, sz * (upD / 2 + 0.03));
+                }
+            });
+            add(new THREE.BoxGeometry(upW + 0.2, 0.36, upD + 0.2), new THREE.MeshStandardMaterial({ map: beamTex, roughness: 0.45 }), 0, upY1 - 0.18, 0);
+            buildSwallowtailRoof(goldMat, greenTrimMat, {
+                cx: X, W: upW + 2.6, ridgeZ: Z, ridgeY: upY1 + 2.0, eaveY: upY1 + 0.1,
+                frontZ: Z + upD / 2 + 1.4, backZ: Z - upD / 2 - 1.4, lift: 0.85, ornaments: true, ceiling: false, sideWalls: false
+            });
+
+            // Interior: the three Buddhas, moved down from the old upper hall
+            buildShrineInterior(templeGroup, { cx: X, FLOOR: F, W: 14, y1: top, dz: Z, goldMat, lacquer, figs: SANBAO,
+                makeFigure: (b, grp) => { b.fallback = buildFallbackBuddha(b); grp.add(b.fallback); } });
+            // Swap the stand-ins for the Blender-sculpted Buddhas (loaded when visitors come near)
+            upgradeStatuesFromGLB(SANBAO.map(b => ({
+                key: b.key, container: b.group, figure: b.fallback, offsetY: 0,
+                interact: { interactType: 'buddha', label: b.label },
+                textures: {
+                    [b.pre + '_Face']: () => createStatueFaceTexture({ skin: b.key === 'yaoshi' ? '#3f7fdc' : '#d8ac52', browColor: '#3a2410', longBrow: true, eyes: 'downcast', mouth: 'serene', urna: true, blush: 0.1 }),
+
+                }
+            })));
+            // Walls, dais and altar are solid for walking
+            for (let x = -W / 2 + 0.5; x <= W / 2 - 0.5; x += 1.0) colliders.push({ x: X + x, z: Z + back + 0.25, r: 0.5 });
+            [-1, 1].forEach(sx => { for (let z = back + 0.5; z <= colZ; z += 1.0) colliders.push({ x: X + sx * (W / 2 - 0.15), z: Z + z, r: 0.45 }); });
+            for (let x = -6.6; x <= 6.6; x += 1.1) colliders.push({ x: X + x, z: Z - 4.6, r: 1.2 });
+            for (let x = -4.6; x <= 4.6; x += 1.0) colliders.push({ x: X + x, z: Z - 1.7, r: 0.55 });
+
+            const anchor = new THREE.Object3D();
+            anchor.position.set(X, upY1 + 2.6, Z + front + 1.2);
+            templeGroup.add(anchor);
+            register3DLabel(anchor, 0, '🪷 大雄寶殿（三寶佛）', '#fbbf24', () => moveCameraPreset('sanbao'));
+
+            // Big gold censer in front of the hall
+            EXTRA_CENSERS.daxiong = { pos: { x: X, z: Z + front + 4.2 }, rotY: 0, plaque: '大 雄 爐', name: '大雄寶殿爐', deity: '三寶佛',
+                toast: '🙏 已將清香插入大雄寶殿爐，恭請三寶佛慈悲加被：消災延壽、福慧增長！' };
+        }
+
         function buildSideHallPlot(h, goldMat) {
             const g = new THREE.Group();
             g.position.set(h.x, 0, h.z);
@@ -2647,6 +2801,7 @@
         }
 
         function isOnSideHallFloor(pos) {
+            if (isOnDaxiongFloor(pos)) return true;
             return SIDE_HALLS.some(h => {
                 const r = h.rot || 0, dx = pos.x - h.x, dz = pos.z - h.z;
                 const lx = dx * Math.cos(r) - dz * Math.sin(r), lz = dx * Math.sin(r) + dz * Math.cos(r);
@@ -3559,7 +3714,7 @@
             const red = new THREE.MeshStandardMaterial({ color: 0x8c1d18, roughness: 0.45 });
             const g = new THREE.Group();
             templeGroup.add(g);
-            const tag = m => { m.userData = { interactType: 'stairs', label: '🪜 登樓樓梯（點擊上二樓・大雄寶殿）' }; clickableMeshes.push(m); return m; };
+            const tag = m => { m.userData = { interactType: 'stairs', label: '🪜 登樓樓梯（點擊上二樓・三官殿）' }; clickableMeshes.push(m); return m; };
             const { x0, x1, zF, zB, land, rise } = STAIR;
             const run = zF - zB, N = 12, mid = (x0 + x1) / 2;
             const flights = [
@@ -3647,7 +3802,7 @@
         function climbStairs(up) {
             if (state.towerFloor > 1) { showToast('🏯 請先從後殿下樓'); return; }
             if (!playerAvatarGroup || state.climb) return;
-            if (up && state.upstairs) { showToast('🏯 你已在二樓・大雄寶殿'); return; }
+            if (up && state.upstairs) { showToast('🏯 你已在二樓・三官殿'); return; }
             if (!up && !state.upstairs) { showToast('🚶 你已在一樓廟埕'); return; }
             resetAvatarPose();
             const p = playerAvatarGroup.position;
@@ -3655,7 +3810,7 @@
             if (up) {
                 path = [[p.x, p.y, p.z], ...STAIR_UP_PATH];
                 if (Math.hypot(p.x - 10, p.z + 8.2) > 2.5) { p.set(10, 0, -9.2); path[0] = [10, 0, -9.2]; }
-                showToast('🪜 拾級而上，前往二樓大雄寶殿參拜三寶佛…');
+                showToast('🪜 拾級而上，前往二樓三官殿參拜三官大帝…');
             } else {
                 path = [[p.x, p.y, p.z], [4.4, 9.04, 1.25], ...STAIR_UP_PATH.slice().reverse().slice(2), [10.0, 0, -9.2]];
                 showToast('🪜 緩步下樓，回到廟埕…');
@@ -3666,7 +3821,7 @@
                 state.followCam = up;
                 if (up) {
                     Object.assign(camControl.desiredSpherical, { radius: 9, theta: 0.0, phi: 1.32 });
-                    showToast('🏯 已登上二樓迴廊。可走進大雄寶殿；走回右側天橋即可下樓。');
+                    showToast('🏯 已登上二樓迴廊。可走進三官殿；走回右側天橋即可下樓。');
                 } else {
                     moveCameraPreset('overview');
                 }
@@ -9954,6 +10109,7 @@
             buildFestivalLanternString(11.2, 9.6, 11.2, 15.5, 5.2, 0.6);
             buildPerimeterWall(goldMat);
             SIDE_HALLS.forEach(h => { if (!h.built) buildSideHallPlot(h, goldMat); else buildSideHall(h, goldMat, greenTrimMat); });
+            buildDaxiongHall(goldMat, greenTrimMat);
             buildCourtyardProps();
             RESERVE_PLOTS.forEach(buildReservePlot);   // the left plot now holds the 地藏殿
             buildFudeCenser(goldMat);
@@ -12087,7 +12243,7 @@
 
         // 鏡頭按鈕分類：分頁切換，避免按鈕太多被畫面右側擋住
         const CAM_GROUPS = [
-            ['大殿', ['overview', 'festival', 'shrine', 'altar', 'mazu', 'nezha', 'tiger', 'tiangong', 'upper', 'stairs', 'sanbao']],
+            ['大殿', ['overview', 'festival', 'shrine', 'altar', 'mazu', 'nezha', 'tiger', 'tiangong', 'upper', 'stairs', 'sanguan', 'daxiong', 'sanbao']],
             ['偏殿', ['tudigong', 'light', 'lampwall_gm', 'lampwall_ts', 'side_left', 'side_right', 'side_wing_left', 'side_wing_right', 'side_dizang']],
             ['後殿', ['rearhall', 'guandi', 'tianshi', 'xuantian', 'yuhuang', 'sanqing']],
             ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'puppet', 'guanyinpond', 'grounds']],
@@ -12165,7 +12321,10 @@
             presets.festival = { r: 36, theta: 0.1, phi: 1.66, tx: -1.5, ty: 10.5, tz: -2 };
             presets.upper = { r: 17, theta: 0.05, phi: 1.36, tx: -1.5, ty: 11.0, tz: 0.5 };
             // Stand inside the hall with a wide lens so all three Buddhas are in frame
-            presets.sanbao = { r: 4.0, theta: 0, phi: 1.52, tx: -1.5, ty: 10.85, tz: -4.4, fov: 72 };
+            presets.sanguan = { r: 4.5, theta: 0, phi: 1.52, tx: -1.5, ty: 10.85, tz: -4.4, fov: 72 };
+            // ground-floor 大雄寶殿: stand inside, wide lens on the three Buddhas
+            presets.sanbao = { r: 5.6, theta: 0, phi: 1.5, tx: DAXIONG.x, ty: SIDE_HALL_FLOOR + 1.95, tz: DAXIONG.z - 4.4, fov: 72 };
+            presets.daxiong = { r: 30, theta: 0.25, phi: 1.3, tx: DAXIONG.x, ty: 4.5, tz: DAXIONG.z + 1 };
             const p = presets[presetName] || presets.overview;
             if (camera) {
                 if (!camera.userData.baseFov) camera.userData.baseFov = camera.fov;
@@ -12372,7 +12531,9 @@
             else if (type === 'basin') washHands();
             else if (type === 'bell') strikeBell();
             else if (type === 'prop') showToast(ud.propMsg || ud.label);
-            else if (type === 'upperhall') { moveCameraPreset('sanbao'); showToast('🏯 主殿二樓・大雄寶殿：安奉三寶佛——釋迦牟尼佛、藥師佛、阿彌陀佛'); }
+            else if (type === 'upperhall') { moveCameraPreset('sanguan'); showToast('🏯 主殿二樓・三官殿：安奉三官大帝——天官賜福、地官赦罪、水官解厄'); }
+            else if (type === 'sanguan') { playTempleBellSound(587); showToast('🙏 頂禮三官大帝：天官賜福、地官赦罪、水官解厄——願福至、罪消、厄解，闔家平安'); }
+            else if (type === 'daxiong') { moveCameraPreset('sanbao'); showToast('🪷 大雄寶殿：安奉三寶佛——中・釋迦牟尼佛，左右・藥師佛、阿彌陀佛'); }
             else if (type === 'buddha') { playTempleBellSound(528); showToast('🪷 合十頂禮三寶佛：願消災延壽、福慧增長、往生淨土'); }
             else if (type === 'sidehall') showToast('🏗️ 偏殿籌建中：基地與柱礎已就位，敬請期待新殿落成！');
         }
