@@ -69,6 +69,12 @@
             },
             "acc": {
               ".validate": "newData.isString() && newData.val().length <= 8"
+            },
+            "age": {
+              ".validate": "newData.isString() && newData.val().length <= 8"
+            },
+            "beard": {
+              ".validate": "newData.isString() && newData.val().length <= 8"
             }
           },
           "$other": {

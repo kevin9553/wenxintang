@@ -1276,7 +1276,7 @@
             return g;
         }
         function updateCandleFlames(t) {
-            const k = t * 0.001;
+            const k = t;   // t is in seconds
             for (let i = 0; i < candleFlames.length; i++) {
                 const c = candleFlames[i], p = c.phase;
                 const f = Math.sin(k * 11 + p) * 0.06 + Math.sin(k * 23.7 + p * 2.1) * 0.04;
@@ -1360,30 +1360,116 @@
 
         function registerNightEmissive(mat, day, night) { nightEmissives.push({ mat, day, night }); }
 
-        function applyLightingMode() {
-            const n = state.nightMode;
-            scene.background.setHex(n ? 0x141038 : 0xf0c08a);
-            scene.fog.color.setHex(n ? 0x1e1645 : 0xe6bf94);
-            ambientLight.intensity = n ? 0.14 : 0.26;
-            hemiLight.intensity = n ? 0.12 : 0.55;
-            hemiLight.color.setHex(n ? 0xdbeafe : 0xffd8a8);
-            hemiLight.groundColor.setHex(n ? 0xcfc4ac : 0x7a4430);
-            sunDirLight.intensity = n ? 0.3 : 2.3;
-            sunDirLight.color.setHex(n ? 0x8fa8ff : 0xffc690);
-            ambientLight.color.setHex(n ? 0x9a88d8 : 0xffd2a8);
-            renderer.toneMappingExposure = n ? 1.2 : 1.05;
-            if (skyDome) { skyDome.material.map = n ? skyNightTex : skyDayTex; skyDome.material.needsUpdate = true; }
-            if (moonMesh) moonMesh.visible = n;
-            skyClouds.forEach(cl => { cl.visible = !n; });
-            skyClouds.forEach(cl => cl.children.forEach(p => {
-                p.material.color.setHex(n ? 0x334155 : 0xf4f7fb);
-                p.material.opacity = n ? 0.45 : 0.88;
-            }));
-            nightEmissives.forEach(e => { e.mat.emissiveIntensity = n ? e.night : e.day; });
-            nightLights.forEach(l => { l.light.intensity = n ? l.night : l.day; l.light.visible = (n ? l.night : l.day) > 0 || l.isJinlu; });
-            nightGlows.forEach(gl => { gl.visible = n; });
-            if (skyLanternField) { skyLanternField.visible = n; skyLanternGlow.visible = n; }
+        // =====================================================================
+        // 天色：依實際時間（看的人的本地時鐘）自動變化——清晨、白天、黃昏、入夜、深夜，每分鐘平滑更新
+        // 右上角按鈕切換：🕒 自動 → ☀️ 白天 → 🌙 夜晚 → 🕒 自動
+        // =====================================================================
+        // keyframes: h = hour of day; sky = gradient stops top→bottom; light settings; night = 0 (day) … 1 (night)
+        const SKY_KEYS = [
+            { h: 0,    sky: ['#05041a', '#0e0c30', '#1f1850', '#2a2058', '#1a1438'], bg: 0x0e0c30, fog: 0x161238, amb: [0.12, 0x8a7cc8], hemi: [0.1, 0xc7d2fe, 0xbfb49c], sun: [0.22, 0x8fa8ff], exp: 1.2, night: 1 },
+            { h: 4.6,  sky: ['#07061e', '#141038', '#2a1f5c', '#3d2c6b', '#241a40'], bg: 0x141038, fog: 0x1e1645, amb: [0.14, 0x9a88d8], hemi: [0.12, 0xdbeafe, 0xcfc4ac], sun: [0.3, 0x8fa8ff], exp: 1.2, night: 1 },
+            { h: 5.6,  sky: ['#2b3a6e', '#6a6aa0', '#e7a07a', '#f3b98a', '#c98a6a'], bg: 0xc49aa0, fog: 0xd8a890, amb: [0.2, 0xd8b8c8], hemi: [0.3, 0xf5c9b8, 0x6a4a40], sun: [1.0, 0xff9a6a], exp: 1.12, night: 0.4 },
+            { h: 7,    sky: ['#3f72c0', '#7aa8de', '#cfdcea', '#f2dcbc', '#e6c49a'], bg: 0xc9d8e6, fog: 0xd2dbe2, amb: [0.24, 0xffe6cc], hemi: [0.48, 0xdbeafe, 0x7a5a40], sun: [1.8, 0xffd2a0], exp: 1.06, night: 0 },
+            { h: 12,   sky: ['#1f5fc0', '#4f90dc', '#8fc0ec', '#b8d8f0', '#a8c4d8'], bg: 0x9cc4ea, fog: 0xaecde8, amb: [0.28, 0xffffff], hemi: [0.6, 0xe0f0ff, 0x8a6a50], sun: [2.5, 0xfff4e0], exp: 1.02, night: 0 },
+            { h: 15.5, sky: ['#2f6cc0', '#6a9edc', '#b8cfe4', '#e8dcc4', '#d8c4a4'], bg: 0xb8cce0, fog: 0xc6d2dc, amb: [0.27, 0xfff0dc], hemi: [0.56, 0xe6ecff, 0x84603e], sun: [2.4, 0xffe2b8], exp: 1.04, night: 0 },
+            { h: 17.3, sky: ['#5f7fb4', '#a9a8c4', '#f1c48e', '#f6b878', '#e8a26a'], bg: 0xf0c08a, fog: 0xe6bf94, amb: [0.26, 0xffd2a8], hemi: [0.55, 0xffd8a8, 0x7a4430], sun: [2.3, 0xffc690], exp: 1.05, night: 0 },
+            { h: 18.3, sky: ['#2a2a62', '#6a4a86', '#e0806a', '#ef9a6a', '#a05a5a'], bg: 0x9a6a80, fog: 0x8a6078, amb: [0.2, 0xd8a8b8], hemi: [0.3, 0xf0b0a0, 0x5a3a40], sun: [1.0, 0xff8a5a], exp: 1.12, night: 0.55 },
+            { h: 19.3, sky: ['#0c0a28', '#1c1648', '#33266a', '#43306e', '#2a1f48'], bg: 0x1a1440, fog: 0x221a4c, amb: [0.15, 0x9a88d8], hemi: [0.13, 0xdbeafe, 0xcfc4ac], sun: [0.32, 0x8fa8ff], exp: 1.2, night: 1 },
+            { h: 24,   sky: ['#05041a', '#0e0c30', '#1f1850', '#2a2058', '#1a1438'], bg: 0x0e0c30, fog: 0x161238, amb: [0.12, 0x8a7cc8], hemi: [0.1, 0xc7d2fe, 0xbfb49c], sun: [0.22, 0x8fa8ff], exp: 1.2, night: 1 }
+        ];
+        let SKY_MODE = 'auto';
+        try { const v = localStorage.getItem('temple.skyMode'); if (v === 'day' || v === 'night' || v === 'auto') SKY_MODE = v; } catch (e) {}
+        const SKY_STATE = { tex: null, canvas: null, lastKey: '', nightFlag: null };
+        function skyHourNow() { const d = new Date(); return d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600; }
+        function skyParamsAt(h) {
+            let a = SKY_KEYS[0], b = SKY_KEYS[1];
+            for (let i = 0; i < SKY_KEYS.length - 1; i++) if (h >= SKY_KEYS[i].h && h <= SKY_KEYS[i + 1].h) { a = SKY_KEYS[i]; b = SKY_KEYS[i + 1]; break; }
+            const t = b.h === a.h ? 0 : (h - a.h) / (b.h - a.h), u = t * t * (3 - 2 * t);
+            const C = (x, y) => new THREE.Color(x).lerp(new THREE.Color(y), u);
+            const L = (x, y) => x + (y - x) * u;
+            return {
+                sky: a.sky.map((c, i) => '#' + C(c, b.sky[i]).getHexString()),
+                bg: C(a.bg, b.bg), fog: C(a.fog, b.fog),
+                amb: [L(a.amb[0], b.amb[0]), C(a.amb[1], b.amb[1])],
+                hemi: [L(a.hemi[0], b.hemi[0]), C(a.hemi[1], b.hemi[1]), C(a.hemi[2], b.hemi[2])],
+                sun: [L(a.sun[0], b.sun[0]), C(a.sun[1], b.sun[1])],
+                exp: L(a.exp, b.exp), night: L(a.night, b.night), h
+            };
         }
+        function drawAutoSky(P) {
+            if (!SKY_STATE.canvas) { SKY_STATE.canvas = document.createElement('canvas'); SKY_STATE.canvas.width = 1024; SKY_STATE.canvas.height = 512; SKY_STATE.tex = new THREE.CanvasTexture(SKY_STATE.canvas); }
+            const ctx = SKY_STATE.canvas.getContext('2d');
+            const g = ctx.createLinearGradient(0, 0, 0, 512);
+            [0, 0.32, 0.48, 0.56, 1].forEach((o, i) => g.addColorStop(o, P.sky[i]));
+            ctx.fillStyle = g; ctx.fillRect(0, 0, 1024, 512);
+            if (P.night > 0.3) {
+                // stars fade in as it gets dark (fixed pattern so they don't jump between updates)
+                let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+                const a = Math.min(1, (P.night - 0.3) / 0.6);
+                for (let i = 0; i < 2600; i++) {
+                    const x = rnd() * 1024, y = rnd() * 280, b = 0.25 + rnd() * 0.75, sz = rnd() < 0.07 ? 2 : 1;
+                    ctx.fillStyle = `rgba(255,255,255,${b * a})`; ctx.fillRect(x, y, sz, sz);
+                }
+            }
+            SKY_STATE.tex.needsUpdate = true;
+            return SKY_STATE.tex;
+        }
+        // sun follows a simple east→west arc through the day; at night a soft moonlight comes from the front-right
+        function placeSun(h, night) {
+            if (night >= 0.9) { sunDirLight.position.set(34, 26, 30); return; }
+            const t = Math.max(0, Math.min(1, (h - 5.8) / (18.6 - 5.8)));
+            const el = Math.sin(t * Math.PI) * 52 + 10;
+            sunDirLight.position.set(Math.cos(t * Math.PI) * 46, el, 30 - Math.sin(t * Math.PI) * 6);
+        }
+        function applyLightingMode() {
+            let P;
+            if (SKY_MODE === 'auto') P = skyParamsAt(skyHourNow());
+            else P = skyParamsAt(SKY_MODE === 'night' ? 22 : 17.3);
+            const n = P.night >= 0.5;
+            state.nightMode = n;
+            scene.background.copy(P.bg);
+            scene.fog.color.copy(P.fog);
+            ambientLight.intensity = P.amb[0]; ambientLight.color.copy(P.amb[1]);
+            hemiLight.intensity = P.hemi[0]; hemiLight.color.copy(P.hemi[1]); hemiLight.groundColor.copy(P.hemi[2]);
+            sunDirLight.intensity = P.sun[0]; sunDirLight.color.copy(P.sun[1]);
+            placeSun(P.h, P.night);
+            renderer.toneMappingExposure = P.exp;
+            if (skyDome) {
+                const key = P.sky.join() + Math.round(P.night * 20);
+                if (key !== SKY_STATE.lastKey) { skyDome.material.map = drawAutoSky(P); skyDome.material.needsUpdate = true; SKY_STATE.lastKey = key; }
+            }
+            if (moonMesh) moonMesh.visible = P.night > 0.6;
+            skyClouds.forEach(cl => { cl.visible = P.night < 0.6; });
+            const cloudCol = new THREE.Color(0xf4f7fb).lerp(new THREE.Color(0xe8a080), Math.max(0, Math.min(1, P.night * 1.6)));
+            skyClouds.forEach(cl => cl.children.forEach(p => { p.material.color.copy(cloudCol); p.material.opacity = 0.88 - P.night * 0.3; }));
+            if (SKY_STATE.nightFlag !== n) {
+                SKY_STATE.nightFlag = n;
+                nightEmissives.forEach(e => { e.mat.emissiveIntensity = n ? e.night : e.day; });
+                nightLights.forEach(l => { l.light.intensity = n ? l.night : l.day; l.light.visible = (n ? l.night : l.day) > 0 || l.isJinlu; });
+                nightGlows.forEach(gl => { gl.visible = n; });
+                if (skyLanternField) { skyLanternField.visible = n; skyLanternGlow.visible = n; }
+            }
+            if (renderer.shadowMap) renderer.shadowMap.needsUpdate = true;
+            updateSkyButton();
+        }
+        function updateSkyButton() {
+            const icon = document.getElementById('lightModeIcon');
+            if (!icon) return;
+            icon.className = SKY_MODE === 'auto' ? 'fa-solid fa-clock text-amber-200 text-xs' : SKY_MODE === 'night' ? 'fa-solid fa-moon text-amber-200 text-xs' : 'fa-solid fa-sun text-amber-300 text-xs';
+            const btn = icon.parentElement;
+            if (btn) btn.title = SKY_MODE === 'auto' ? '天色：依實際時間（點擊切換白天）' : SKY_MODE === 'day' ? '天色：白天（點擊切換夜晚）' : '天色：夜晚（點擊改回依實際時間）';
+        }
+        function setSkyMode(m, quiet) {
+            SKY_MODE = m;
+            try { localStorage.setItem('temple.skyMode', m); } catch (e) {}
+            applyLightingMode();
+            if (!quiet) {
+                const h = skyHourNow();
+                const phase = h < 5 ? '深夜' : h < 7 ? '清晨' : h < 11 ? '上午' : h < 13.5 ? '中午' : h < 17 ? '下午' : h < 19 ? '黃昏' : '夜晚';
+                showToast(m === 'auto' ? `🕒 天色依實際時間變化（現在是${phase}）` : m === 'day' ? '☀️ 已切換至「晴空廟埕日景」' : '🌙 已切換至「靜謐夜參模式」');
+            }
+        }
+        setInterval(() => { if (SKY_MODE === 'auto' && typeof scene !== 'undefined' && scene && sunDirLight) applyLightingMode(); }, 60000);
 
         function createRoofTileTexture() {
             const cvs = document.createElement('canvas');
@@ -3902,7 +3988,7 @@
         }
 
         function enterLanternFestival() {
-            if (!state.nightMode) toggleTempleLightingMode();
+            if (!state.nightMode) setSkyMode('night', true);
             moveCameraPreset('festival');
             showToast('🏮 天燈夜祭：萬盞天燈冉冉升空，祈願直達天聽！');
         }
@@ -7545,7 +7631,7 @@
             }
         }
         function updateMiaozhuCat(t) {
-            if (MIAOZHU.cat) MIAOZHU.cat.body.scale.y = MIAOZHU.cat.base + Math.sin(t * 0.0025) * 0.03;   // breathing
+            if (MIAOZHU.cat) MIAOZHU.cat.body.scale.y = MIAOZHU.cat.base + Math.sin(t * 2.5) * 0.03;   // breathing
         }
 
         function buildXiaorenArea(goldMat) {
@@ -8072,7 +8158,7 @@
             if (pose === 'kneel') {
                 // upright kneel (跪): thighs straight down onto the kneeler, shins and feet folded back behind
                 ud.legs.forEach(l => { const shoe = l.children[1]; if (shoe) { shoe.position.set(0, -0.42, -0.34); shoe.scale.z = 1.9; } });
-                ud.poseDY = -0.33;
+                ud.poseDY = -0.33 * (ud.ageScale || 1);
                 ud.leftArm.rotation.set(-0.95, 0, 0.32);
                 ud.rightArm.rotation.set(holding ? -0.75 : -0.95, 0, -0.32);
             } else if (pose === 'lotus') {
@@ -8080,7 +8166,7 @@
                 ud.legs.forEach((l, i) => { l.position.set(l.userData.home.x * 0.9, 0.3 + i * 0.06, 0.1); });
                 ud.legs[0].rotation.set(-1.5, 0, 1.0);
                 ud.legs[1].rotation.set(-1.62, 0, -1.0);
-                ud.poseDY = -0.22;
+                ud.poseDY = -0.22 * (ud.ageScale || 1);
                 ud.leftArm.rotation.set(-0.55, 0, 0.42);
                 ud.rightArm.rotation.set(-0.55, 0, -0.42);
                 ud.headGroup.rotation.x = 0.12;
@@ -10327,15 +10413,17 @@
         // =====================================================================
         const AV_OPTIONS = {
             gender: [['m', '👦 男偶'], ['f', '👧 女偶']],
+            age:   [['child', '童'], ['young', '青'], ['middle', '中'], ['old', '老']],
+            beard: [['none', '無'], ['mous', '八字鬍'], ['goat', '山羊鬍'], ['long', '長鬚']],
             skin:  [0xffe2cc, 0xf6d2b4, 0xe8bc94, 0xcf9a6e, 0x9b6a45],
             mood:  [['open', '睜眼'], ['smile', '笑眼']],
-            style: [['short', '短髮'], ['bun', '包包頭'], ['twin', '雙丸子'], ['long', '長髮'], ['pony', '馬尾']],
+            style: [['short', '短髮'], ['bun', '包包頭'], ['twin', '雙丸子'], ['long', '長髮'], ['pony', '馬尾'], ['braid', '辮子'], ['curly', '捲髮'], ['bald', '光頭']],
             hair:  [0x1c140d, 0x2b1a12, 0x5a3a22, 0x8a5a2b, 0xb9b2a6, 0xd8d2c6, 0x7a1f2b],
             shirt: [0x8b5cc6, 0xe58fb0, 0x4b5f8a, 0x6b8f5e, 0xb8565f, 0xf5f0e6, 0x7c6a9a, 0xd97706, 0x0e7490, 0x8a6a4a, 0xb91c1c, 0x1f2937],
             sash:  [0xf5d0fe, 0xfde68a, 0xffffff, 0xd4a017, 0xb91c1c, 0x1f2937],
             pants: [0x3b2a4a, 0x2f2a26, 0x1f2937, 0x5c4033, 0x7f1d1d],
-            hat:   [['none', '無'], ['straw', '斗笠'], ['cap', '瓜皮帽']],
-            acc:   [['none', '無'], ['beads', '念珠'], ['fan', '摺扇'], ['gourd', '葫蘆'], ['bag', '香包']]
+            hat:   [['none', '無'], ['straw', '斗笠'], ['cap', '瓜皮帽'], ['scarf', '頭巾']],
+            acc:   [['none', '無'], ['beads', '念珠'], ['fan', '摺扇'], ['gourd', '葫蘆'], ['bag', '香包'], ['cane', '拐杖'], ['glasses', '眼鏡'], ['umbrella', '油紙傘']]
         };
         const pickOpt = (list, v, d) => list.some(o => (Array.isArray(o) ? o[0] : o) === v) ? v : d;
 
@@ -10351,6 +10439,8 @@
                 hairStyle: pickOpt(AV_OPTIONS.style, l.style, 'short'),
                 skirt: !!l.skirt,
                 gender: pickOpt(AV_OPTIONS.gender, l.gender, l.skirt ? 'f' : 'm'),
+                age: pickOpt(AV_OPTIONS.age, l.age, 'young'),
+                beard: pickOpt(AV_OPTIONS.beard, l.beard, 'none'),
                 accentColor: pickOpt(AV_OPTIONS.sash, l.sash, new THREE.Color(shirt).lerp(new THREE.Color(0xffffff), 0.7).getHex()),
                 pantsColor: pickOpt(AV_OPTIONS.pants, l.pants, 0x3b2a4a),
                 hat: pickOpt(AV_OPTIONS.hat, l.hat, 'none'),
@@ -10395,6 +10485,44 @@
                 const tie = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.01, 6, 10), new THREE.MeshStandardMaterial({ color: 0xb91c1c }));
                 tie.position.set(0.3, 0.57, 0.05); tie.rotation.x = Math.PI / 2;
                 g.add(g1, g2, tie);
+            } else if (cfg.acc === 'cane') {
+                // 拐杖: a bent-top walking stick held in the right hand, its foot on the ground
+                const wood = new THREE.MeshStandardMaterial({ color: 0x6b3e1f, roughness: 0.6 });
+                const cane = new THREE.Group();
+                const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.026, 0.62, 8), wood); shaft.position.y = -0.31;
+                const crook = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.022, 8, 14, Math.PI), wood); crook.position.set(-0.06, 0.0, 0); 
+                const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 8), new THREE.MeshStandardMaterial({ color: 0x1c1917 })); tip.position.y = -0.62;
+                cane.add(shaft, crook, tip);
+                cane.position.set(0.02, -0.38, 0.08);
+                cane.rotation.z = -0.12;
+                ud.rightArm.add(cane);
+            } else if (cfg.acc === 'glasses') {
+                // 眼鏡: round wire frames over the eyes
+                const wire = new THREE.MeshStandardMaterial({ color: 0x2b2118, metalness: 0.4, roughness: 0.4 });
+                const fz = 0.46 * 0.9;
+                [-1, 1].forEach(sx => {
+                    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.009, 6, 20), wire);
+                    ring.position.set(sx * 0.105, -0.07, fz + 0.02); ring.rotation.y = sx * 0.22; ud.headGroup.add(ring);
+                    const lens = new THREE.Mesh(new THREE.CircleGeometry(0.07, 18), new THREE.MeshStandardMaterial({ color: 0xbfe3ff, transparent: true, opacity: 0.18, roughness: 0.05 }));
+                    lens.position.copy(ring.position); lens.rotation.y = ring.rotation.y; ud.headGroup.add(lens);
+                    const arm2 = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.01, 0.3), wire); arm2.position.set(sx * 0.4, -0.06, 0.2); arm2.rotation.y = sx * -0.35; ud.headGroup.add(arm2);
+                });
+                const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.01, 0.01), wire); bridge.position.set(0, -0.06, fz + 0.04); ud.headGroup.add(bridge);
+            } else if (cfg.acc === 'umbrella') {
+                // 油紙傘: a red oiled-paper parasol held in the left hand, open over the head
+                const um = new THREE.Group();
+                const canopyTex = (() => { const c = document.createElement('canvas'); c.width = 256; c.height = 64; const k = c.getContext('2d'); k.fillStyle = '#b91c1c'; k.fillRect(0, 0, 256, 64); k.strokeStyle = '#7f1d1d'; k.lineWidth = 3; for (let i = 0; i < 16; i++) { k.beginPath(); k.moveTo(i * 16, 0); k.lineTo(i * 16, 64); k.stroke(); } k.fillStyle = '#fbbf24'; k.fillRect(0, 50, 256, 6); return new THREE.CanvasTexture(c); })();
+                const canopy = new THREE.Mesh(new THREE.ConeGeometry(0.7, 0.28, 16, 1, true), new THREE.MeshStandardMaterial({ map: canopyTex, side: THREE.DoubleSide, roughness: 0.7, transparent: true, opacity: 0.95 }));
+                canopy.position.y = 1.78;
+                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 1.95, 6), new THREE.MeshStandardMaterial({ color: 0x6b3e1f })); pole.position.y = 0.85;
+                const knob = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), gold); knob.position.y = 1.94;
+                um.add(canopy, pole, knob);
+                // held at the left side of the body (not on the swinging arm), so it stays steady while walking
+                // canopy rim stays above the hair and hats; the pole leans in so the canopy sits over the head
+                um.position.set(-0.3, 0.62, 0.12);
+                um.rotation.z = -0.17;
+                g.add(um);
+                ud.umbrella = um;
             } else if (cfg.acc === 'bag') {
                 const bag = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.18, 0.06), new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.6 }));
                 bag.position.set(-0.27, 0.55, 0.12);
@@ -10463,6 +10591,10 @@
             const y = avEdit.doll ? avEdit.doll.rotation.y : 0.4;
             if (avEdit.doll) avEdit.scene.remove(avEdit.doll);
             avEdit.doll = createLookDoll(avEdit.look);
+            // frame the taller look when a parasol is held over the head
+            const tall = avEdit.look.acc === 'umbrella';
+            avEdit.cam.position.set(0, tall ? 1.55 : 1.25, tall ? 5.4 : 4.2);
+            avEdit.cam.lookAt(0, tall ? 1.2 : 0.95, 0);
             avEdit.doll.rotation.y = y;
             avEdit.scene.add(avEdit.doll);
         }
@@ -10475,6 +10607,20 @@
             else { L.skirt = false; if (L.style !== 'short' && L.style !== 'pony') L.style = 'short'; }
             renderAvatarOptions(); refreshAvatarPreview();
         }
+        // 選年齡時帶入該年齡常見的造型（之後各項仍可自由改）
+        function setAvatarAge(a) {
+            const L = avEdit.look;
+            if (L.age === a) return;
+            const was = L.age || 'young';
+            L.age = a;
+            if (a === 'old') { L.hair = 0xd8d2c6; if (L.acc === 'none' || !L.acc) L.acc = 'cane'; if (L.gender !== 'f' && (!L.beard || L.beard === 'none')) L.beard = 'long'; if (L.gender === 'f' && L.style !== 'bald') L.style = 'bun'; }
+            else if (a === 'middle') { if (L.hair === 0xd8d2c6 || L.hair === 0xb9b2a6) L.hair = 0x2b1a12; if (L.gender !== 'f' && (!L.beard || L.beard === 'none')) L.beard = 'mous'; if (L.acc === 'cane') L.acc = 'none'; }
+            else {
+                if (was === 'old' || was === 'middle') { if (L.hair === 0xd8d2c6 || L.hair === 0xb9b2a6) L.hair = 0x2b1a12; L.beard = 'none'; if (L.acc === 'cane') L.acc = 'none'; }
+                if (a === 'child') { L.beard = 'none'; if (L.gender === 'f' && L.style === 'bun') L.style = 'twin'; }
+            }
+            renderAvatarOptions(); refreshAvatarPreview();
+        }
         function setAvatarOpt(k, v) {
             avEdit.look[k] = v;
             renderAvatarOptions();
@@ -10484,6 +10630,9 @@
             const pick = a => { const o = a[(Math.random() * a.length) | 0]; return Array.isArray(o) ? o[0] : o; };
             ['skin', 'mood', 'style', 'hair', 'shirt', 'sash', 'pants', 'hat', 'acc'].forEach(k => { avEdit.look[k] = pick(AV_OPTIONS[k]); });
             avEdit.look.gender = Math.random() < 0.5 ? 'f' : 'm';
+            avEdit.look.age = pick(AV_OPTIONS.age);
+            avEdit.look.beard = avEdit.look.gender === 'm' && (avEdit.look.age === 'middle' || avEdit.look.age === 'old') ? pick(AV_OPTIONS.beard) : 'none';
+            if (avEdit.look.age === 'old' && Math.random() < 0.7) avEdit.look.hair = pick([0xd8d2c6, 0xb9b2a6]);
             avEdit.look.skirt = avEdit.look.gender === 'f' ? Math.random() < 0.75 : false;
             if (avEdit.look.gender === 'm' && Math.random() < 0.7) avEdit.look.style = 'short';
             renderAvatarOptions(); refreshAvatarPreview();
@@ -10506,6 +10655,7 @@
             const g = L.gender || (L.skirt ? 'f' : 'm');
             document.getElementById('avatarOptions').innerHTML = [
                 row('性別', AV_OPTIONS.gender.map(([v, t]) => `<button type="button" onclick="setAvatarGender('${v}')" class="px-3 py-1 rounded-full text-xs font-bold border ${g === v ? 'bg-amber-400 text-stone-900 border-amber-200' : 'border-amber-300/40 text-amber-100'}">${t}</button>`).join('')),
+                row('年齡', (AV_OPTIONS.age.map(([v, t]) => `<button type="button" onclick="setAvatarAge('${v}')" class="px-3 py-1 rounded-full text-xs font-bold border ${(L.age || 'young') === v ? 'bg-amber-400 text-stone-900 border-amber-200' : 'border-amber-300/40 text-amber-100'}">${t}</button>`).join(''))),
                 row('膚色', swatches('skin', AV_OPTIONS.skin)),
                 row('表情', chips('mood', AV_OPTIONS.mood)),
                 row('髮型', chips('style', AV_OPTIONS.style)),
@@ -10513,6 +10663,7 @@
                 row('上衣', swatches('shirt', AV_OPTIONS.shirt)),
                 row('衣領・腰帶', swatches('sash', AV_OPTIONS.sash)),
                 row('下身', `<button type="button" onclick="setAvatarOpt('skirt', false)" class="px-2 py-0.5 rounded-full text-[11px] border ${!L.skirt ? 'bg-amber-400 text-stone-900 border-amber-200' : 'border-amber-300/40 text-amber-100'}">褲裝</button><button type="button" onclick="setAvatarOpt('skirt', true)" class="px-2 py-0.5 rounded-full text-[11px] border ${L.skirt ? 'bg-amber-400 text-stone-900 border-amber-200' : 'border-amber-300/40 text-amber-100'}">長裙</button>` + swatches('pants', AV_OPTIONS.pants)),
+                row('鬍子', chips('beard', AV_OPTIONS.beard)),
                 row('帽子', chips('hat', AV_OPTIONS.hat)),
                 row('配件', chips('acc', AV_OPTIONS.acc))
             ].join('');
@@ -13040,8 +13191,8 @@
         // userData 介面與舊版相同（leftArm / rightArm / headGroup / incenseBundle / legs），動作不受影響
         // =====================================================================
         const _chibiFaceCache = {};
-        function createChibiFaceTexture(skinHex, eyeHex, mood, gender) {
-            const key = skinHex + '|' + eyeHex + '|' + mood + '|' + (gender || '');
+        function createChibiFaceTexture(skinHex, eyeHex, mood, gender, age) {
+            const key = skinHex + '|' + eyeHex + '|' + mood + '|' + (gender || '') + '|' + (age || '');
             if (_chibiFaceCache[key]) return _chibiFaceCache[key];
             const W = 1024, H = 512;
             const c = document.createElement('canvas');
@@ -13090,9 +13241,16 @@
                     x.strokeStyle = 'rgba(70,40,25,0.75)'; x.lineWidth = gender === 'f' ? 5 : 6;
                     x.beginPath(); x.moveTo(ex - 16, ey - 62); x.quadraticCurveTo(ex, ey - 70, ex + 16, ey - 63); x.stroke();
                 }
+                if (age === 'old') {
+                    // crow's feet and a line under each eye
+                    x.strokeStyle = 'rgba(110,60,40,0.45)'; x.lineWidth = 3;
+                    [-10, 0, 10].forEach(d => { x.beginPath(); x.moveTo(ex + s * 40, ey + d * 0.6); x.lineTo(ex + s * 56, ey + d * 1.4); x.stroke(); });
+                    x.beginPath(); x.arc(ex, ey + 30, 22, Math.PI * 0.2, Math.PI * 0.8); x.stroke();
+                }
                 // Blush
-                const bg = x.createRadialGradient(ex + s * 14, ey + 52, 0, ex + s * 14, ey + 52, 30);
-                bg.addColorStop(0, 'rgba(255,120,130,0.55)'); bg.addColorStop(1, 'rgba(255,120,130,0)');
+                const ba = age === 'child' ? 0.75 : age === 'old' ? 0.3 : age === 'middle' ? 0.4 : 0.55;
+                const bg = x.createRadialGradient(ex + s * 14, ey + 52, 0, ex + s * 14, ey + 52, age === 'child' ? 36 : 30);
+                bg.addColorStop(0, `rgba(255,120,130,${ba})`); bg.addColorStop(1, 'rgba(255,120,130,0)');
                 x.fillStyle = bg;
                 x.fillRect(ex + s * 14 - 32, ey + 20, 64, 64);
             });
@@ -13107,10 +13265,91 @@
                 x.strokeStyle = '#8a3b2e'; x.lineWidth = 5; x.lineCap = 'round';
                 x.beginPath(); x.arc(cx, ey + 58, 12, Math.PI * 0.15, Math.PI * 0.85); x.stroke();
             }
+            if (age === 'old' || age === 'middle') {
+                // forehead lines (three for old, one faint one for middle-aged) and smile lines beside the mouth
+                x.strokeStyle = age === 'old' ? 'rgba(110,60,40,0.42)' : 'rgba(110,60,40,0.25)'; x.lineWidth = 3.5; x.lineCap = 'round';
+                (age === 'old' ? [0, 1, 2] : [0]).forEach(k => { x.beginPath(); x.moveTo(cx - 60 + k * 8, ey - 98 - k * 13); x.quadraticCurveTo(cx, ey - 106 - k * 13, cx + 60 - k * 8, ey - 98 - k * 13); x.stroke(); });
+                [-1, 1].forEach(s => { x.beginPath(); x.moveTo(cx + s * 26, ey + 38); x.quadraticCurveTo(cx + s * 40, ey + 56, cx + s * 30, ey + 74); x.stroke(); });
+            }
             const tex = new THREE.CanvasTexture(c);
             tex.anisotropy = 4;
             _chibiFaceCache[key] = tex;
             return tex;
+        }
+
+        // ---- 手持清香：三炷香（紅竹柄＋褐色香身＋發光香頭＋灰白香灰），微微散開；香煙裊裊上升
+        const heldIncense = [];
+        const _incGeo = {};
+        function incenseGeos() {
+            if (_incGeo.handle) return _incGeo;
+            _incGeo.handle = new THREE.CylinderGeometry(0.0075, 0.0085, 0.2, 6);
+            _incGeo.body = new THREE.CylinderGeometry(0.0115, 0.0105, 0.4, 7);
+            _incGeo.ash = new THREE.CylinderGeometry(0.0108, 0.0114, 0.018, 7);
+            _incGeo.ember = new THREE.SphereGeometry(0.0125, 8, 6);
+            _incGeo.handleMat = new THREE.MeshStandardMaterial({ color: 0xc81e1e, roughness: 0.5 });
+            _incGeo.bodyMat = new THREE.MeshStandardMaterial({ color: 0x6b3d24, roughness: 0.95 });
+            _incGeo.ashMat = new THREE.MeshStandardMaterial({ color: 0xd8d2c8, roughness: 1 });
+            _incGeo.emberMat = new THREE.MeshBasicMaterial({ color: 0xff5a1f, toneMapped: false });
+            _incGeo.glowMat = new THREE.SpriteMaterial({ map: getPuffTexture(), color: 0xff6a2a, transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+            return _incGeo;
+        }
+        function buildHeldIncense() {
+            const G = incenseGeos();
+            const b = new THREE.Group();
+            // tilted forward so the burning tips point up and ahead of the face, not into it
+            b.position.set(0, -0.42, 0.07);
+            b.rotation.x = 1.42;
+            b.scale.setScalar(0.82);          // shorter for the big-headed dolls, so the tips stay in front of the chin
+            const tips = [];
+            [-1, 0, 1].forEach(k => {
+                const st = new THREE.Group();
+                st.rotation.z = -k * 0.07;              // fanned out a little
+                st.position.x = k * 0.012;
+                const handle = new THREE.Mesh(G.handle, G.handleMat); handle.position.y = 0.04;
+                const body = new THREE.Mesh(G.body, G.bodyMat); body.position.y = 0.34;
+                const ash = new THREE.Mesh(G.ash, G.ashMat); ash.position.y = 0.548;
+                const ember = new THREE.Mesh(G.ember, G.emberMat); ember.position.y = 0.562; ember.scale.set(1, 0.7, 1);
+                const glow = new THREE.Sprite(G.glowMat); glow.scale.set(0.07, 0.07, 1); glow.position.y = 0.565;
+                st.add(handle, body, ash, ember, glow);
+                b.add(st);
+                tips.push({ st, ember, glow });
+            });
+            // a small fist wrap where the hand grips the sticks
+            const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.04, 10), new THREE.MeshStandardMaterial({ color: 0xd4a017, metalness: 0.4, roughness: 0.4 }));
+            grip.position.y = 0.13; b.add(grip);
+            // smoke puffs: each rises from a tip, drifts and fades, then restarts
+            const smoke = [];
+            for (let i = 0; i < 9; i++) {
+                const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: getPuffTexture(), color: 0xe7e5e4, transparent: true, opacity: 0, depthWrite: false }));
+                sp.userData = { tip: tips[i % 3], t: i / 9 };
+                smoke.push(sp);
+            }
+            b.userData = { tips, smoke, smokeAdded: false };
+            heldIncense.push(b);
+            return b;
+        }
+        const _incW = new THREE.Vector3();
+        function updateHeldIncense(t, dt) {
+            for (let i = 0; i < heldIncense.length; i++) {
+                const b = heldIncense[i];
+                if (!b.visible || !b.parent) { if (b.userData.smokeAdded) b.userData.smoke.forEach(sp => { sp.visible = false; }); continue; }
+                const ud = b.userData;
+                // embers breathe
+                ud.tips.forEach((tp, k) => { const f = 0.75 + Math.sin(t * 4 + k * 2.1) * 0.25; tp.glow.material.opacity = 0.55 + f * 0.35; tp.glow.scale.setScalar(0.06 + f * 0.025); });
+                if (!ud.smokeAdded) { ud.smoke.forEach(sp => templeGroup.add(sp)); ud.smokeAdded = true; }
+                ud.smoke.forEach(sp => {
+                    const s = sp.userData;
+                    s.t += dt * 0.45;
+                    if (s.t >= 1 || s.ox === undefined) { if (s.t >= 1) s.t -= 1; s.tip.ember.getWorldPosition(_incW); templeGroup.worldToLocal(_incW); s.ox = _incW.x; s.oy = _incW.y; s.oz = _incW.z; s.dx = (Math.random() - 0.5) * 0.12; s.dz = (Math.random() - 0.5) * 0.12; }
+                    if (s.ox === undefined) { sp.visible = false; return; }
+                    sp.visible = true;
+                    const u = s.t;
+                    sp.position.set(s.ox + s.dx * u + Math.sin(u * 6 + s.dz * 40) * 0.025, s.oy + u * 0.55, s.oz + s.dz * u);
+                    const sz = 0.07 + u * 0.22;
+                    sp.scale.set(sz, sz * 1.3, 1);
+                    sp.material.opacity = Math.sin(u * Math.PI) * 0.5;
+                });
+            }
         }
 
         function createWoodenDollCharacter(cfg) {
@@ -13143,7 +13382,7 @@
             const hemY = cfg.skirt ? 0.12 : 0.38, hemR = cfg.skirt ? 0.4 : 0.33;
             // 男偶肩膀寬一點、女偶腰身收一點（沒指定性別的 NPC 維持原樣）
             const shW = cfg.gender === 'm' ? 1.1 : cfg.gender === 'f' ? 0.92 : 1;
-            const waistW = cfg.gender === 'f' ? 0.9 : 1;
+            const waistW = (cfg.gender === 'f' ? 0.9 : 1) * (cfg.age === 'middle' ? 1.1 : cfg.age === 'old' ? 1.04 : 1);
             const torso = new THREE.Mesh(new THREE.LatheGeometry([
                 [0, hemY], [hemR, hemY], [hemR - 0.03, hemY + 0.05], [0.29 * waistW, 0.62], [0.26 * (shW + waistW) / 2, 0.82], [0.22 * shW, 0.97], [0.12 * shW, 1.04], [0, 1.06]
             ].map(([r, y]) => new THREE.Vector2(r, y)), 28), clothesMat);
@@ -13184,7 +13423,7 @@
             const R = 0.46;
             const head = new THREE.Mesh(
                 new THREE.SphereGeometry(R, 40, 28),
-                new THREE.MeshStandardMaterial({ map: createChibiFaceTexture(skinHex, cfg.eyeColor || 0x6b3a1f, cfg.mood || 'open', cfg.gender), roughness: 0.55 })
+                new THREE.MeshStandardMaterial({ map: createChibiFaceTexture(skinHex, cfg.eyeColor || 0x6b3a1f, cfg.mood || 'open', cfg.gender, cfg.age), roughness: 0.55 })
             );
             head.scale.set(1.0, 0.94, 0.95);
             head.castShadow = true;
@@ -13196,13 +13435,24 @@
                 headGroup.add(ear);
             });
 
-            // Hair: cap + front bangs, then a style
+            // Hair: cap + front bangs, then a style (光頭 has neither; old age thins the bangs)
+            const bald = cfg.hairStyle === 'bald';
             const cap = new THREE.Mesh(new THREE.SphereGeometry(R * 1.06, 36, 20, 0, Math.PI * 2, 0, Math.PI * 0.56), hairMat);
             cap.scale.set(1.0, 0.98, 0.98);
             cap.rotation.x = -0.32;
             cap.position.set(0, 0.02, -0.02);
-            headGroup.add(cap);
+            if (!bald) headGroup.add(cap);
+            if (bald) {
+                // a little shine on the bald head, and a ring of hair low at the back for the elderly
+                const shine = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
+                shine.scale.set(1.4, 0.6, 0.4); shine.position.set(-0.12, R * 0.82, 0.18); headGroup.add(shine);
+                if (cfg.age === 'old' || cfg.age === 'middle') {
+                    const fringe = new THREE.Mesh(new THREE.TorusGeometry(R * 0.93, 0.06, 8, 30, Math.PI * 1.15), hairMat);
+                    fringe.rotation.set(Math.PI / 2, 0, Math.PI * 0.92); fringe.position.set(0, -0.02, -0.04); headGroup.add(fringe);
+                }
+            }
             for (let i = -2; i <= 2; i++) {
+                if (bald || (cfg.age === 'old' && Math.abs(i) === 1)) continue;
                 const bang = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10), hairMat);
                 bang.scale.set(1.05, 1.5, 0.55);
                 const a = i * 0.32;
@@ -13261,6 +13511,59 @@
                 tail.position.set(0, 0.0, -0.5);
                 tail.rotation.x = 0.5;
                 headGroup.add(tail);
+            } else if (style === 'braid') {
+                // 辮子: a braid of beads hanging down the back, tied with a red ribbon
+                for (let k = 0; k < 7; k++) {
+                    const seg = new THREE.Mesh(new THREE.SphereGeometry(0.085 - k * 0.007, 10, 8), hairMat);
+                    seg.scale.set(1, 1.25, 0.9);
+                    seg.position.set((k % 2 ? 0.025 : -0.025), -0.05 - k * 0.12, -R * 0.95 - Math.min(k, 2) * 0.03);
+                    headGroup.add(seg);
+                }
+                const rib = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.015, 6, 12), new THREE.MeshStandardMaterial({ color: 0xc81e1e }));
+                rib.position.set(0, -0.86, -R * 0.95 - 0.06); headGroup.add(rib);
+            } else if (style === 'curly') {
+                // 捲髮: little curls all over the cap
+                for (let k = 0; k < 34; k++) {
+                    const u = k / 34, th = u * Math.PI * 2 * 5.3, ph = 0.15 + u * 1.25;
+                    const curl = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 6), hairMat);
+                    curl.position.set(Math.sin(ph) * Math.sin(th) * R * 1.05, Math.cos(ph) * R * 1.02 + 0.02, Math.sin(ph) * Math.cos(th) * R * 1.02 - 0.03);
+                    if (curl.position.z > R * 0.55 && curl.position.y < R * 0.55) continue;     // keep the face clear
+                    headGroup.add(curl);
+                }
+            }
+            // 鬍子: moustache, goatee or a long beard, in the hair colour
+            if (cfg.beard && cfg.beard !== 'none') {
+                const fz = R * 0.9, my = -R * 0.38;
+                if (cfg.beard === 'mous' || cfg.beard === 'long') {
+                    [-1, 1].forEach(sx => {
+                        const m = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), hairMat);
+                        m.scale.set(1.8, 0.55, 0.6); m.position.set(sx * 0.07, my + 0.02, fz + 0.01); m.rotation.z = sx * 0.35; headGroup.add(m);
+                    });
+                }
+                if (cfg.beard === 'goat') {
+                    const gt = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.2, 10), hairMat);
+                    gt.rotation.x = Math.PI; gt.position.set(0, my - 0.2, fz - 0.06); headGroup.add(gt);
+                    [-1, 1].forEach(sx => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), hairMat); m.scale.set(1.8, 0.5, 0.6); m.position.set(sx * 0.06, my + 0.02, fz + 0.01); m.rotation.z = sx * 0.4; headGroup.add(m); });
+                }
+                if (cfg.beard === 'long') {
+                    for (let k = -2; k <= 2; k++) {
+                        const st = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.008, 0.42 - Math.abs(k) * 0.07, 8), hairMat);
+                        st.position.set(k * 0.05, my - 0.26 + Math.abs(k) * 0.03, fz - 0.08 - Math.abs(k) * 0.02);
+                        st.rotation.x = 0.25; headGroup.add(st);
+                    }
+                }
+            }
+            // 年齡：童＝小身體大頭；老＝微駝背、頭略低
+            if (cfg.age === 'child') { group.userData.ageScale = 0.78; headGroup.scale.setScalar(1.12); }
+            if (cfg.age === 'old') { headGroup.position.set(0, 1.39, 0.05); headGroup.rotation.x = 0.1; torso.rotation.x = 0.06; }
+            if (cfg.hat === 'scarf') {
+                // 頭巾: a cloth band round the head with a knot and tails at the back
+                const sm = accentMat;
+                const band = new THREE.Mesh(new THREE.TorusGeometry(R * 0.98, 0.07, 10, 36), sm);
+                band.rotation.x = Math.PI / 2 - 0.25; band.position.set(0, R * 0.4, -0.03); band.scale.set(1, 1, 0.9);
+                const knot = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), sm); knot.position.set(0, R * 0.35, -R * 0.98);
+                headGroup.add(band, knot);
+                [-1, 1].forEach(sx => { const tail = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.28, 0.02), sm); tail.position.set(sx * 0.07, R * 0.15, -R * 1.0); tail.rotation.z = sx * 0.3; headGroup.add(tail); });
             }
             if (cfg.hat === 'straw') {
                 // Conical straw hat (斗笠)
@@ -13274,22 +13577,15 @@
             }
             group.add(headGroup);
 
-            // Incense held in the right hand
-            const incenseBundle = new THREE.Group();
-            incenseBundle.position.set(0, -0.4, 0.06);
-            incenseBundle.rotation.x = Math.PI / 3;
-            [-0.02, 0, 0.02].forEach(ix => {
-                const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.5, 6), new THREE.MeshStandardMaterial({ color: 0xb91c1c }));
-                stick.position.set(ix, 0.22, 0);
-                const ember = new THREE.Mesh(new THREE.SphereGeometry(0.016, 6, 6), new THREE.MeshBasicMaterial({ color: 0xff4500 }));
-                ember.position.set(ix, 0.47, 0);
-                incenseBundle.add(stick, ember);
-            });
+            // Incense held in the right hand: three sticks fanned slightly, red bamboo handles, dark incense coating,
+            // glowing embers with ash tips, a little smoke rising (animated in updateHeldIncense)
+            const incenseBundle = buildHeldIncense();
             incenseBundle.visible = Boolean(cfg.holdingIncense);
             rightArm.add(incenseBundle);
             if (cfg.holdingIncense) rightArm.rotation.x = -0.65;
 
-            group.userData = { leftArm, rightArm, headGroup, incenseBundle, legs };
+            group.userData = { leftArm, rightArm, headGroup, incenseBundle, legs, ageScale: group.userData.ageScale || 1 };
+            if (group.userData.ageScale !== 1) group.scale.setScalar(group.userData.ageScale);
             return group;
         }
 
@@ -14252,6 +14548,7 @@
             updatePerformanceTuning(t);
             updateStatueLoading();
             updateCandleFlames(t);
+            updateHeldIncense(t, dt);
             updateMiaozhuCat(t);
             renderer.render(scene, camera);
         }
@@ -14270,11 +14567,7 @@
         }
 
         function toggleTempleLightingMode() {
-            state.nightMode = !state.nightMode;
-            applyLightingMode();
-            const icon = document.getElementById('lightModeIcon');
-            if (icon) icon.className = state.nightMode ? 'fa-solid fa-moon text-amber-200 text-xs' : 'fa-solid fa-sun text-amber-300 text-xs';
-            showToast(state.nightMode ? '🌙 已切換至「靜謐夜參模式」' : '☀️ 已切換至「晴空廟埕日景」');
+            setSkyMode(SKY_MODE === 'auto' ? 'day' : SKY_MODE === 'day' ? 'night' : 'auto');
         }
 
         function openDivinationModal() { document.getElementById('divinationModal').classList.remove('hidden'); }
