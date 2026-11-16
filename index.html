@@ -6329,6 +6329,267 @@
             addNightLight(REAR.x + 4.6, y + 2.6, F.back + 3.2, 0xffe0b0, 0.9, 7, false, 0.6);
         }
 
+        // 雙龍搶珠壁畫：深紅底、金龍兩條由兩側盤旋而來，中央火焰寶珠，祥雲環繞，金框
+        function createDragonMuralTexture() {
+            const W = 2048, H = 400;
+            const c = document.createElement('canvas'); c.width = W; c.height = H;
+            const x = c.getContext('2d');
+            // background: deep lacquer red with a soft centre glow
+            const bg = x.createRadialGradient(W / 2, 120, 30, W / 2, H / 2, W * 0.55);
+            bg.addColorStop(0, '#c0301a'); bg.addColorStop(0.35, '#6a0d08'); bg.addColorStop(1, '#1e0403');
+            x.fillStyle = bg; x.fillRect(0, 0, W, H);
+            // storm: dark rolling clouds and gold lightning
+            for (let k = 0; k < 26; k++) {
+                const cx = Math.random() * W, cy = Math.random() * H, r = 50 + Math.random() * 90;
+                const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+                g.addColorStop(0, 'rgba(10,2,2,0.45)'); g.addColorStop(1, 'rgba(10,2,2,0)');
+                x.fillStyle = g; x.fillRect(cx - r, cy - r, r * 2, r * 2);
+            }
+            const bolt = (x0, y0, len, ang) => {
+                x.save(); x.shadowColor = '#ffd66a'; x.shadowBlur = 14; x.strokeStyle = '#ffe9a0'; x.lineWidth = 3;
+                x.beginPath(); x.moveTo(x0, y0);
+                let px = x0, py = y0;
+                for (let k = 1; k <= 7; k++) { px += Math.cos(ang) * len / 7 + (Math.random() - 0.5) * 26; py += Math.sin(ang) * len / 7 + (Math.random() - 0.5) * 14; x.lineTo(px, py); if (k === 3) { x.moveTo(px, py); x.lineTo(px + 30, py + 30); x.moveTo(px, py); } }
+                x.stroke(); x.restore();
+            };
+            bolt(260, 10, 180, 1.2); bolt(1790, 10, 180, 1.95); bolt(620, 380, 120, -1.3); bolt(1430, 380, 120, -1.85);
+            // faint wave pattern along the bottom (海水紋)
+            x.strokeStyle = 'rgba(232,185,80,0.18)'; x.lineWidth = 3;
+            for (let row = 0; row < 3; row++) for (let i = -1; i < W / 60 + 1; i++) {
+                const cx = i * 60 + (row % 2) * 30, cy = H - 18 - row * 16;
+                x.beginPath(); x.arc(cx, cy, 26, Math.PI, 0); x.stroke();
+            }
+            // auspicious clouds (祥雲)
+            const cloud = (cx, cy, s) => {
+                x.save(); x.translate(cx, cy); x.scale(s, s);
+                x.fillStyle = 'rgba(214,188,140,0.75)'; x.strokeStyle = '#8a5a14'; x.lineWidth = 3;
+                const blobs = [[0, 0, 26], [30, -8, 20], [-30, -4, 22], [52, 6, 14], [-54, 8, 14]];
+                x.beginPath(); blobs.forEach(([bx, by, r]) => { x.moveTo(bx + r, by); x.arc(bx, by, r, 0, Math.PI * 2); }); x.fill();
+                blobs.forEach(([bx, by, r]) => { x.beginPath(); x.arc(bx, by, r, Math.PI * 0.9, Math.PI * 2.1); x.stroke(); x.beginPath(); x.arc(bx + r * 0.2, by + r * 0.1, r * 0.45, Math.PI, Math.PI * 2.6); x.stroke(); });
+                x.restore();
+            };
+            [[180, 80, 1.1], [520, 330, 0.9], [760, 70, 0.8], [1290, 70, 0.8], [1530, 330, 0.9], [1870, 80, 1.1], [1024, 340, 0.8], [360, 220, 0.6], [1690, 220, 0.6]].forEach(a => cloud(...a));
+            // flaming pearl (火珠) in the centre
+            const pc = [W / 2, 112];   // high in the panel so it shows above the central statue's halo
+            for (let k = 0; k < 14; k++) {
+                const a = k / 14 * Math.PI * 2, r1 = 46, r2 = 78 + (k % 2) * 16;
+                x.fillStyle = k % 2 ? '#ffb02e' : '#ff6a1a';
+                x.beginPath(); x.moveTo(pc[0] + Math.cos(a - 0.18) * r1, pc[1] + Math.sin(a - 0.18) * r1);
+                x.quadraticCurveTo(pc[0] + Math.cos(a) * r2 * 1.05, pc[1] + Math.sin(a) * r2 * 1.05, pc[0] + Math.cos(a + 0.18) * r1, pc[1] + Math.sin(a + 0.18) * r1); x.fill();
+            }
+            const pg = x.createRadialGradient(pc[0] - 12, pc[1] - 12, 4, pc[0], pc[1], 44);
+            pg.addColorStop(0, '#fff6d8'); pg.addColorStop(0.5, '#ffcf5a'); pg.addColorStop(1, '#e8701a');
+            x.fillStyle = pg; x.beginPath(); x.arc(pc[0], pc[1], 42, 0, Math.PI * 2); x.fill();
+            x.strokeStyle = '#a0400e'; x.lineWidth = 3; x.beginPath(); x.arc(pc[0], pc[1], 42, 0, Math.PI * 2); x.stroke();
+            x.strokeStyle = 'rgba(160,64,14,0.6)'; x.lineWidth = 2.5; x.beginPath(); x.arc(pc[0], pc[1], 24, 0.3, Math.PI * 1.6); x.stroke();
+
+            // one dragon, drawn in the left half; the right one is its mirror image — a fierce, rearing dragon
+            const drawDragon = () => {
+                const ctrl = [[40, 300], [110, 360], [210, 300], [190, 160], [300, 60], [430, 120], [460, 290], [600, 350], [700, 230], [730, 110], [800, 80]];
+                const cat = (p0, p1, p2, p3, t) => { const t2 = t * t, t3 = t2 * t; return 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3); };
+                const pts = [];
+                for (let i = 0; i < ctrl.length - 1; i++) {
+                    const p0 = ctrl[Math.max(0, i - 1)], p1 = ctrl[i], p2 = ctrl[i + 1], p3 = ctrl[Math.min(ctrl.length - 1, i + 2)];
+                    for (let k = 0; k < 24; k++) { const t = k / 24; pts.push([cat(p0[0], p1[0], p2[0], p3[0], t), cat(p0[1], p1[1], p2[1], p3[1], t)]); }
+                }
+                pts.push(ctrl[ctrl.length - 1]);
+                const n = pts.length;
+                const rad = i => { const u = i / (n - 1); return 7 + Math.sin(Math.min(1, u * 1.3) * Math.PI * 0.5) * 36 - (u > 0.92 ? (u - 0.92) * 90 : 0); };
+                const nor = i => { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)]; const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; return [-dy / l, dx / l]; };
+                // flame wisps trailing off the body (火焰紋)
+                for (let i = 10; i < n - 10; i += 9) {
+                    const p = pts[i], [nx, ny] = nor(i), r = rad(i), s2 = (i / 9) % 2 ? 1 : -1;
+                    const fx = p[0] + nx * s2 * (r + 8), fy = p[1] + ny * s2 * (r + 8);
+                    const g = x.createLinearGradient(fx, fy, fx - 40, fy + ny * s2 * 30);
+                    g.addColorStop(0, 'rgba(255,120,30,0.9)'); g.addColorStop(1, 'rgba(255,200,60,0)');
+                    x.fillStyle = g;
+                    x.beginPath(); x.moveTo(fx, fy); x.quadraticCurveTo(fx - 18 + nx * s2 * 30, fy + ny * s2 * 30, fx - 46, fy + ny * s2 * 46 - 6); x.quadraticCurveTo(fx - 22, fy + ny * s2 * 14, fx + 10, fy); x.fill();
+                }
+                // dorsal spikes: tall, sharp, flame-red
+                for (let i = 6; i < n - 12; i += 5) {
+                    const [nx, ny] = nor(i), r = rad(i), p = pts[i], q = pts[Math.min(n - 1, i + 4)];
+                    const h = r * 0.9 + 16;
+                    const g = x.createLinearGradient(p[0], p[1], p[0] - nx * (r + h), p[1] - ny * (r + h));
+                    g.addColorStop(0, '#8a1a0a'); g.addColorStop(1, '#ff5a1a');
+                    x.fillStyle = g; x.strokeStyle = '#3a0802'; x.lineWidth = 2;
+                    x.beginPath(); x.moveTo(p[0] - nx * r * 0.7, p[1] - ny * r * 0.7); x.lineTo(q[0] - nx * (r + h) + (q[0] - p[0]) * 0.6, q[1] - ny * (r + h) + (q[1] - p[1]) * 0.6); x.lineTo(q[0] - nx * r * 0.7, q[1] - ny * r * 0.7); x.closePath(); x.fill(); x.stroke();
+                }
+                // legs: thick, splayed, with long hooked talons
+                const leg = (i, side) => {
+                    const p = pts[i], [nx, ny] = nor(i), r = rad(i);
+                    const knee = [p[0] + nx * side * (r + 34) + 24, p[1] + ny * side * (r + 34)];
+                    const paw = [knee[0] + 34, knee[1] + ny * side * 18];
+                    x.lineCap = 'round';
+                    x.strokeStyle = '#3a2004'; x.lineWidth = 24; x.beginPath(); x.moveTo(p[0], p[1]); x.quadraticCurveTo(knee[0], knee[1], paw[0], paw[1]); x.stroke();
+                    x.strokeStyle = '#d89a22'; x.lineWidth = 18; x.beginPath(); x.moveTo(p[0], p[1]); x.quadraticCurveTo(knee[0], knee[1], paw[0], paw[1]); x.stroke();
+                    // elbow flames
+                    x.fillStyle = '#ff6a1a';
+                    for (let k = 0; k < 3; k++) { x.beginPath(); x.moveTo(knee[0], knee[1]); x.quadraticCurveTo(knee[0] - 20 - k * 6, knee[1] - side * (14 + k * 8), knee[0] - 36 - k * 6, knee[1] - side * (6 + k * 12)); x.lineTo(knee[0] + 4, knee[1] + 2); x.fill(); }
+                    // talons: four long curved claws spread wide
+                    const base = Math.atan2(paw[1] - knee[1], paw[0] - knee[0]);
+                    [-1.0, -0.35, 0.3, 0.95].forEach(a => {
+                        const ang = base + a, tx = paw[0] + Math.cos(ang) * 22, ty = paw[1] + Math.sin(ang) * 22;
+                        x.strokeStyle = '#d89a22'; x.lineWidth = 7; x.beginPath(); x.moveTo(paw[0], paw[1]); x.lineTo(tx, ty); x.stroke();
+                        x.fillStyle = '#fbf3dc'; x.strokeStyle = '#3a2004'; x.lineWidth = 1.5;
+                        x.beginPath(); x.moveTo(tx - Math.sin(ang) * 4, ty + Math.cos(ang) * 4); x.quadraticCurveTo(tx + Math.cos(ang + 0.6) * 16, ty + Math.sin(ang + 0.6) * 16, tx + Math.cos(ang + 1.2) * 20, ty + Math.sin(ang + 1.2) * 20); x.lineTo(tx + Math.sin(ang) * 4, ty - Math.cos(ang) * 4); x.fill(); x.stroke();
+                    });
+                };
+                leg(Math.floor(n * 0.28), 1); leg(Math.floor(n * 0.44), -1); leg(Math.floor(n * 0.62), 1); leg(Math.floor(n * 0.77), -1);
+                // body: heavy dark outline, burnished gold with deep shading
+                x.save(); x.shadowColor = 'rgba(255,110,20,0.9)'; x.shadowBlur = 26; x.fillStyle = '#2a1402';
+                for (let i = 0; i < n; i += 2) { x.beginPath(); x.arc(pts[i][0], pts[i][1], rad(i) + 4, 0, Math.PI * 2); x.fill(); }
+                x.restore();
+                for (let pass = 0; pass < 2; pass++) for (let i = 0; i < n; i++) {
+                    const p = pts[i], r = rad(i) + (pass ? 0 : 4);
+                    if (pass) { const g = x.createRadialGradient(p[0], p[1] - r * 0.45, 1, p[0], p[1], r); g.addColorStop(0, '#fff0a8'); g.addColorStop(0.45, '#e6aa28'); g.addColorStop(1, '#6e4208'); x.fillStyle = g; }
+                    else x.fillStyle = '#2a1402';
+                    x.beginPath(); x.arc(p[0], p[1], r, 0, Math.PI * 2); x.fill();
+                }
+                // armour-like scales
+                for (let i = 4; i < n - 6; i += 3) {
+                    const p = pts[i], [nx, ny] = nor(i), r = rad(i), ang = Math.atan2(ny, nx);
+                    for (let k = -1; k <= 1; k++) {
+                        const ox = p[0] + nx * k * r * 0.46, oy = p[1] + ny * k * r * 0.46;
+                        x.strokeStyle = 'rgba(70,36,4,0.9)'; x.lineWidth = 2.2;
+                        x.beginPath(); x.arc(ox, oy, r * 0.3, ang + Math.PI * 0.5 - 1.15, ang + Math.PI * 0.5 + 1.15); x.stroke();
+                        x.strokeStyle = 'rgba(255,240,180,0.5)'; x.lineWidth = 1.2;
+                        x.beginPath(); x.arc(ox, oy - 1.5, r * 0.26, ang + Math.PI * 0.5 - 0.9, ang + Math.PI * 0.5 + 0.3); x.stroke();
+                    }
+                }
+                // ribbed belly
+                x.strokeStyle = 'rgba(255,236,190,0.9)'; x.lineWidth = 3.5;
+                for (let i = 4; i < n - 8; i += 3) {
+                    const p = pts[i], [nx, ny] = nor(i), r = rad(i);
+                    x.beginPath(); x.moveTo(p[0] + nx * r * 0.5 - ny * 3, p[1] + ny * r * 0.5 + nx * 3); x.lineTo(p[0] + nx * r * 0.95 - ny * 3, p[1] + ny * r * 0.95 + nx * 3); x.stroke();
+                }
+                // ---- head: big, snarling, jaws wide open toward the pearl
+                const hp = pts[n - 1], dir = Math.atan2(pc[1] - hp[1], pc[0] - hp[0]);
+                { const ex = 24 * 1.75, ey = -18 * 1.75; createDragonMuralTexture.eye = [hp[0] + Math.cos(dir) * ex - Math.sin(dir) * ey, hp[1] + Math.sin(dir) * ex + Math.cos(dir) * ey]; }
+                x.save(); x.translate(hp[0], hp[1]); x.rotate(dir); x.scale(1.75, 1.75);
+                // roaring fire from the jaws toward the pearl
+                x.save(); x.globalCompositeOperation = 'lighter';
+                for (let k = 0; k < 9; k++) {
+                    const spread = (k - 4) * 0.06, L = 110 + Math.random() * 40;
+                    const g = x.createLinearGradient(80, 16, 80 + L, 16);
+                    g.addColorStop(0, 'rgba(255,240,170,0.9)'); g.addColorStop(0.35, 'rgba(255,140,30,0.7)'); g.addColorStop(1, 'rgba(200,30,10,0)');
+                    x.fillStyle = g;
+                    x.beginPath(); x.moveTo(78, 12); x.quadraticCurveTo(80 + L * 0.5, 16 + Math.sin(spread * 8) * 20 + spread * L, 80 + L, 16 + spread * L * 1.6); x.quadraticCurveTo(80 + L * 0.5, 22 + spread * L * 0.8, 78, 22); x.fill();
+                }
+                x.restore();
+                // wild flaming mane
+                for (let k = 0; k < 11; k++) {
+                    const a = Math.PI + (k - 5) * 0.24, L = 70 + (k % 3) * 18;
+                    const g = x.createLinearGradient(0, 0, Math.cos(a) * L, Math.sin(a) * L);
+                    g.addColorStop(0, '#c41a0a'); g.addColorStop(1, '#ff9a2a');
+                    x.fillStyle = g;
+                    x.beginPath(); x.moveTo(-8, 0); x.quadraticCurveTo(Math.cos(a) * L * 0.5 - 12, Math.sin(a) * L * 0.5 + (k - 5) * 3, Math.cos(a) * L - 26, Math.sin(a) * L * 0.8 + (k - 5) * 5); x.quadraticCurveTo(Math.cos(a) * L * 0.4, Math.sin(a) * L * 0.35, 6, 0); x.fill();
+                }
+                // antlers: long, sharp, swept back with prongs
+                x.strokeStyle = '#f6ecd0'; x.lineCap = 'round';
+                [[-34, 7], [-24, 5.5]].forEach(([yy, lw]) => {
+                    x.lineWidth = lw;
+                    x.beginPath(); x.moveTo(-2, yy * 0.55); x.quadraticCurveTo(-34, yy - 22, -76, yy - 30); x.stroke();
+                    x.lineWidth = lw * 0.7;
+                    x.beginPath(); x.moveTo(-36, yy - 18); x.lineTo(-44, yy - 44); x.stroke();
+                    x.beginPath(); x.moveTo(-58, yy - 25); x.lineTo(-62, yy - 46); x.stroke();
+                });
+                const hg = x.createLinearGradient(0, -34, 0, 34); hg.addColorStop(0, '#fff0a0'); hg.addColorStop(0.55, '#e0a020'); hg.addColorStop(1, '#7a4a08');
+                // lower jaw dropped wide open
+                x.fillStyle = '#5a0a04'; x.beginPath(); x.moveTo(6, 2); x.lineTo(80, -2); x.lineTo(76, 34); x.quadraticCurveTo(36, 40, 4, 18); x.closePath(); x.fill();
+                x.fillStyle = '#d2281a'; x.beginPath(); x.moveTo(14, 12); x.quadraticCurveTo(46, 20, 70, 10); x.quadraticCurveTo(60, 26, 22, 22); x.closePath(); x.fill();   // tongue
+                x.fillStyle = hg; x.strokeStyle = '#2a1402'; x.lineWidth = 3;
+                x.beginPath(); x.moveTo(-2, 14); x.quadraticCurveTo(36, 44, 78, 36); x.lineTo(82, 46); x.quadraticCurveTo(30, 58, -12, 26); x.closePath(); x.fill(); x.stroke();
+                // upper head and snout, with a curled-up nose
+                x.fillStyle = hg;
+                x.beginPath(); x.moveTo(-18, -30); x.quadraticCurveTo(26, -44, 70, -24); x.quadraticCurveTo(92, -26, 92, -10); x.quadraticCurveTo(90, 0, 80, -1); x.lineTo(8, 2); x.quadraticCurveTo(-22, 4, -26, -10); x.closePath(); x.fill(); x.stroke();
+                // fangs: big upper and lower canines plus rows of teeth
+                x.fillStyle = '#ffffff'; x.strokeStyle = '#2a1402'; x.lineWidth = 1.2;
+                for (let k = 0; k < 7; k++) { x.beginPath(); x.moveTo(16 + k * 9, 0); x.lineTo(20 + k * 9, 9); x.lineTo(24 + k * 9, 0); x.fill(); }
+                for (let k = 0; k < 6; k++) { x.beginPath(); x.moveTo(20 + k * 9, 34 - k * 0.6); x.lineTo(24 + k * 9, 25 - k * 0.6); x.lineTo(28 + k * 9, 34 - k * 0.6); x.fill(); }
+                [[12, 0, 1], [74, -1, 1], [16, 30, -1], [70, 38, -1]].forEach(([fx, fy, d]) => { x.beginPath(); x.moveTo(fx - 4, fy); x.quadraticCurveTo(fx + 2, fy + d * 10, fx + 1, fy + d * 20); x.lineTo(fx + 5, fy); x.closePath(); x.fill(); x.stroke(); });
+                // glaring eye under a heavy angry brow
+                x.save(); x.shadowColor = '#ffcc00'; x.shadowBlur = 12;
+                x.fillStyle = '#ffde3a'; x.beginPath(); x.ellipse(22, -18, 11, 8, -0.25, 0, Math.PI * 2); x.fill();
+                x.restore();
+                x.fillStyle = '#c41a0a'; x.beginPath(); x.ellipse(24, -18, 6, 6, 0, 0, Math.PI * 2); x.fill();
+                x.fillStyle = '#100402'; x.beginPath(); x.ellipse(24, -18, 2, 5.5, 0, 0, Math.PI * 2); x.fill();
+                x.fillStyle = '#fff'; x.beginPath(); x.arc(21, -21, 1.8, 0, Math.PI * 2); x.fill();
+                x.fillStyle = '#2a1402'; x.beginPath(); x.moveTo(2, -26); x.quadraticCurveTo(20, -40, 44, -24); x.quadraticCurveTo(22, -30, 6, -20); x.closePath(); x.fill();   // brow ridge pulled down
+                x.strokeStyle = '#2a1402'; x.lineWidth = 2; x.beginPath(); x.moveTo(40, -30); x.lineTo(56, -22); x.stroke(); x.beginPath(); x.moveTo(44, -16); x.lineTo(60, -12); x.stroke();   // snarl wrinkles
+                x.fillStyle = '#2a1402'; x.beginPath(); x.ellipse(84, -14, 4, 3, 0, 0, Math.PI * 2); x.fill();   // nostril
+                // cheek fins and beard
+                x.fillStyle = '#e0501a';
+                x.beginPath(); x.moveTo(-10, 10); x.lineTo(-40, 30); x.lineTo(-24, 8); x.lineTo(-46, 18); x.lineTo(-18, -2); x.closePath(); x.fill();
+                x.strokeStyle = '#f6ecd0'; x.lineWidth = 3;
+                for (let k = 0; k < 4; k++) { x.beginPath(); x.moveTo(30 + k * 10, 46); x.quadraticCurveTo(26 + k * 10, 62, 18 + k * 12, 74); x.stroke(); }
+                // long whiskers whipping forward
+                x.lineWidth = 3.5;
+                x.beginPath(); x.moveTo(86, -8); x.bezierCurveTo(118, -50, 140, 6, 176, -36); x.stroke();
+                x.beginPath(); x.moveTo(84, 2); x.bezierCurveTo(114, 30, 140, -10, 170, 30); x.stroke();
+                x.restore();
+                // tail: a big flaming fan
+                const tp = pts[0];
+                for (let k = 0; k < 7; k++) {
+                    const a = Math.PI + (k - 3) * 0.3, L = 56 + (k % 2) * 14;
+                    const g = x.createLinearGradient(tp[0], tp[1], tp[0] + Math.cos(a) * L, tp[1] + Math.sin(a) * L);
+                    g.addColorStop(0, '#c41a0a'); g.addColorStop(1, '#ffa030');
+                    x.fillStyle = g;
+                    x.beginPath(); x.moveTo(tp[0], tp[1]); x.quadraticCurveTo(tp[0] + Math.cos(a) * L * 0.6, tp[1] + Math.sin(a) * L * 0.6 - 12, tp[0] + Math.cos(a) * L, tp[1] + Math.sin(a) * L); x.lineTo(tp[0] + 8, tp[1] + 4); x.fill();
+                }
+            };
+            drawDragon();
+            x.save(); x.translate(W, 0); x.scale(-1, 1); drawDragon(); x.restore();
+            // gold border with a key-fret band
+            x.strokeStyle = '#d9a520'; x.lineWidth = 12; x.strokeRect(6, 6, W - 12, H - 12);
+            x.strokeStyle = '#8a5a10'; x.lineWidth = 3; x.strokeRect(18, 18, W - 36, H - 36);
+            createDragonMuralTexture.size = [W, H];
+            const t = new THREE.CanvasTexture(c);
+            t.anisotropy = 8;
+            return t;
+        }
+        // glowing dragon eyes: a hot core, a red halo and a little flare on each eye, pulsing slowly
+        const dragonEyes = [];
+        function updateDragonEyes(t) {
+            for (let i = 0; i < dragonEyes.length; i++) {
+                const e = dragonEyes[i], f = 0.8 + Math.sin(t * 2.2 + e.ph) * 0.2 + (Math.sin(t * 13 + e.ph) > 0.97 ? 0.25 : 0);
+                const night = state.nightMode ? 1.35 : 1;
+                e.halo.material.opacity = Math.min(1, 0.7 * f * night);
+                e.halo.scale.setScalar(e.s * (0.9 + f * 0.25) * night);
+                e.flare.material.opacity = Math.min(1, 0.55 * f * night);
+                e.light.intensity = 0.55 * f * night;
+            }
+        }
+        function buildDragonMural(g, cx, cy, z, w, h, goldMat) {
+            const mural = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: createDragonMuralTexture(), roughness: 0.45, metalness: 0.15 }));
+            mural.position.set(cx, cy, z);
+            mural.userData = { interactType: 'enzhu_mural', label: '🐉 雙龍搶珠壁畫' };
+            // eyes light up (left dragon and its mirror image)
+            const [TW, TH] = createDragonMuralTexture.size, eye = createDragonMuralTexture.eye;
+            [eye[0], TW - eye[0]].forEach((u, k) => {
+                const ex = cx + (u / TW - 0.5) * w, ey = cy + (0.5 - eye[1] / TH) * h;
+                const core = new THREE.Mesh(new THREE.CircleGeometry(0.07, 18), new THREE.MeshBasicMaterial({ color: 0xffe066, toneMapped: false }));
+                core.position.set(ex, ey, z + 0.015);
+                const pupil = new THREE.Mesh(new THREE.PlaneGeometry(0.03, 0.11), new THREE.MeshBasicMaterial({ color: 0x5a0000 }));
+                pupil.position.set(ex + (k ? -0.012 : 0.012), ey, z + 0.02);
+                const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: getPuffTexture(), color: 0xff4a10, transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+                halo.position.set(ex, ey, z + 0.06); halo.scale.setScalar(0.6);
+                const flare = new THREE.Sprite(new THREE.SpriteMaterial({ map: getPuffTexture(), color: 0xffd060, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+                flare.position.set(ex, ey, z + 0.07); flare.scale.set(0.9, 0.12, 1);
+                // a small red light so the glow spills onto the statues' halos and the wall
+                const light = new THREE.PointLight(0xff3a10, 0.55, 3.2, 2);
+                light.position.set(ex, ey, z + 0.4);
+                g.add(core, pupil, halo, flare, light);
+                dragonEyes.push({ halo, flare, light, s: 0.6, ph: k * 1.7 });
+            });
+            clickableMeshes.push(mural);
+            g.add(mural);
+            // carved gilt frame around it
+            const t = 0.14;
+            [[0, h / 2 + t / 2, w + 2 * t, t], [0, -h / 2 - t / 2, w + 2 * t, t]].forEach(([dx, dy, fw, fh]) => { const b = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.08), goldMat); b.position.set(cx + dx, cy + dy, z + 0.02); g.add(b); });
+            [-1, 1].forEach(s2 => { const b = new THREE.Mesh(new THREE.BoxGeometry(t, h, 0.08), goldMat); b.position.set(cx + s2 * (w / 2 + t / 2), cy, z + 0.02); g.add(b); });
+            return mural;
+        }
+
         function buildRearShrine(g, F, d, goldMat, lacquer) {
             const y = F.y, back = F.back, S = 0.9, PED = 0.32, SEAT = 0.42;
             const shrineZ = back + 1.5;
@@ -6385,7 +6646,7 @@
                 }
             });
             // deity-specific companions
-            if (d.key === 'guandi') { buildGuandao(g, REAR.x + 8.3, y, shrineZ + 0.4, goldMat); buildEnzhuCompanions(g, F, goldMat, lacquer, shrineZ, az); }
+            if (d.key === 'guandi') { buildGuandao(g, REAR.x + 8.3, y, shrineZ + 0.4, goldMat); buildEnzhuCompanions(g, F, goldMat, lacquer, shrineZ, az); buildDragonMural(g, REAR.x, y + 3.05, back + 0.32, F.W - 3.6, (F.W - 3.6) * 400 / 2048, goldMat); }
             if (d.key === 'tianshi') {
                 buildBlackTiger(g, REAR.x - 1.45, y + 0.95, shrineZ + 0.5, 0.35, { interact: { interactType: 'tianshi', label: '🐯 天師座騎黑虎' } });
                 blackTigers[blackTigers.length - 1].g.scale.setScalar(0.65);
@@ -14329,6 +14590,7 @@
             }
             else if (REAR_DEITY_TOASTS[type]) { playTempleBellSound(523); showToast(REAR_DEITY_TOASTS[type]); }
             else if (ENZHU_TOASTS[type]) { playTempleBellSound(523); showToast(ENZHU_TOASTS[type]); }
+            else if (type === 'enzhu_mural') showToast('🐉 雙龍搶珠：兩條金龍騰雲駕霧、爭搶火焰寶珠，象徵祥瑞吉慶、護佑五恩主殿。');
             else if (type === 'rearhall') showToast('🏯 後殿五層樓：一樓五恩主殿（關聖帝君等五恩主）、二樓天師殿（張天師）、三樓北極殿（玄天上帝）、四樓凌霄寶殿（玉皇上帝）、五樓三清殿。點右側樓梯可上樓參拜。');
             else if (type === 'caishen' || type === 'caishen_wen' || type === 'caishen_wu') { playTempleBellSound(784); showToast(type === 'caishen_wen' ? '📜 文財神比干：公正無私，佑你正財穩進、事業亨通。' : (type === 'caishen_wu' ? '🐯 武財神趙公明：黑虎玄壇，佑你偏財廣進、招財納福。' : '💰 恭請文武財神：財源廣進、招財進寶！')); }
             else if (type === 'dizang') { playTempleBellSound(440); showToast('🪷 南無大願地藏王菩薩：「地獄不空，誓不成佛；眾生度盡，方證菩提。」祈求超薦先亡、消災延壽。'); }
@@ -14672,6 +14934,7 @@
             updateCandleFlames(t);
             updateHeldIncense(t, dt);
             updateMarquee(dt);
+            updateDragonEyes(t);
             updateMiaozhuCat(t);
             renderer.render(scene, camera);
         }
