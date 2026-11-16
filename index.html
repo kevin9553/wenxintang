@@ -6678,6 +6678,79 @@
             return mural;
         }
 
+        // 劍印將軍：主殿神案兩側護法——龍邊劍將軍（七星寶劍）、虎邊印將軍（捧帥印），立於紅漆台座上
+        const JIANYIN = [
+            { key: 'jianjun', pre: 'JJ', x: 6.5, rot: -0.35, flagCh: '劍', flagBg: '#1f3b5a', robe: 0x1f3b5a, skin: 0xc9663f, hat: 0xd9a520, interact: 'jianjun', name: '劍將軍',
+              label: '🗡️ 劍將軍（持七星寶劍・斬妖除魔）', robeTex: ['#1f3b5a', '#d4a017', '#9b1c1c'],
+              face: { skin: '#c9663f', browColor: '#0a0806', browWidth: 12, browArch: 22, eyes: 'open', eyeW: 21, eyeH: 10, iris: '#0a0806', mouth: 'small', blush: 0 } },
+            { key: 'yinjun', pre: 'YJ', x: -9.5, rot: 0.35, flagCh: '印', flagBg: '#9b1c1c', robe: 0x7f1d1d, skin: 0xefcfb0, hat: 0xd9a520, interact: 'yinjun', name: '印將軍',
+              label: '🔏 印將軍（捧帥印・號令天兵）', robeTex: ['#7f1d1d', '#d4a017', '#1f3b5a'],
+              face: { skin: '#efcfb0', browColor: '#120c08', browWidth: 10, browArch: 18, eyes: 'open', eyeW: 19, eyeH: 8, iris: '#120c08', mouth: 'small', blush: 0.15 } }
+        ];
+        // armour scales (魚鱗甲) in gold, and a 令旗 banner with a red border and the general's character
+        function createScaleArmorTexture() {
+            if (createScaleArmorTexture.t) return createScaleArmorTexture.t;
+            const c = document.createElement('canvas'); c.width = c.height = 256;
+            const x = c.getContext('2d');
+            x.fillStyle = '#7a5410'; x.fillRect(0, 0, 256, 256);
+            const R = 16;
+            for (let row = 0; row < 20; row++) for (let col = -1; col < 10; col++) {
+                const cx = col * R * 2 + (row % 2) * R, cy = row * R * 0.9;
+                const g = x.createRadialGradient(cx, cy - 4, 2, cx, cy, R);
+                g.addColorStop(0, '#ffe9a0'); g.addColorStop(0.6, '#d9a520'); g.addColorStop(1, '#6e4608');
+                x.fillStyle = g; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI); x.fill();
+                x.strokeStyle = '#3e2604'; x.lineWidth = 1.5; x.beginPath(); x.arc(cx, cy, R, 0, Math.PI); x.stroke();
+            }
+            const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(6, 6);
+            return (createScaleArmorTexture.t = t);
+        }
+        function createGeneralFlagTexture(ch, bg) {
+            const c = document.createElement('canvas'); c.width = c.height = 256;
+            const x = c.getContext('2d');
+            x.fillStyle = bg; x.fillRect(0, 0, 256, 256);
+            x.strokeStyle = '#facc15'; x.lineWidth = 18; x.strokeRect(9, 9, 238, 238);
+            x.fillStyle = '#facc15'; x.font = '900 120px "Noto Serif TC", serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+            x.fillText(ch, 90, 120);
+            for (let k = 0; k < 6; k++) { x.beginPath(); x.moveTo(30 + k * 38, 256); x.lineTo(49 + k * 38, 230); x.lineTo(68 + k * 38, 256); x.fill(); }
+            return new THREE.CanvasTexture(c);
+        }
+        function buildJianyinGenerals(goldMat) {
+            const lac = new THREE.MeshStandardMaterial({ color: 0x7a1814, roughness: 0.35 });
+            JIANYIN.forEach(a => {
+                const z = -3.5, fy = 0.46;
+                // taller lacquered pedestal with a gilt base and top, so the generals stand above the altar
+                const PH = 0.55;
+                const pedBase = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.08, 1.4), goldMat);
+                pedBase.position.set(a.x, fy + 0.04, z);
+                const ped = new THREE.Mesh(new THREE.BoxGeometry(1.25, PH, 1.25), lac);
+                ped.position.set(a.x, fy + PH / 2, z);
+                const pedTop = new THREE.Mesh(new THREE.BoxGeometry(1.36, 0.06, 1.36), goldMat);
+                pedTop.position.set(a.x, fy + PH, z);
+                templeGroup.add(pedBase, ped, pedTop);
+                const holder = new THREE.Group();
+                holder.position.set(a.x, fy + PH + 0.03, z);
+                holder.rotation.y = a.rot;
+                holder.scale.setScalar(1.12);
+                templeGroup.add(holder);
+                const fig = buildStandingStandIn(a.robe, a.skin, a.hat, 2.2);
+                holder.add(fig);
+                const interact = { interactType: a.interact, label: a.label };
+                fig.traverse(o => { if (o.isMesh) { o.userData = { ...interact }; clickableMeshes.push(o); } });
+                [ped, pedTop].forEach(m => { m.userData = { ...interact }; clickableMeshes.push(m); });
+                upgradeStatuesFromGLB([{ key: a.key, container: holder, figure: fig, offsetY: 0, interact, textures: {
+                    [a.pre + '_Face']: () => createStatueFaceTexture(a.face),
+                    [a.pre + '_Robe']: () => { const t = createBrocadeTexture(...a.robeTex); t.repeat.set(3, 2); return t; },
+                    [a.pre + '_Armor']: () => createScaleArmorTexture(),
+                    [a.pre + '_Flag']: () => createGeneralFlagTexture(a.flagCh, a.flagBg)
+                } }]);
+                colliders.push({ x: a.x, z, r: 0.85 });
+                const anchor = new THREE.Object3D();
+                anchor.position.set(a.x, fy + PH + 3.3, z);
+                templeGroup.add(anchor);
+                registerMinorLabel(anchor, 0, a.name, null);
+            });
+        }
+
         function buildRearShrine(g, F, d, goldMat, lacquer) {
             const y = F.y, back = F.back, S = 0.9, PED = 0.32, SEAT = 0.42;
             const shrineZ = back + 1.5;
@@ -11591,6 +11664,7 @@
             const cRight = new THREE.Mesh(new THREE.BoxGeometry(0.45, 3.8, 0.08), new THREE.MeshStandardMaterial({ map: coupletRightTex }));
             cRight.position.set(4.2, 2.6, -1.6);
             templeGroup.add(cRight);
+            buildJianyinGenerals(goldMat);
 
             // Symmetric 6-Column Front Porch (中門大開不擋主神，中門左右雙龍柱對稱護駕)
             [-10.2, -7.2, -3.8, 0.8, 4.2, 7.2].forEach((px, idx) => {
@@ -12729,6 +12803,8 @@
             next();
         }
 
+        const STATUE_ENLARGE = 1.25;
+        const STATUE_NO_ENLARGE = new Set(['baiwu', 'heiwu', 'jianjun', 'yinjun', 'guanyin']);
         function upgradeStatuesFromGLB(specs) {
             if (typeof THREE.GLTFLoader !== 'function') return;
             const loader = new THREE.GLTFLoader();
@@ -12742,6 +12818,12 @@
             }
             const env = getStatueEnvMap();
             const maxAniso = renderer ? renderer.capabilities.getMaxAnisotropy() : 1;
+            // 桌上供奉的神尊整體放大（連神座、背光一起），站立在地上的護法／將軍與觀音蓮池不變
+            specs.forEach(spec => {
+                if (STATUE_NO_ENLARGE.has(spec.key) || !spec.container || spec.container.userData.enlarged) return;
+                spec.container.userData.enlarged = true;
+                spec.container.scale.multiplyScalar(STATUE_ENLARGE);
+            });
             // each statue waits until the visitor comes near; its model file is then fetched and set up
             specs.forEach(spec => statueLoader.pending.push({ spec, run: buffer => queueStatueTask(() => {
                 loader.parse(buffer, '', gltf => {
@@ -14680,6 +14762,8 @@
             }
             else if (REAR_DEITY_TOASTS[type]) { playTempleBellSound(523); showToast(REAR_DEITY_TOASTS[type]); }
             else if (ENZHU_TOASTS[type]) { playTempleBellSound(523); showToast(ENZHU_TOASTS[type]); }
+            else if (type === 'jianjun') { playTempleBellSound(392); showToast('🗡️ 劍將軍：手持七星寶劍，護衛主神、斬妖除魔，保佑信眾出入平安、邪祟不侵。'); }
+            else if (type === 'yinjun') { playTempleBellSound(440); showToast('🔏 印將軍：雙手捧帥印，掌主神號令、調遣天兵，祈求事業有權有印、官運亨通。'); }
             else if (type === 'cloudmural') showToast('☁️ 祥雲圖：如意祥雲層層環繞、金光放射，象徵神明駕雲降臨、吉祥如意。');
             else if (type === 'enzhu_mural') showToast('🐉 雙龍搶珠：兩條金龍騰雲駕霧、爭搶火焰寶珠，象徵祥瑞吉慶、護佑五恩主殿。');
             else if (type === 'rearhall') showToast('🏯 後殿五層樓：一樓五恩主殿（關聖帝君等五恩主）、二樓天師殿（張天師）、三樓北極殿（玄天上帝）、四樓凌霄寶殿（玉皇上帝）、五樓三清殿。點右側樓梯可上樓參拜。');
