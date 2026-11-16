@@ -1369,9 +1369,9 @@
             { h: 0,    sky: ['#05041a', '#0e0c30', '#1f1850', '#2a2058', '#1a1438'], bg: 0x0e0c30, fog: 0x161238, amb: [0.12, 0x8a7cc8], hemi: [0.1, 0xc7d2fe, 0xbfb49c], sun: [0.22, 0x8fa8ff], exp: 1.2, night: 1 },
             { h: 4.6,  sky: ['#07061e', '#141038', '#2a1f5c', '#3d2c6b', '#241a40'], bg: 0x141038, fog: 0x1e1645, amb: [0.14, 0x9a88d8], hemi: [0.12, 0xdbeafe, 0xcfc4ac], sun: [0.3, 0x8fa8ff], exp: 1.2, night: 1 },
             { h: 5.6,  sky: ['#2b3a6e', '#6a6aa0', '#e7a07a', '#f3b98a', '#c98a6a'], bg: 0xc49aa0, fog: 0xd8a890, amb: [0.2, 0xd8b8c8], hemi: [0.3, 0xf5c9b8, 0x6a4a40], sun: [1.0, 0xff9a6a], exp: 1.12, night: 0.4 },
-            { h: 7,    sky: ['#3f72c0', '#7aa8de', '#cfdcea', '#f2dcbc', '#e6c49a'], bg: 0xc9d8e6, fog: 0xd2dbe2, amb: [0.24, 0xffe6cc], hemi: [0.48, 0xdbeafe, 0x7a5a40], sun: [1.8, 0xffd2a0], exp: 1.06, night: 0 },
-            { h: 12,   sky: ['#1f5fc0', '#4f90dc', '#8fc0ec', '#b8d8f0', '#a8c4d8'], bg: 0x9cc4ea, fog: 0xaecde8, amb: [0.28, 0xffffff], hemi: [0.6, 0xe0f0ff, 0x8a6a50], sun: [2.5, 0xfff4e0], exp: 1.02, night: 0 },
-            { h: 15.5, sky: ['#2f6cc0', '#6a9edc', '#b8cfe4', '#e8dcc4', '#d8c4a4'], bg: 0xb8cce0, fog: 0xc6d2dc, amb: [0.27, 0xfff0dc], hemi: [0.56, 0xe6ecff, 0x84603e], sun: [2.4, 0xffe2b8], exp: 1.04, night: 0 },
+            { h: 7,    sky: ['#3f72c0', '#7aa8de', '#cfdcea', '#f2dcbc', '#e6c49a'], bg: 0xc9d8e6, fog: 0xd2dbe2, amb: [0.24, 0xffdcb8], hemi: [0.5, 0xffe2c0, 0x7a4a34], sun: [2.0, 0xffc890], exp: 1.05, night: 0 },
+            { h: 12,   sky: ['#1f5fc0', '#4f90dc', '#8fc0ec', '#b8d8f0', '#a8c4d8'], bg: 0x9cc4ea, fog: 0xaecde8, amb: [0.25, 0xffe2c4], hemi: [0.52, 0xffe6c8, 0x7a4834], sun: [2.35, 0xffd6a8], exp: 1.04, night: 0 },
+            { h: 15.5, sky: ['#2f6cc0', '#6a9edc', '#b8cfe4', '#e8dcc4', '#d8c4a4'], bg: 0xb8cce0, fog: 0xc6d2dc, amb: [0.26, 0xffd8b0], hemi: [0.54, 0xffdcb0, 0x7a4630], sun: [2.35, 0xffcc98], exp: 1.05, night: 0 },
             { h: 17.3, sky: ['#5f7fb4', '#a9a8c4', '#f1c48e', '#f6b878', '#e8a26a'], bg: 0xf0c08a, fog: 0xe6bf94, amb: [0.26, 0xffd2a8], hemi: [0.55, 0xffd8a8, 0x7a4430], sun: [2.3, 0xffc690], exp: 1.05, night: 0 },
             { h: 18.3, sky: ['#2a2a62', '#6a4a86', '#e0806a', '#ef9a6a', '#a05a5a'], bg: 0x9a6a80, fog: 0x8a6078, amb: [0.2, 0xd8a8b8], hemi: [0.3, 0xf0b0a0, 0x5a3a40], sun: [1.0, 0xff8a5a], exp: 1.12, night: 0.55 },
             { h: 19.3, sky: ['#0c0a28', '#1c1648', '#33266a', '#43306e', '#2a1f48'], bg: 0x1a1440, fog: 0x221a4c, amb: [0.15, 0x9a88d8], hemi: [0.13, 0xdbeafe, 0xcfc4ac], sun: [0.32, 0x8fa8ff], exp: 1.2, night: 1 },
@@ -1418,8 +1418,9 @@
         function placeSun(h, night) {
             if (night >= 0.9) { sunDirLight.position.set(34, 26, 30); return; }
             const t = Math.max(0, Math.min(1, (h - 5.8) / (18.6 - 5.8)));
-            const el = Math.sin(t * Math.PI) * 52 + 10;
-            sunDirLight.position.set(Math.cos(t * Math.PI) * 46, el, 30 - Math.sin(t * Math.PI) * 6);
+            const el = Math.sin(t * Math.PI) * 10 + 11;                   // stays low: long shadows give the scene its depth
+            const az = (1 - t) * Math.PI * 0.82 + Math.PI * 0.09;          // sweeps from the left (morning) to the right (evening)
+            sunDirLight.position.set(Math.cos(az) * 46, el, 30);
         }
         function applyLightingMode() {
             let P;
@@ -3775,9 +3776,17 @@
                 const dv = (Math.random() - 0.5) * S.vary;
                 x.fillStyle = `rgb(${(S.base[0] + dv) | 0},${(S.base[1] + dv) | 0},${(S.base[2] + dv) | 0})`;
                 x.fillRect(i * T + 2, j * T + 2, T - 4, T - 4);
-                for (let k = 0; k < 260 * 16 / (n * n); k++) {
-                    x.fillStyle = `rgba(${S.fleck[Math.random() < 0.5 ? 0 : 1]},${0.12 + Math.random() * 0.2})`;
-                    x.fillRect(i * T + 3 + Math.random() * (T - 6), j * T + 3 + Math.random() * (T - 6), 1.5, 1.5);
+                for (let k = 0; k < 900 * 16 / (n * n); k++) {
+                    x.fillStyle = `rgba(${S.fleck[Math.random() < 0.5 ? 0 : 1]},${0.15 + Math.random() * 0.3})`;
+                    const sz = Math.random() < 0.15 ? 2.5 : 1.2;
+                    x.fillRect(i * T + 3 + Math.random() * (T - 6), j * T + 3 + Math.random() * (T - 6), sz, sz);
+                }
+                // weathering: soft mottled patches on each tile
+                for (let k = 0; k < 4; k++) {
+                    const px = i * T + Math.random() * T, py = j * T + Math.random() * T, r = T * (0.15 + Math.random() * 0.25);
+                    const rg = x.createRadialGradient(px, py, 0, px, py, r);
+                    rg.addColorStop(0, `rgba(${S.fleck[0]},0.12)`); rg.addColorStop(1, `rgba(${S.fleck[0]},0)`);
+                    x.fillStyle = rg; x.fillRect(i * T + 2, j * T + 2, T - 4, T - 4);
                 }
                 if (S.vein) {
                     x.strokeStyle = S.vein; x.lineWidth = 1.2;
@@ -3798,7 +3807,7 @@
             tex.needsUpdate = true;
             tex.repeat.set(w / 2.4, d / 2.4);
             // a top plane only (a box shared its side faces with the podium and shimmered along the edges)
-            const m = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.03, d - 0.03), new THREE.MeshStandardMaterial({ map: tex, roughness: FLOOR_TILE_STYLES[FLOOR_TILE_STYLE].rough, metalness: 0.05, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+            const m = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.03, d - 0.03), new THREE.MeshStandardMaterial({ map: tex, bumpMap: tex, bumpScale: 0.35, roughness: Math.max(0.45, FLOOR_TILE_STYLES[FLOOR_TILE_STYLE].rough + 0.2), metalness: 0.04, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
             m.rotation.x = -Math.PI / 2;
             m.position.set(x, y + 0.01, z);
             m.receiveShadow = true;
