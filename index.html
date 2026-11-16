@@ -2282,6 +2282,98 @@
             })));
         }
 
+
+        // =====================================================================
+        // 跑馬燈（LED 字幕板）：掛在主殿二樓平座正面，紅色 LED 點陣字由右往左捲動
+        // 內容：歡迎詞、今日日期、祈福吉祥話、在線人數；廟公發布公告時，公告會排在最前面
+        // =====================================================================
+        const MARQUEE = { mesh: null, tex: null, canvas: null, len: 1, lastText: '', speed: 0.035, boardW: 13 };
+        const MARQUEE_LINES = ['合境平安', '風調雨順', '國泰民安', '心誠則靈・有求必應', '點一盞光明燈，照亮前程', '師父問事・求籤解惑，歡迎入內參拜', '請勿奔跑・小心香火'];
+        function marqueeText() {
+            const d = new Date();
+            const wk = '日一二三四五六'[d.getDay()];
+            const parts = [];
+            try { if (typeof announceActive === 'function' && announceActive()) parts.push('【廟公公告】' + ADMIN.announce.text); } catch (e) {}
+            parts.push('問心堂歡迎您');
+            parts.push(`今天是 ${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日 星期${wk}`);
+            const online = (typeof NET !== 'undefined' && NET.room) ? NET.room.peers().filter(p => p.kind === 'viewer').length : 0;
+            if (online > 1) parts.push(`目前在線香客 ${online} 人`);
+            parts.push(...MARQUEE_LINES);
+            return '　◆　' + parts.join('　◆　') + '　';
+        }
+        // draw the message as an LED strip: dark board, unlit dot grid, lit dots where the text is
+        function drawMarqueeStrip(text) {
+            const H = 64, DOT = 4;                                  // 16 rows of dots
+            const meas = document.createElement('canvas').getContext('2d');
+            const font = `900 ${H - 12}px "Noto Serif TC", "Microsoft JhengHei", sans-serif`;
+            meas.font = font;
+            let W = Math.ceil(meas.measureText(text).width / DOT) * DOT + DOT;
+            W = Math.min(W, 16384);
+            // 1) text mask
+            const m = document.createElement('canvas'); m.width = W; m.height = H;
+            const mx = m.getContext('2d');
+            mx.fillStyle = '#000'; mx.fillRect(0, 0, W, H);
+            mx.fillStyle = '#fff'; mx.font = font; mx.textBaseline = 'middle';
+            mx.fillText(text, 0, H / 2 + 2);
+            const md = mx.getImageData(0, 0, W, H).data;
+            // 2) LED dots
+            const c = MARQUEE.canvas || (MARQUEE.canvas = document.createElement('canvas'));
+            c.width = W; c.height = H;
+            const x = c.getContext('2d');
+            x.fillStyle = '#120403'; x.fillRect(0, 0, W, H);
+            for (let yy = 0; yy < H; yy += DOT) for (let xx = 0; xx < W; xx += DOT) {
+                let on = 0;
+                for (let k = 0; k < 4; k++) on += md[((yy + (k >> 1) * 2 + 1) * W + xx + (k & 1) * 2 + 1) * 4];
+                const lit = on > 300;
+                x.fillStyle = lit ? '#ff3a1a' : '#3a0d08';
+                x.beginPath(); x.arc(xx + DOT / 2, yy + DOT / 2, DOT * 0.42, 0, Math.PI * 2); x.fill();
+                if (lit) { x.fillStyle = 'rgba(255,190,120,0.75)'; x.beginPath(); x.arc(xx + DOT / 2, yy + DOT / 2, DOT * 0.18, 0, Math.PI * 2); x.fill(); }
+            }
+            if (!MARQUEE.tex) { MARQUEE.tex = new THREE.CanvasTexture(c); MARQUEE.tex.wrapS = THREE.RepeatWrapping; MARQUEE.tex.minFilter = THREE.LinearFilter; MARQUEE.tex.generateMipmaps = false; }
+            else { MARQUEE.tex.image = c; MARQUEE.tex.needsUpdate = true; }
+            MARQUEE.len = W;
+            // show about 22 characters across the board
+            MARQUEE.tex.repeat.set(Math.min(1, (H * 28) / W), 1);
+            MARQUEE.tex.needsUpdate = true;
+        }
+        function refreshMarquee(force) {
+            if (!MARQUEE.mesh) return;
+            const t = marqueeText();
+            if (!force && t === MARQUEE.lastText) return;
+            MARQUEE.lastText = t;
+            drawMarqueeStrip(t);
+        }
+        function buildMarquee(goldMat) {
+            const { cx, zF } = UPPER_HALL;
+            // mounted on the front fascia of the upper gallery (the red band under the railing), facing the courtyard
+            const W = MARQUEE.boardW, Hh = 0.46, y = 8.7, z = 1.96 + 0.08;
+            const g = new THREE.Group(); g.position.set(cx, y, z); templeGroup.add(g);
+            // frame: black housing with a gold trim
+            const housing = new THREE.Mesh(new THREE.BoxGeometry(W + 0.3, Hh + 0.24, 0.14), new THREE.MeshStandardMaterial({ color: 0x18110e, roughness: 0.5 }));
+            housing.position.z = -0.04;
+            const trim = new THREE.Mesh(new THREE.BoxGeometry(W + 0.38, Hh + 0.32, 0.08), goldMat);
+            trim.position.z = -0.09;
+            g.add(trim, housing);
+            drawMarqueeStrip(marqueeText());
+            MARQUEE.lastText = marqueeText();
+            const screen = new THREE.Mesh(new THREE.PlaneGeometry(W, Hh), new THREE.MeshBasicMaterial({ map: MARQUEE.tex, toneMapped: false }));
+            screen.position.z = 0.035;
+            g.add(screen);
+            // soft red glow on the wall around the board at night
+            const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: getPuffTexture(), color: 0xff3a1a, transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+            glow.scale.set(W * 1.15, 2.2, 1); glow.position.z = 0.1; glow.visible = false;
+            g.add(glow); nightGlows.push(glow);
+            screen.userData = { interactType: 'marquee', label: '📟 跑馬燈' };
+            clickableMeshes.push(screen);
+            MARQUEE.mesh = screen;
+            setInterval(() => refreshMarquee(false), 20000);
+        }
+        function updateMarquee(dt) {
+            if (!MARQUEE.tex) return;
+            // scroll at a steady on-screen speed regardless of message length
+            MARQUEE.tex.offset.x = (MARQUEE.tex.offset.x + dt * 150 / MARQUEE.len) % 1;
+        }
+
         function buildSecondFloor(goldMat, greenTrimMat) {
             const { cx, W, zF, zB, y0, floorY, y1 } = UPPER_HALL;
             const D = zF - zB, zc = (zF + zB) / 2, roomH = y1 - floorY;
@@ -2432,6 +2524,7 @@
             register3DLabel(labelAnchor, 0, '🏯 二樓・三官殿（三官大帝）', '#fbbf24', () => moveCameraPreset('sanguan'));
 
             upgradeSanguanStatues();
+            buildMarquee(goldMat);
         }
 
         // Dragon carved around a stone column (螺旋石雕龍柱)
@@ -10726,6 +10819,7 @@
         // ---- announcements: a bar above the bottom dock, a pinned note in the chat, and a toast when new
         function onAnnounce(a) {
             ADMIN.announce = a && typeof a.text === 'string' && typeof a.t === 'number' ? a : null;
+            if (typeof refreshMarquee === 'function') refreshMarquee(true);
             renderAnnounce(true);
             renderAdminPanel();
         }
@@ -14148,6 +14242,7 @@
             else if (type === 'blacktiger') tigerRoar();
             else if (type === 'xiaoren') openXiaorenModal();
             else if (type && type.startsWith('miaozhu')) miaozhuInteract(type, ud);
+            else if (type === 'marquee') showToast('📟 跑馬燈：' + MARQUEE.lastText.replace(/　◆　/g, ' ◆ ').trim().slice(0, 120));
             else if (type === 'baihu') { playTempleBellSound(392); showToast('🐯 白虎爺：主掌是非口舌。打小人前先以肥豬肉、雞蛋祭白虎，白虎吃飽便不再傷人。'); }
             else if (type === 'fireworks') openFireworksModal();
             else if (type === 'offerings') openOfferingsModal();
@@ -14549,6 +14644,7 @@
             updateStatueLoading();
             updateCandleFlames(t);
             updateHeldIncense(t, dt);
+            updateMarquee(dt);
             updateMiaozhuCat(t);
             renderer.render(scene, camera);
         }
