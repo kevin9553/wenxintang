@@ -2398,7 +2398,7 @@
             addTileFloor(g, cx, FLOOR + 0.004, zc, W - 0.2, D - 0.1);
             const backWall = new THREE.Mesh(new THREE.BoxGeometry(W, roomH, 0.3), lacquer);
             backWall.position.set(cx, floorY + roomH / 2, zB + 0.15);
-            backWall.material = new THREE.MeshStandardMaterial({ map: createRuyiCloudTexture('red', W / roomH), roughness: 0.7 });
+            backWall.material = new THREE.MeshStandardMaterial({ map: createPeonyMuralTexture(), roughness: 0.85 });
             const ceiling = new THREE.Mesh(new THREE.BoxGeometry(W, 0.14, D), darkWood);
             ceiling.position.set(cx, y1 - 0.07, zc);
             g.add(floor, backWall, ceiling);
