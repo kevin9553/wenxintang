@@ -2398,7 +2398,7 @@
             addTileFloor(g, cx, FLOOR + 0.004, zc, W - 0.2, D - 0.1);
             const backWall = new THREE.Mesh(new THREE.BoxGeometry(W, roomH, 0.3), lacquer);
             backWall.position.set(cx, floorY + roomH / 2, zB + 0.15);
-            backWall.material = new THREE.MeshStandardMaterial({ map: createPeonyMuralTexture(), roughness: 0.85 });
+            backWall.material = new THREE.MeshStandardMaterial({ map: createRuyiCloudTexture('red', W / roomH), roughness: 0.7 });
             const ceiling = new THREE.Mesh(new THREE.BoxGeometry(W, 0.14, D), darkWood);
             ceiling.position.set(cx, y1 - 0.07, zc);
             g.add(floor, backWall, ceiling);
@@ -3414,6 +3414,7 @@
             // Lacquered wood panelling inside (so the Buddhas sit against dark wood, not bare brick)
             const panel = new THREE.MeshStandardMaterial({ color: 0x5a140f, roughness: 0.55 });
             add(new THREE.BoxGeometry(W - 0.7, wallH - 0.1, 0.06), panel, 0, F + wallH / 2, back + 0.34);
+            addCloudMural(hg, 0, F + wallH * 0.55, back + 0.39, W - 3.2, wallH - 1.6, 'gold', goldMat);
             [-1, 1].forEach(sx => add(new THREE.BoxGeometry(0.06, wallH - 0.1, D - 1.9), panel, sx * (W / 2 - 0.33), F + wallH / 2, -0.8));
             for (let k = -3; k <= 3; k++) add(new THREE.BoxGeometry(0.12, wallH - 0.1, 0.08), goldMat, k * 2.5, F + wallH / 2, back + 0.38);
             // Front colonnade: six red columns; the outer bays carry carved lattice door panels
@@ -4776,6 +4777,9 @@
             const backWall = new THREE.Mesh(new THREE.BoxGeometry(W, wallH, 0.3), brickMat);
             backWall.position.set(0, F + wallH / 2, back + 0.15);
             g.add(backWall);
+            // 祥雲圖 behind the deity, coloured for each hall
+            const pal = { right: 'blue', wing_left: 'orange', wing_right: 'gold', dizang: 'purple', left: 'red' }[h.key] || 'red';
+            addCloudMural(g, 0, F + wallH * 0.52, back + 0.32, W - 1.1, wallH - 0.8, pal, goldMat);
             [-1, 1].forEach(s => {
                 const side = new THREE.Mesh(new THREE.BoxGeometry(0.3, wallH, D - 1.2), brickMat);
                 side.position.set(s * (W / 2 - 0.15), F + wallH / 2, -0.6);
@@ -6329,6 +6333,90 @@
             addNightLight(REAR.x + 4.6, y + 2.6, F.back + 3.2, 0xffe0b0, 0.9, 7, false, 0.6);
         }
 
+        // =====================================================================
+        // 祥雲圖：神尊後方的壁畫——放射金光、層層如意祥雲；各殿用不同底色
+        // =====================================================================
+        const CLOUD_PALETTES = {
+            red:    { bg: ['#a3261a', '#3a0806'], cloud: '#f6e6c0', shade: '#e2c48a', line: '#b8862e', ray: 'rgba(255,214,120,0.16)' },
+            gold:   { bg: ['#c8922e', '#4a2a08'], cloud: '#fff4d6', shade: '#ecd29a', line: '#9a6a14', ray: 'rgba(255,240,180,0.22)' },
+            blue:   { bg: ['#2a4a86', '#0a1430'], cloud: '#e8f0ff', shade: '#b8c8e8', line: '#d4a83a', ray: 'rgba(200,220,255,0.14)', stars: true },
+            purple: { bg: ['#5a2a6e', '#160820'], cloud: '#f2e6f6', shade: '#d6bce0', line: '#c99a2e', ray: 'rgba(255,220,160,0.14)' },
+            teal:   { bg: ['#2a6a6a', '#081e20'], cloud: '#eef8f2', shade: '#c4e0d6', line: '#d4a83a', ray: 'rgba(220,255,240,0.14)', stars: true },
+            orange: { bg: ['#d0702a', '#4a1a06'], cloud: '#fff2dc', shade: '#f0cc98', line: '#a0601a', ray: 'rgba(255,230,170,0.2)' },
+            dark:   { bg: ['#3a3440', '#0c0a10'], cloud: '#e6e2ea', shade: '#bdb6c6', line: '#c99a2e', ray: 'rgba(230,220,255,0.12)', stars: true }
+        };
+        const _cloudTex = {};
+        function createRuyiCloudTexture(pal, aspect) {
+            const key = pal + '|' + Math.round(aspect * 4);
+            if (_cloudTex[key]) return _cloudTex[key];
+            const P = CLOUD_PALETTES[pal] || CLOUD_PALETTES.red;
+            const H = 512, W = Math.min(2048, Math.round(H * aspect / 64) * 64);
+            const c = document.createElement('canvas'); c.width = W; c.height = H;
+            const x = c.getContext('2d');
+            let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+            const bg = x.createRadialGradient(W / 2, H * 0.32, 20, W / 2, H * 0.45, Math.max(W, H) * 0.7);
+            bg.addColorStop(0, P.bg[0]); bg.addColorStop(1, P.bg[1]);
+            x.fillStyle = bg; x.fillRect(0, 0, W, H);
+            if (P.stars) for (let i = 0; i < 260; i++) { x.fillStyle = `rgba(255,255,240,${0.2 + rnd() * 0.6})`; x.fillRect(rnd() * W, rnd() * H * 0.7, 1.6, 1.6); }
+            // golden rays fanning out from behind the deity
+            x.fillStyle = P.ray;
+            for (let k = 0; k < 28; k++) {
+                const a = k / 28 * Math.PI * 2, a2 = a + 0.06;
+                x.beginPath(); x.moveTo(W / 2, H * 0.36); x.lineTo(W / 2 + Math.cos(a) * W, H * 0.36 + Math.sin(a) * W); x.lineTo(W / 2 + Math.cos(a2) * W, H * 0.36 + Math.sin(a2) * W); x.fill();
+            }
+            // 如意雲: a cluster of rounded lobes with spiral curls and a long trailing tail
+            const ruyi = (cx, cy, s, dir) => {
+                x.save(); x.translate(cx, cy); x.scale(s * dir, s);
+                // tail
+                x.fillStyle = P.shade; x.strokeStyle = P.line; x.lineWidth = 3 / s;
+                x.beginPath(); x.moveTo(-10, -8);
+                x.bezierCurveTo(-60, -24, -90, 4, -150, -6); x.bezierCurveTo(-176, -10, -196, 0, -214, -14);
+                x.bezierCurveTo(-198, 6, -170, 16, -140, 12); x.bezierCurveTo(-96, 8, -70, 30, -12, 20); x.closePath(); x.fill(); x.stroke();
+                // lobes
+                const lobes = [[-28, 6, 24], [26, 8, 22], [0, -6, 32], [6, -32, 18], [-20, -24, 16]];
+                x.fillStyle = P.cloud;
+                x.beginPath(); lobes.forEach(([lx, ly, r]) => { x.moveTo(lx + r, ly); x.arc(lx, ly, r, 0, Math.PI * 2); }); x.fill();
+                lobes.forEach(([lx, ly, r]) => { x.beginPath(); x.arc(lx, ly, r, Math.PI * 0.85, Math.PI * 2.15); x.stroke(); });
+                // spiral curls inside each lobe
+                x.lineWidth = 2.4 / s;
+                lobes.forEach(([lx, ly, r], i) => {
+                    x.beginPath();
+                    for (let t = 0; t <= 1; t += 0.04) { const a = Math.PI * (1.1 + t * 2.2) + i, rr = r * (0.72 - t * 0.55); const px = lx + Math.cos(a) * rr, py = ly + Math.sin(a) * rr * 0.9; t ? x.lineTo(px, py) : x.moveTo(px, py); }
+                    x.stroke();
+                });
+                x.restore();
+            };
+            // a dense band of clouds along the bottom, a lighter scatter higher up, leaving a clear glow in the centre
+            const rows = [[H * 0.86, 1.25, 9], [H * 0.68, 1.0, 7], [H * 0.2, 0.8, 5]];
+            rows.forEach(([yy, sc, cnt], ri) => {
+                for (let k = 0; k < cnt; k++) {
+                    const u = (k + 0.5) / cnt, cx = u * W + (rnd() - 0.5) * W / cnt * 0.6;
+                    if (ri === 2 && Math.abs(cx - W / 2) < W * 0.16) continue;
+                    if (ri === 1 && Math.abs(cx - W / 2) < W * 0.1) continue;
+                    ruyi(cx, yy + (rnd() - 0.5) * 30, sc * (0.85 + rnd() * 0.3) * (H / 512), cx < W / 2 ? -1 : 1);
+                }
+            });
+            // gold border
+            x.strokeStyle = '#d9a520'; x.lineWidth = 10; x.strokeRect(5, 5, W - 10, H - 10);
+            x.strokeStyle = 'rgba(80,40,6,0.8)'; x.lineWidth = 2.5; x.strokeRect(16, 16, W - 32, H - 32);
+            const t = new THREE.CanvasTexture(c);
+            t.anisotropy = 8;
+            return (_cloudTex[key] = t);
+        }
+        function addCloudMural(parent, cx, cy, z, w, h, pal, goldMat, label) {
+            const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: createRuyiCloudTexture(pal, w / h), roughness: 0.55, metalness: 0.08 }));
+            m.position.set(cx, cy, z);
+            m.userData = { interactType: 'cloudmural', label: '☁️ ' + (label || '祥雲圖') };
+            clickableMeshes.push(m);
+            parent.add(m);
+            if (goldMat) {
+                const t = 0.1;
+                [[0, h / 2 + t / 2, w + 2 * t, t], [0, -h / 2 - t / 2, w + 2 * t, t]].forEach(([dx, dy, fw, fh]) => { const b = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.06), goldMat); b.position.set(cx + dx, cy + dy, z + 0.015); parent.add(b); });
+                [-1, 1].forEach(s2 => { const b = new THREE.Mesh(new THREE.BoxGeometry(t, h, 0.06), goldMat); b.position.set(cx + s2 * (w / 2 + t / 2), cy, z + 0.015); parent.add(b); });
+            }
+            return m;
+        }
+
         // 雙龍搶珠壁畫：深紅底、金龍兩條由兩側盤旋而來，中央火焰寶珠，祥雲環繞，金框
         function createDragonMuralTexture() {
             const W = 2048, H = 400;
@@ -6697,6 +6785,7 @@
                 }
                 // Back and side walls
                 tag(box(F.W, wallH, 0.3, brickMat, REAR.x, y + wallH / 2, F.back + 0.15));
+                if (f > 1 && f < REAR.floors) addCloudMural(g, REAR.x, y + wallH * 0.52, F.back + 0.32, F.W - 3.4, wallH - 1.2, { 2: 'blue', 3: 'dark', 4: 'gold', 5: 'teal' }[f] || 'red', goldMat);
                 [F.L + 0.15, F.R - 0.15].forEach(wx => tag(box(0.3, wallH, F.D, brickMat, wx, y + wallH / 2, REAR.z)));
                 // Front: 7 bays so the middle of the hall is an opening (no column in front of the deity);
                 // the middle three bays are open (five on the 五恩主 floor), the outer ones carry lattice doors
@@ -11491,6 +11580,7 @@
 
             const backWall = new THREE.Mesh(new THREE.BoxGeometry(18.6, 5.6, 0.4), darkRedWallMat);
             backWall.position.set(-1.5, 3.1, -6.8);
+            addCloudMural(templeGroup, -1.5, 3.3, -6.58, 16.4, 4.6, 'red', goldMat);
             templeGroup.add(backWall);
 
             const coupletLeftTex = createSignboardTexture('手執破扇搖出乾坤正氣', 96, 640, '#7f1d1d', '#fbbf24', '#fef08a', true, 44);
@@ -14590,6 +14680,7 @@
             }
             else if (REAR_DEITY_TOASTS[type]) { playTempleBellSound(523); showToast(REAR_DEITY_TOASTS[type]); }
             else if (ENZHU_TOASTS[type]) { playTempleBellSound(523); showToast(ENZHU_TOASTS[type]); }
+            else if (type === 'cloudmural') showToast('☁️ 祥雲圖：如意祥雲層層環繞、金光放射，象徵神明駕雲降臨、吉祥如意。');
             else if (type === 'enzhu_mural') showToast('🐉 雙龍搶珠：兩條金龍騰雲駕霧、爭搶火焰寶珠，象徵祥瑞吉慶、護佑五恩主殿。');
             else if (type === 'rearhall') showToast('🏯 後殿五層樓：一樓五恩主殿（關聖帝君等五恩主）、二樓天師殿（張天師）、三樓北極殿（玄天上帝）、四樓凌霄寶殿（玉皇上帝）、五樓三清殿。點右側樓梯可上樓參拜。');
             else if (type === 'caishen' || type === 'caishen_wen' || type === 'caishen_wu') { playTempleBellSound(784); showToast(type === 'caishen_wen' ? '📜 文財神比干：公正無私，佑你正財穩進、事業亨通。' : (type === 'caishen_wu' ? '🐯 武財神趙公明：黑虎玄壇，佑你偏財廣進、招財納福。' : '💰 恭請文武財神：財源廣進、招財進寶！')); }
