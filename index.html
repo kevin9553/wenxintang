@@ -185,6 +185,7 @@
             <button onclick="moveCameraPreset('xiaoren')" id="camBtn-xiaoren" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">👡 打小人</button>
             <button onclick="moveCameraPreset('miaozhu')" id="camBtn-miaozhu" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏠 廟祝的窩</button>
             <button onclick="moveCameraPreset('zhaitang')" id="camBtn-zhaitang" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🍚 齋堂</button>
+            <button onclick="focusTempleCat()" id="camBtn-cat" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🐈 廟貓在哪</button>
             <button onclick="moveCameraPreset('fireworks')" id="camBtn-fireworks" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🎆 煙火區</button>
             <button onclick="moveCameraPreset('guandi')" id="camBtn-guandi" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">⚔️ 五恩主</button>
             <button onclick="moveCameraPreset('tianshi')" id="camBtn-tianshi" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🗡️ 張天師</button>
@@ -8350,13 +8351,16 @@
             fx.fillStyle = '#8a3f0e'; for (let i = 0; i < 10; i++) fx.fillRect(i * 13 + 2, 0, 5, 30);
             fx.fillStyle = '#f2d2a8'; fx.fillRect(0, 44, 128, 20);
             const fur = new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(fc), roughness: 0.9 });
-            const body = add(new THREE.SphereGeometry(0.17, 18, 14), fur, 0, 0.17, 0, cat); body.scale.set(1.2, 0.7, 0.9);
-            const head = add(new THREE.SphereGeometry(0.09, 16, 12), fur, 0.17, 0.18, 0.07, cat);
-            [-1, 1].forEach(s => { const ear = add(new THREE.ConeGeometry(0.03, 0.06, 6), fur, 0.19, 0.27, 0.07 + s * 0.045, cat); ear.rotation.z = -0.3; });
-            const tail = add(new THREE.TorusGeometry(0.16, 0.025, 8, 20, Math.PI * 1.2), fur, -0.02, 0.1, 0, cat); tail.rotation.x = Math.PI / 2;
-            [-1, 1].forEach(s => add(new THREE.BoxGeometry(0.03, 0.005, 0.012), new THREE.MeshBasicMaterial({ color: 0x3a2410 }), 0.24, 0.19, 0.07 + s * 0.03, cat));
+            const curl = new THREE.Group(); cat.add(curl);   // the curled-up sleeping cat; hidden while it is out for a walk
+            const body = add(new THREE.SphereGeometry(0.17, 18, 14), fur, 0, 0.17, 0, curl); body.scale.set(1.2, 0.7, 0.9);
+            const head = add(new THREE.SphereGeometry(0.09, 16, 12), fur, 0.17, 0.18, 0.07, curl);
+            [-1, 1].forEach(s => { const ear = add(new THREE.ConeGeometry(0.03, 0.06, 6), fur, 0.19, 0.27, 0.07 + s * 0.045, curl); ear.rotation.z = -0.3; });
+            const tail = add(new THREE.TorusGeometry(0.16, 0.025, 8, 20, Math.PI * 1.2), fur, -0.02, 0.1, 0, curl); tail.rotation.x = Math.PI / 2;
+            [-1, 1].forEach(s => add(new THREE.BoxGeometry(0.03, 0.005, 0.012), new THREE.MeshBasicMaterial({ color: 0x3a2410 }), 0.24, 0.19, 0.07 + s * 0.03, curl));
             tagAll(cat, { interactType: 'miaozhu_cat', label: '🐈 廟貓（正在睡午覺）' });
             MIAOZHU.cat = { body, base: 0.7 };
+            TCAT.curl = curl;
+            buildTempleCat(fur);
 
             // ---- finer interior: wood wainscot + cream plaster walls, painted ceiling beams, hanging palace lanterns,
             //      a proper shrine cabinet with an altar table, calligraphy and a landscape scroll, rugs and a tatami mat
@@ -8542,8 +8546,7 @@
                 if (MIAOZHU.steamAt) addSmokeEmitter(MIAOZHU.steamAt.x, 0.95, MIAOZHU.steamAt.z, 3, 0.15, 0.5, 0xffffff, 0.08);
                 showToast(['🍵 來，喝杯烏龍茶，甘甘的，心也定了。', '🍵 廟祝的老人茶：一泡香、二泡甘、三泡回味無窮。', '🍵 坐一下、喝口茶，煩惱先放旁邊。'][(Math.random() * 3) | 0]);
             } else if (type === 'miaozhu_cat') {
-                playTempleBellSound(1320);
-                showToast(['🐈 喵～（廟貓翻了個身，繼續睡）', '🐈 呼嚕呼嚕……廟貓睡得正香，別吵醒牠。', '🐈 廟貓睜開一隻眼瞄了你一下，又閉上了。'][(Math.random() * 3) | 0]);
+                petTempleCat();
             } else if (type === 'miaozhu_books') {
                 showToast('📚 書櫃裡有《金剛經》《心經》、六十甲子籤詩解、農民曆，還有廟祝手抄的祭典流程。');
             } else if (type === 'miaozhu_shrine') {
@@ -8567,6 +8570,222 @@
                 showToast('🪑 竹躺椅涼涼的，廟祝中午最愛在這裡搧扇子小睡。');
             }
         }
+        // =====================================================================
+        // 廟貓散步：睡飽了就從廟祝的窩走出去，到齋堂門口討食、鼓樓邊趴著、石頭公旁曬太陽、福田池看魚、許願樹下坐一下，再回窩睡覺
+        // =====================================================================
+        const TCAT = { rig: null, state: 'sleep', timer: 30 + Math.random() * 40, path: [], dest: null, phase: 0, look: null, home: null, door: null, step: null, curl: null, y: 0 };
+        const TCAT_DEST = {
+            zhaitang: { route: [[-47.5, 36.5], [-47.8, 29.6]], face: -Math.PI / 2, act: 'beg', name: '齋堂門口討食' },
+            drum: { route: [[-46, 38], [-39.6, 35.2]], face: Math.PI * 0.8, act: 'loaf', name: '鼓樓邊趴著' },
+            shitou: { route: [[-46, 38], [-40, 36.6], [-31, 36.6], [-16.6, 34.2]], face: Math.PI, act: 'loaf', name: '石頭公旁曬太陽' },
+            futian: { route: [[-46, 38], [-40, 36.6], [-31, 36.6], [-16.6, 34.2], [-6, 34.2], [6, 34.6], [12.2, 36.7]], face: 0, act: 'sit', name: '福田池邊看魚' },
+            wishtree: { route: [[-46, 38], [-40, 36.6], [-31, 36.6], [-16.6, 34.2], [-6, 34.2], [6, 34.6], [19.4, 34.6], [21.3, 32.7]], face: Math.PI * 0.55, act: 'sit', name: '許願樹下' }
+        };
+        function buildTempleCat(fur) {
+            const P = MIAOZHU_POS, rc = Math.cos(P.rot), rs = Math.sin(P.rot);
+            const hw = (lx, lz) => ({ x: P.x + lx * rc + lz * rs, z: P.z - lx * rs + lz * rc });
+            TCAT.home = hw(0.9, 1.4); TCAT.door = hw(0, 3.1); TCAT.step = hw(0, 5.0);
+            TCAT.homeFace = Math.atan2(rs, rc);
+            const root = new THREE.Group();
+            const add = (geo, mat, x, y, z, parent) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
+            const cream = new THREE.MeshStandardMaterial({ color: 0xf2d2a8, roughness: 0.9 });
+            const dark = new THREE.MeshBasicMaterial({ color: 0x2a1a0c });
+            const torso = new THREE.Group(); torso.position.set(0, 0.2, -0.13); root.add(torso);   // pivot at the hips
+            const body = add(new THREE.SphereGeometry(0.15, 18, 14), fur, 0, 0.05, 0.14, torso); body.scale.set(0.78, 0.72, 1.55);
+            add(new THREE.SphereGeometry(0.1, 14, 10), cream, 0, -0.01, 0.2, torso).scale.set(0.9, 0.7, 1.4);
+            const head = new THREE.Group(); head.position.set(0, 0.15, 0.37); torso.add(head);
+            add(new THREE.SphereGeometry(0.095, 18, 14), fur, 0, 0, 0, head).scale.set(1.1, 0.95, 1);
+            add(new THREE.SphereGeometry(0.045, 12, 8), cream, 0, -0.03, 0.075, head).scale.set(1.3, 0.8, 0.9);
+            add(new THREE.SphereGeometry(0.012, 8, 6), new THREE.MeshStandardMaterial({ color: 0xe48a9a }), 0, -0.012, 0.115, head);
+            [-1, 1].forEach(s => {
+                const ear = add(new THREE.ConeGeometry(0.035, 0.07, 4), fur, s * 0.055, 0.085, -0.005, head); ear.rotation.z = -s * 0.25;
+                const eye = add(new THREE.SphereGeometry(0.016, 10, 8), new THREE.MeshStandardMaterial({ color: 0x9be05a, emissive: 0x4a8a1a, emissiveIntensity: 0.3 }), s * 0.04, 0.015, 0.082, head);
+                registerNightEmissive(eye.material, 0.3, 1.2);
+                add(new THREE.BoxGeometry(0.006, 0.02, 0.004), dark, s * 0.04, 0.015, 0.098, head);
+                [-1, 1].forEach(w => { const wh = add(new THREE.BoxGeometry(0.09, 0.002, 0.002), new THREE.MeshBasicMaterial({ color: 0xfafafa }), s * 0.07, -0.03 + w * 0.008, 0.09, head); wh.rotation.z = s * w * 0.12; wh.castShadow = false; });
+            });
+            // tail: three chained segments so it can sway and curl
+            const tail = []; let parent = torso;
+            const tailRoot = new THREE.Group(); tailRoot.position.set(0, 0.07, -0.08); torso.add(tailRoot); parent = tailRoot;
+            for (let i = 0; i < 4; i++) {
+                const seg = new THREE.Group(); if (i) seg.position.z = -0.085; parent.add(seg);
+                const m = add(new THREE.CylinderGeometry(0.02, 0.024, 0.09, 8), i === 3 ? new THREE.MeshStandardMaterial({ color: 0x8a3f0e }) : fur, 0, 0, -0.042, seg); m.rotation.x = Math.PI / 2;
+                tail.push(seg); parent = seg;
+            }
+            tailRoot.rotation.x = 0.7;
+            // legs pivot at the shoulder / hip
+            const legs = [[-1, 1], [1, 1], [-1, -1], [1, -1]].map(([sx, sz]) => {
+                const L = new THREE.Group(); L.position.set(sx * 0.065, 0.2, sz > 0 ? 0.13 : -0.1); root.add(L);
+                add(new THREE.CylinderGeometry(0.026, 0.022, 0.19, 8), fur, 0, -0.095, 0, L);
+                add(new THREE.SphereGeometry(0.027, 8, 6), cream, 0, -0.19, 0.01, L).scale.set(1, 0.6, 1.3);
+                return L;
+            });
+            root.traverse(o => { if (o.isMesh) { o.userData = { interactType: 'temple_cat', label: '🐈 廟貓（點一下摸摸牠）' }; clickableMeshes.push(o); } });
+            root.visible = false;
+            templeGroup.add(root);
+            Object.assign(TCAT, { rig: root, torso, head, tail, tailRoot, legs });
+            const lbl = new THREE.Object3D(); lbl.position.y = 0.75; root.add(lbl);
+        }
+        function catPose(kind) {
+            const T = TCAT;
+            T.pose = kind;
+            T.torso.rotation.x = 0; T.torso.position.y = 0.2; T.head.rotation.set(0, 0, 0);
+            T.legs.forEach(l => { l.rotation.x = 0; l.scale.y = 1; l.visible = true; });
+            if (kind === 'sit') {
+                T.torso.rotation.x = -0.75; T.torso.position.y = 0.13;
+                T.head.rotation.x = 0.7;
+                T.legs[0].rotation.x = T.legs[1].rotation.x = 0.12; T.legs[0].position.z = T.legs[1].position.z = 0.05;
+                T.legs[2].visible = T.legs[3].visible = false;
+                T.tailRoot.rotation.set(0.6, 0.95, 0);
+            } else if (kind === 'loaf') {
+                T.torso.position.y = 0.06;
+                T.legs.forEach(l => { l.visible = false; });
+                T.tailRoot.rotation.set(-0.12, 1.0, 0);
+            } else {
+                T.legs[0].position.z = T.legs[1].position.z = 0.13;
+                T.tailRoot.rotation.set(0.7, 0, 0);
+            }
+        }
+        function catMeow() {
+            const ctx = ensureAudioCtx(); if (!ctx) return;
+            const now = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain(), f = ctx.createBiquadFilter();
+            o.type = 'sawtooth'; f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = 3;
+            o.frequency.setValueAtTime(520, now); o.frequency.linearRampToValueAtTime(820, now + 0.18); o.frequency.linearRampToValueAtTime(480, now + 0.55);
+            g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.09, now + 0.06); g.gain.exponentialRampToValueAtTime(0.0005, now + 0.6);
+            o.connect(f); f.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now + 0.65);
+        }
+        function catGoTo(key) {
+            const T = TCAT, D = TCAT_DEST[key];
+            T.dest = key;
+            T.path = [[T.door.x, T.door.z], [T.step.x, T.step.z], ...D.route];
+            T.state = 'walk';
+            catPose('walk');
+        }
+        function catGoHome() {
+            const T = TCAT, D = TCAT_DEST[T.dest];
+            T.path = [...(D ? D.route.slice(0, -1).reverse() : []), [T.step.x, T.step.z], [T.door.x, T.door.z], [T.home.x, T.home.z]];
+            T.dest = 'home';
+            T.state = 'walk';
+            catPose('walk');
+        }
+        function catSetSleeping(on) {
+            const T = TCAT;
+            if (T.curl) T.curl.visible = on;
+            T.rig.visible = !on;
+            if (on) { T.state = 'sleep'; T.timer = 60 + Math.random() * 90; }
+        }
+        function updateTempleCat(t, dt) {
+            const T = TCAT;
+            if (!T.rig) return;
+            dt = Math.min(dt, 0.1);
+            if (T.state === 'sleep') {
+                T.timer -= dt;
+                if (T.timer <= 0) {
+                    // wake up and stretch on the cushion, then head out
+                    catSetSleeping(false);
+                    T.rig.position.set(T.home.x, SIDE_HALL_FLOOR, T.home.z);
+                    T.rig.rotation.y = T.homeFace + Math.PI / 2;
+                    catPose('walk');
+                    T.state = 'stretch'; T.timer = 2.2;
+                }
+                return;
+            }
+            if (T.state === 'stretch') {
+                T.timer -= dt;
+                const k = Math.sin(Math.min(1, (2.2 - T.timer) / 2.2) * Math.PI);
+                T.torso.rotation.x = k * 0.35; T.legs[0].rotation.x = T.legs[1].rotation.x = -k * 0.6;
+                if (T.timer <= 0) { const keys = Object.keys(TCAT_DEST); catGoTo(keys[(Math.random() * keys.length) | 0]); }
+                return;
+            }
+            if (T.state === 'look') {
+                T.timer -= dt;
+                if (playerAvatarGroup) {
+                    const want = Math.atan2(playerAvatarGroup.position.x - T.rig.position.x, playerAvatarGroup.position.z - T.rig.position.z);
+                    let d = want - T.rig.rotation.y; d = Math.atan2(Math.sin(d), Math.cos(d));
+                    T.rig.rotation.y += d * Math.min(1, dt * 5);
+                }
+                T.tail[1].rotation.y = Math.sin(t * 6) * 0.4;
+                if (T.timer <= 0) { T.state = T.resume || 'idle'; catPose(T.state === 'walk' ? 'walk' : (TCAT_DEST[T.dest] || {}).act === 'loaf' ? 'loaf' : 'sit'); if (T.state === 'idle') T.timer = 4 + Math.random() * 6; }
+                return;
+            }
+            if (T.state === 'walk') {
+                const tgt = T.path[0];
+                if (!tgt) {
+                    if (T.dest === 'home') { catSetSleeping(true); return; }
+                    const D = TCAT_DEST[T.dest];
+                    T.state = 'idle'; T.timer = 14 + Math.random() * 18;
+                    T.rig.rotation.y = D.face;
+                    catPose(D.act === 'loaf' ? 'loaf' : 'sit');
+                    if (D.act === 'beg') { T.begAt = 2; }
+                    return;
+                }
+                const p = T.rig.position, dx = tgt[0] - p.x, dz = tgt[1] - p.z, d = Math.hypot(dx, dz);
+                const speed = 0.85;
+                if (d < 0.06) { T.path.shift(); return; }
+                const want = Math.atan2(dx, dz);
+                let dr = want - T.rig.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr));
+                T.rig.rotation.y += dr * Math.min(1, dt * 6);
+                const step = Math.min(d, speed * dt * (Math.abs(dr) > 1.2 ? 0.3 : 1));
+                p.x += Math.sin(T.rig.rotation.y) * step; p.z += Math.cos(T.rig.rotation.y) * step;
+                const floorY = isOnMiaozhuFloor(p) ? SIDE_HALL_FLOOR : 0;
+                p.y += (floorY - p.y) * Math.min(1, dt * 8);
+                T.phase += dt * 11;
+                const s = Math.sin(T.phase);
+                T.legs[0].rotation.x = s * 0.55; T.legs[3].rotation.x = s * 0.55;
+                T.legs[1].rotation.x = -s * 0.55; T.legs[2].rotation.x = -s * 0.55;
+                T.torso.position.y = 0.2 + Math.abs(Math.cos(T.phase)) * 0.012;
+                T.head.rotation.x = Math.sin(T.phase * 2) * 0.04;
+                T.tailRoot.rotation.y = Math.sin(T.phase * 0.5) * 0.25;
+                T.tail.forEach((sg, i) => { if (i) sg.rotation.x = -0.12 + Math.sin(T.phase * 0.5 - i) * 0.08; });
+                return;
+            }
+            if (T.state === 'idle') {
+                T.timer -= dt;
+                const D = TCAT_DEST[T.dest];
+                // grooming / looking around / tail flick
+                T.head.rotation.y = Math.sin(t * 0.4) * 0.5;
+                T.tail.forEach((sg, i) => { if (i) sg.rotation.y = Math.sin(t * 1.6 - i * 0.8) * 0.25; });
+                if (D && D.act === 'beg' && T.begAt !== undefined) {
+                    T.begAt -= dt;
+                    if (T.begAt <= 0) { T.begAt = 5 + Math.random() * 4; T.head.rotation.x = 0.9; if (playerAvatarGroup && T.rig.position.distanceTo(playerAvatarGroup.position) < 8) catMeow(); }
+                }
+                if (T.timer <= 0) {
+                    T.begAt = undefined;
+                    if (Math.random() < 0.45) catGoHome();
+                    else {
+                        const keys = Object.keys(TCAT_DEST).filter(k => k !== T.dest);
+                        const next = keys[(Math.random() * keys.length) | 0];
+                        // walk back to the shared trunk, then out along the next route
+                        const back = TCAT_DEST[T.dest].route.slice(0, -1).reverse();
+                        T.dest = next;
+                        T.path = [...back, ...TCAT_DEST[next].route];
+                        T.state = 'walk'; catPose('walk');
+                    }
+                }
+            }
+        }
+        function petTempleCat() {
+            const T = TCAT;
+            catMeow();
+            if (T.state === 'sleep') {
+                showToast(['🐈 喵～（廟貓翻了個身，繼續睡）', '🐈 呼嚕呼嚕……廟貓睡得正香，睡飽了就會出門散步。', '🐈 廟貓睜開一隻眼瞄了你一下，又閉上了。'][(Math.random() * 3) | 0]);
+                return;
+            }
+            const where = T.dest && TCAT_DEST[T.dest] ? `（正要去${TCAT_DEST[T.dest].name}）` : T.dest === 'home' ? '（正要回窩睡覺）' : '';
+            showToast(['🐈 喵嗚～ 廟貓蹭了蹭你的腳', '🐈 呼嚕呼嚕～ 廟貓讓你摸了摸頭', '🐈 廟貓抬頭看你，尾巴翹得高高的'][(Math.random() * 3) | 0] + where);
+            if (T.state !== 'look') { T.resume = T.state; }
+            T.state = 'look'; T.timer = 2.5;
+            catPose(T.resume === 'walk' ? 'sit' : T.pose === 'loaf' ? 'loaf' : 'sit');
+        }
+        function focusTempleCat() {
+            const T = TCAT;
+            const p = T.rig && T.rig.visible ? T.rig.position : T.home;
+            if (!p) return;
+            camControl.desiredTarget.set(p.x, (p.y || 0) + 0.4, p.z);
+            Object.assign(camControl.desiredSpherical, { radius: 4.5, theta: (T.rig && T.rig.visible ? T.rig.rotation.y : TCAT.homeFace) + 0.9, phi: 1.15 });
+            showToast(T.state === 'sleep' ? '🐈 廟貓在廟祝的窩裡睡覺中' : `🐈 廟貓在這裡${T.dest && TCAT_DEST[T.dest] ? '・' + TCAT_DEST[T.dest].name : ''}`);
+        }
+
         function updateMiaozhuCat(t) {
             if (MIAOZHU.cat) MIAOZHU.cat.body.scale.y = MIAOZHU.cat.base + Math.sin(t * 2.5) * 0.03;   // breathing
         }
@@ -15339,7 +15558,7 @@
             ['偏殿', ['tudigong', 'light', 'lampwall_gm', 'lampwall_ts', 'side_left', 'side_right', 'side_wing_left', 'side_wing_right', 'side_dizang']],
             ['後殿', ['rearhall', 'guandi', 'tianshi', 'xuantian', 'yuhuang', 'sanqing']],
             ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'wishtree', 'puppet', 'guanyinpond', 'grounds']],
-            ['活動', ['fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'fireworks', 'festival']]
+            ['活動', ['fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'cat', 'fireworks', 'festival']]
         ];
         let camGroupActive = 0;
         function showCamGroup(i) {
@@ -15598,6 +15817,7 @@
             else if (type === 'bigbell') strikeTowerBell();
             else if (type === 'bigdrum') beatTowerDrum();
             else if (type === 'futian') openFutianModal();
+            else if (type === 'temple_cat') petTempleCat();
             else if (type === 'wishtree') openWishTreeModal();
             else if (type === 'yuelaoshi') touchYuelaoStone();
             else if (type === 'fortune') openFortuneModal();
@@ -15996,6 +16216,7 @@
             updateMarquee(dt);
             updateDragonEyes(t);
             updateMiaozhuCat(t);
+            updateTempleCat(t, dt);
             renderer.render(scene, camera);
         }
 
