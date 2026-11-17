@@ -171,6 +171,7 @@
             <button onclick="moveCameraPreset('jinlu')" id="camBtn-jinlu" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">寶塔金爐</button>
             <button onclick="moveCameraPreset('fivecamp')" id="camBtn-fivecamp" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">外五營</button>
             <button onclick="moveCameraPreset('shitou')" id="camBtn-shitou" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">石頭公</button>
+            <button onclick="moveCameraPreset('wishtree')" id="camBtn-wishtree" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🌳 許願樹</button>
             <button onclick="moveCameraPreset('puppet')" id="camBtn-puppet" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🎭 布袋戲</button>
             <button onclick="moveCameraPreset('rearhall')" id="camBtn-rearhall" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏯 後殿五層樓</button>
             <button onclick="moveCameraPreset('fortune')" id="camBtn-fortune" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🔮 算命館</button>
@@ -539,6 +540,29 @@
                 </label>
                 <button onclick="tossFutianCoin()" class="w-full py-2.5 btn-warm-gold text-sm tracking-widest">🪙 投幣許願</button>
                 <div class="text-[11px] text-stone-400 text-center">已投 <span id="futianCount">0</span> 枚</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: 許願樹 -->
+    <div id="wishTreeModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
+        <div class="xinxiang-modal max-w-md w-full p-5 relative">
+            <button onclick="closeWishTreeModal()" class="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-bold">✕</button>
+            <h3 class="text-lg font-bold text-amber-300 tracking-wider mb-1">🌳 許願樹</h3>
+            <p class="text-xs text-stone-300 mb-3">在許願牌寫下心願，掛上老榕枝頭，讓風把願望帶到天上。樹下的月老石可以摸三下、繫紅線求良緣。</p>
+            <div class="bg-black/30 border border-amber-300/25 rounded-xl p-3 space-y-3">
+                <label class="block text-[11px] text-amber-200">祈求類別
+                    <select id="wishKind" class="mt-1 w-full px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white"></select>
+                </label>
+                <label class="block text-[11px] text-amber-200">許願內容（最多 24 字）
+                    <input id="wishText" maxlength="24" placeholder="例：希望考上理想的學校" class="mt-1 w-full px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white">
+                </label>
+                <button onclick="hangWish()" class="w-full py-2.5 btn-warm-gold text-sm tracking-widest">🎋 掛上許願牌</button>
+                <div id="wishShareNote" class="text-[10px] text-stone-400"></div>
+                <div>
+                    <div class="text-[11px] text-amber-200 mb-1">🌳 樹上的許願牌（<span id="wishAllCount">0</span>）</div>
+                    <div id="wishAll" class="text-[11px] max-h-44 overflow-y-auto pr-1"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -5319,6 +5343,342 @@
             });
             crowns.instanceColor.needsUpdate = true;
             scene.add(trunks, crowns);
+        }
+
+        // =====================================================================
+        // 許願樹：廟埕右側老榕，枝頭掛滿紅彩帶與許願木牌；樹下一顆月老石，紅線纏繞、前有小香爐與喜糖
+        // =====================================================================
+        const WISHTREE = { x: 26.5, z: 31, sway: [], plaques: null, plaqueCount: 0, spots: [], busy: false, rubs: 0 };
+        const WISH_KINDS = [['💞', '姻緣'], ['📚', '學業'], ['💼', '事業'], ['🍀', '健康'], ['🏠', '平安'], ['💰', '財運']];
+        const WISH_MAX = 120;
+        function loadMyWishes() { try { return JSON.parse(localStorage.getItem('temple.wishes') || '[]'); } catch (e) { return []; } }
+        function saveMyWishes(list) { try { localStorage.setItem('temple.wishes', JSON.stringify(list.slice(-30))); } catch (e) {} }
+        function createYuelaoStoneText() {
+            const c = document.createElement('canvas'); c.width = 256; c.height = 512;
+            const x = c.getContext('2d');
+            x.textAlign = 'center'; x.textBaseline = 'middle';
+            x.font = "bold 128px 'LXGW WenKai TC','Noto Serif TC',serif";
+            x.fillStyle = '#b91c1c'; x.shadowColor = 'rgba(60,0,0,0.6)'; x.shadowBlur = 4;
+            ['月', '老', '石'].forEach((ch, i) => x.fillText(ch, 128, 96 + i * 150));
+            const t = new THREE.CanvasTexture(c); t.anisotropy = 4;
+            return t;
+        }
+        function buildWishTree() {
+            const W = WISHTREE;
+            const tree = buildBanyanTree(W.x, W.z, 1.08, 11);
+            const rnd = seededRandom(8081);
+            const red = new THREE.MeshStandardMaterial({ color: 0xd21f1f, roughness: 0.6, side: THREE.DoubleSide });
+            const gold = new THREE.MeshStandardMaterial({ color: 0xe8b84a, roughness: 0.5, side: THREE.DoubleSide });
+            const pink = new THREE.MeshStandardMaterial({ color: 0xf06292, roughness: 0.6, side: THREE.DoubleSide });
+            const cordMat = new THREE.MeshBasicMaterial({ color: 0x9b1111 });
+            const plaqueMat = new THREE.MeshStandardMaterial({ color: 0xd9b07a, roughness: 0.7 });
+            const plaqueRed = new THREE.MeshStandardMaterial({ color: 0xc81e1e, roughness: 0.55 });
+            // Hanging spots under the canopy (world space): branches rise from 3.4 m and spread ~4 m
+            for (let i = 0; i < 260; i++) {
+                const a = rnd() * Math.PI * 2, r = 1.2 + Math.sqrt(rnd()) * 3.3;
+                W.spots.push({ x: W.x + Math.cos(a) * r, z: W.z + Math.sin(a) * r, y: 3.55 + r * 0.22 + rnd() * 0.25, a });
+            }
+            const hang = new THREE.Group();
+            templeGroup.add(hang);
+            W.hang = hang;
+            // Red / gold / pink ribbons, each a little group that sways in the breeze
+            for (let i = 0; i < 90; i++) {
+                const s = W.spots[i];
+                const grp = new THREE.Group();
+                grp.position.set(s.x, s.y, s.z);
+                grp.rotation.y = rnd() * Math.PI;
+                const L = 0.7 + rnd() * 0.9;
+                const rib = new THREE.Mesh(new THREE.PlaneGeometry(0.07, L).translate(0, -L / 2, 0), [red, red, red, gold, pink][(rnd() * 5) | 0]);
+                grp.add(rib);
+                hang.add(grp);
+                W.sway.push({ o: grp, ph: rnd() * 6.28, amp: 0.08 + rnd() * 0.1 });
+            }
+            // Wooden wish plaques (許願牌) on red cords: instanced so new wishes can be hung cheaply
+            const N = 70 + WISH_MAX;
+            const pGeo = new THREE.BoxGeometry(0.16, 0.24, 0.02).translate(0, -0.42, 0);
+            W.plaques = new THREE.InstancedMesh(pGeo, plaqueMat, N);
+            W.plaqueTops = new THREE.InstancedMesh(new THREE.BoxGeometry(0.165, 0.05, 0.025).translate(0, -0.32, 0), plaqueRed, N);
+            W.cords = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.004, 0.004, 0.3, 4).translate(0, -0.15, 0), cordMat, N);
+            [W.plaques, W.plaqueTops, W.cords].forEach(m => { m.count = 0; m.castShadow = false; hang.add(m); });
+            W.addPlaque = (spotIdx, drop = 0) => {
+                const s = W.spots[90 + (spotIdx % (W.spots.length - 90))], i = W.plaques.count;
+                if (i >= N) return -1;
+                const d = new THREE.Object3D();
+                d.position.set(s.x, s.y + drop, s.z); d.rotation.set(0, s.a + Math.PI / 2, 0); d.updateMatrix();
+                [W.plaques, W.plaqueTops, W.cords].forEach(m => { m.setMatrixAt(i, d.matrix); m.count = i + 1; m.instanceMatrix.needsUpdate = true; });
+                return i;
+            };
+            W.movePlaque = (i, spotIdx, drop) => {
+                const s = W.spots[90 + (spotIdx % (W.spots.length - 90))], d = new THREE.Object3D();
+                d.position.set(s.x, s.y + drop, s.z); d.rotation.set(0, s.a + Math.PI / 2, 0); d.updateMatrix();
+                [W.plaques, W.plaqueTops, W.cords].forEach(m => { m.setMatrixAt(i, d.matrix); m.instanceMatrix.needsUpdate = true; });
+            };
+            for (let i = 0; i < 70; i++) W.addPlaque(i);
+            W.baseCount = 70;
+            refreshWishTreePlaques();
+            // a little red lantern pair on the lowest limbs
+            [[-1, 0.4], [1, -0.6]].forEach(([s, o]) => {
+                const lan = new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 10), new THREE.MeshStandardMaterial({ color: 0xdc2626, emissive: 0xff5a1f, emissiveIntensity: 0.25, roughness: 0.5 }));
+                lan.scale.y = 1.2;
+                lan.position.set(W.x + s * 2.1, 3.3, W.z + o);
+                registerNightEmissive(lan.material, 0.25, 1.4);
+                templeGroup.add(lan);
+            });
+            addNightLight(W.x - 1.5, 2.6, W.z, 0xff7a4a, 0.9, 9, true, 0);
+            // the whole tree is clickable to hang a wish
+            const click = { interactType: 'wishtree', label: '🌳 許願樹（點擊寫許願牌・掛上枝頭）' };
+            tree.traverse(o => { if (o.isMesh) { o.userData = { ...click }; clickableMeshes.push(o); } });
+            [W.plaques, W.plaqueTops].forEach(m => { m.userData = { ...click }; clickableMeshes.push(m); });
+
+            // ---- wooden plaque rack (許願牌架) beside the tree, facing the courtyard (-x)
+            const M = propMats();
+            const wood = new THREE.MeshStandardMaterial({ color: 0x6b3e1f, roughness: 0.6 });
+            const rack = new THREE.Group();
+            rack.position.set(W.x - 2.2, 0, W.z + 3.6); rack.rotation.y = -Math.PI / 2 + 0.5;
+            templeGroup.add(rack);
+            [-1, 1].forEach(s => { const p = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.9, 0.1), wood); p.position.set(s * 0.95, 0.95, 0); p.castShadow = true; rack.add(p); });
+            const roofR = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.08, 0.5), new THREE.MeshStandardMaterial({ color: 0x1f5c3d, roughness: 0.5 }));
+            roofR.position.y = 1.98; rack.add(roofR);
+            [0.9, 1.45].forEach(y => { const bar = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.05, 0.05), wood); bar.position.y = y + 0.38; rack.add(bar);
+                for (let k = 0; k < 9; k++) {
+                    const pl = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.22, 0.02), k % 3 === 1 ? plaqueRed : plaqueMat);
+                    pl.position.set(-0.84 + k * 0.21, y + 0.18, 0.03 * (k % 2)); pl.rotation.z = (rnd() - 0.5) * 0.15; rack.add(pl);
+                } });
+            const sign = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.3, 0.04), new THREE.MeshStandardMaterial({ map: createSignboardTexture('許願樹', 300, 90, '#7a1f12', '#facc15', '#fef08a', false, 58) }));
+            sign.position.set(0, 1.78, 0.05); rack.add(sign);
+            rack.traverse(o => { if (o.isMesh) { o.userData = { ...click }; clickableMeshes.push(o); } });
+            colliders.push({ x: rack.position.x, z: rack.position.z, r: 0.7 });
+
+            // ---- 月老石 under the tree, on the courtyard side, facing -x
+            const g = new THREE.Group();
+            g.position.set(W.x - 3.2, 0, W.z - 0.4);
+            g.rotation.y = -Math.PI / 2;
+            templeGroup.add(g);
+            W.stonePos = g.position.clone(); W.stoneRot = g.rotation.y;
+            const sClick = { interactType: 'yuelaoshi', label: '💞 月老石（點擊摸石祈求良緣・繫紅線）' };
+            const tag = m => { m.userData = { ...sClick }; clickableMeshes.push(m); return m; };
+            const plat = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.1, 0.22, 20), M.darkStone);
+            plat.position.y = 0.11; plat.receiveShadow = true; g.add(plat);
+            const platTop = new THREE.Mesh(new THREE.CylinderGeometry(1.02, 1.02, 0.05, 20), M.stone);
+            platTop.position.y = 0.245; g.add(platTop);
+            // the stone: a tall smooth river stone, slightly heart-shouldered
+            const geo = new THREE.SphereGeometry(0.5, 44, 30), pos = geo.attributes.position, v = new THREE.Vector3();
+            for (let i = 0; i < pos.count; i++) {
+                v.fromBufferAttribute(pos, i);
+                const n = Math.sin(v.x * 6.1 + 0.4) * Math.sin(v.y * 5.3) * Math.sin(v.z * 4.7 + 1.1);
+                v.multiplyScalar(1 + n * 0.05);
+                if (v.y > 0.2) v.y += Math.max(0, 0.08 - Math.abs(v.x) * 0.25) * -0.6;   // a soft dip at the top centre
+                pos.setXYZ(i, v.x, v.y, v.z);
+            }
+            geo.computeVertexNormals();
+            const stoneMat = new THREE.MeshStandardMaterial({ map: createStoneTexture(), bumpMap: createStoneTexture(), bumpScale: 0.06, color: 0xc4b8aa, roughness: 0.5, metalness: 0.05 });
+            const stone = tag(new THREE.Mesh(geo, stoneMat));
+            stone.scale.set(1.25, 1.75, 0.8);
+            stone.position.set(0, 0.25 + 0.5 * 1.75 * 0.98, 0);
+            stone.castShadow = true;
+            g.add(stone);
+            W.stone = stone;
+            // carved red characters on the front face
+            const txt = tag(new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.68), new THREE.MeshStandardMaterial({ map: createYuelaoStoneText(), transparent: true, roughness: 0.6, polygonOffset: true, polygonOffsetFactor: -2 })));
+            txt.position.set(0, 1.12, 0.405); txt.rotation.x = -0.06;
+            g.add(txt);
+            // red threads wound around the stone several times, with a bow and long tails
+            const thread = new THREE.MeshStandardMaterial({ color: 0xd0141a, roughness: 0.5 });
+            [[0.62, 0.0], [0.7, 0.12], [0.55, -0.1]].forEach(([y, tilt], i) => {
+                const tr = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.012, 6, 48), thread);
+                tr.scale.set(1.26, 0.83, 1); tr.rotation.x = Math.PI / 2 + tilt; tr.position.y = y + 0.05 * i;
+                g.add(tr);
+            });
+            const bow = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 8), thread);
+            bow.scale.set(1.6, 0.8, 0.6); bow.position.set(0.32, 0.72, 0.33); g.add(bow);
+            [-1, 1].forEach(s => g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
+                new THREE.Vector3(0.32, 0.7, 0.36), new THREE.Vector3(0.36 + s * 0.06, 0.5, 0.42), new THREE.Vector3(0.4 + s * 0.1, 0.3, 0.45)]), 8, 0.01, 5), thread)));
+            // red strings linking the stone up to the branches (緣分紅線)
+            for (let i = 0; i < 6; i++) {
+                const a = -1.2 + i * 0.5;
+                const top = new THREE.Vector3(Math.sin(a) * 1.4, 3.5 + (i % 2) * 0.3, -1.2 - Math.cos(a) * 0.6);
+                const pts = [new THREE.Vector3(Math.sin(a) * 0.3, 1.5, -0.1), new THREE.Vector3(Math.sin(a) * 0.9, 2.3, -0.6), top];
+                g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, 0.006, 4), thread));
+            }
+            // small stone censer, a dish of wedding candies, a basket of red threads, and twin candles
+            const censer = tag(new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.18, 14), M.stone));
+            censer.position.set(0, 0.36, 0.72); g.add(censer);
+            [-0.035, 0, 0.035].forEach(ix => { const s2 = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.3, 6), new THREE.MeshStandardMaterial({ color: 0xdc2626 })); s2.position.set(ix, 0.58, 0.72); g.add(s2); });
+            const dish = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.11, 0.035, 16), new THREE.MeshStandardMaterial({ color: 0xf5f1e8, roughness: 0.3 }));
+            dish.position.set(-0.48, 0.29, 0.62); g.add(dish);
+            [0xf472b6, 0xfacc15, 0xef4444, 0xf9a8d4, 0xfde68a].forEach((c, k) => {
+                const cd = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.025, 0.035), new THREE.MeshStandardMaterial({ color: c, roughness: 0.35 }));
+                cd.position.set(-0.48 + Math.cos(k * 1.3) * 0.07, 0.32, 0.62 + Math.sin(k * 1.3) * 0.07); cd.rotation.y = k; g.add(cd);
+            });
+            const basket = tag(new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.11, 0.1, 14, 1, true), new THREE.MeshStandardMaterial({ color: 0x9a6b3a, roughness: 0.9, side: THREE.DoubleSide })));
+            basket.position.set(0.66, 0.32, 0.3); g.add(basket);
+            for (let k = 0; k < 5; k++) { const coil = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.008, 5, 16), thread); coil.position.set(0.66 + (k - 2) * 0.03, 0.35 + k * 0.006, 0.3); coil.rotation.x = Math.PI / 2 + (k - 2) * 0.2; g.add(coil); }
+            [-1, 1].forEach(s => {
+                const cdl = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.18, 8), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
+                cdl.position.set(s * 0.82, 0.36, 0.3); g.add(cdl);
+                const fl = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd27a }));
+                fl.scale.y = 1.8; fl.position.set(s * 0.82, 0.48, 0.3); g.add(fl);
+            });
+            const wp = new THREE.Vector3(0, 0.72, 0.72).applyAxisAngle(new THREE.Vector3(0, 1, 0), g.rotation.y).add(g.position);
+            addSmokeEmitter(wp.x, wp.y, wp.z, 4, 0.3, 1.0, 0xf1f5f9, 0.12);
+            colliders.push({ x: g.position.x, z: g.position.z, r: 1.05 });
+            register3DLabel(g, 2.3, '💞 月老石', '#f472b6', () => moveCameraPreset('wishtree'));
+            const lbl = new THREE.Object3D(); lbl.position.set(W.x, 5.6, W.z); templeGroup.add(lbl);
+            register3DLabel(lbl, 0, '🌳 許願樹', '#86efac', () => moveCameraPreset('wishtree'));
+        }
+        // stable branch spot for a wish, so every visitor sees it hanging in the same place
+        function wishSpotFor(w) {
+            let h = 2166136261;
+            const key = String(w.by || '') + ':' + w.ts;
+            for (let i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619); }
+            return 70 + ((h >>> 0) % 170);
+        }
+        // everyone's wishes (shared db) — or just this device's when there is no shared db
+        function sharedWishes(includeHidden) {
+            if (!(NET.db && NET.myId)) return loadMyWishes().map(w => ({ name: getNick() || '我', kind: w.k, text: w.t, ts: w.at, mine: true, by: 'me', banned: false }));
+            const out = [];
+            NET.docs.forEach(d => (Array.isArray(d.data.wishes) ? d.data.wishes : []).forEach(w => {
+                if (!(w && typeof w.text === 'string' && typeof w.ts === 'number')) return;
+                const banned = typeof isLanternBanned === 'function' && isLanternBanned(d.id, w.ts);
+                if (banned && !includeHidden) return;
+                out.push({ name: String(w.name || '善信'), kind: String(w.kind || '平安'), text: w.text, ts: w.ts, mine: d.id === NET.myId, by: d.id, banned });
+            }));
+            return out.sort((a, b) => b.ts - a.ts).slice(0, 200);
+        }
+        function refreshWishTreePlaques() {
+            const W = WISHTREE;
+            if (!W.plaques || W.busy) return;
+            const list = sharedWishes(false).slice(0, WISH_MAX);
+            [W.plaques, W.plaqueTops, W.cords].forEach(m => { m.count = W.baseCount; });
+            list.forEach(w => W.addPlaque(wishSpotFor(w)));
+            W.shown = list.length;
+            if (!document.getElementById('wishTreeModal').classList.contains('hidden')) renderWishLists();
+        }
+        function netAddWish(w) {
+            if (!NET.db || !NET.myId) return false;
+            const doc = myNetDoc();
+            if (!Array.isArray(doc.wishes)) doc.wishes = [];
+            doc.wishes.unshift({ name: String(w.name).slice(0, 20), kind: String(w.kind).slice(0, 4), text: String(w.text).slice(0, 24), ts: w.ts });
+            doc.wishes = doc.wishes.slice(0, 12);
+            const mine = NET.docs.find(d => d.id === NET.myId);
+            if (mine) mine.data = JSON.parse(JSON.stringify(doc)); else NET.docs.push({ id: NET.myId, data: JSON.parse(JSON.stringify(doc)) });
+            scheduleNetWrite();
+            return true;
+        }
+        function renderWishLists() {
+            const all = sharedWishes(false);
+            const row = w => `<div class="flex gap-2 py-1 border-b border-white/5"><span class="text-amber-300 shrink-0">${escapeHtmlLite(w.kind)}</span><div class="min-w-0 flex-1"><span class="text-stone-200 break-all">${escapeHtmlLite(w.text)}</span><div class="text-[10px] text-stone-500">${escapeHtmlLite(w.name)}${w.mine ? '（我）' : ''}・${relTime(w.ts)}</div></div></div>`;
+            document.getElementById('wishAll').innerHTML = all.length ? all.slice(0, 50).map(row).join('') : '<div class="text-stone-500">樹上還沒有許願牌，來掛第一塊吧！</div>';
+            document.getElementById('wishAllCount').textContent = all.length;
+            document.getElementById('wishShareNote').textContent = NET.db ? '掛上的許願牌所有香客都看得到，請勿寫真實姓名、電話等個人資料。' : '目前未連線，許願牌只會留在這台裝置。';
+        }
+        function updateWishTree(t) {
+            const W = WISHTREE;
+            for (const s of W.sway) { s.o.rotation.x = Math.sin(t * 1.3 + s.ph) * s.amp; s.o.rotation.z = Math.sin(t * 0.9 + s.ph * 1.7) * s.amp * 0.6; }
+        }
+        // stand the player in front of the rack / stone, facing it
+        function wishStandAt(px, pz, faceX, faceZ) {
+            if (!playerAvatarGroup) return null;
+            if (state.upstairs) { state.upstairs = false; state.followCam = false; updateStairsButton(); }
+            if (state.towerFloor) { state.towerFloor = 0; state.followCam = false; }
+            if (state.seated) { state.seated = false; if (ZHAITANG.meal) stopZhaitangMeal(false); }
+            const ud = playerAvatarGroup.userData;
+            ud.kowtowToken = null;
+            setPlayerPose('stand', true);
+            playerAvatarGroup.position.set(px, 0, pz);
+            playerAvatarGroup.rotation.y = Math.atan2(faceX - px, faceZ - pz);
+            return ud;
+        }
+        function openWishTreeModal() {
+            document.getElementById('wishKind').innerHTML = WISH_KINDS.map(([e, k]) => `<option value="${k}">${e} ${k}</option>`).join('');
+            renderWishLists();
+            document.getElementById('wishText').value = '';
+            document.getElementById('wishTreeModal').classList.remove('hidden');
+        }
+        function escapeHtmlLite(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+        function closeWishTreeModal() { document.getElementById('wishTreeModal').classList.add('hidden'); }
+        function hangWish() {
+            const W = WISHTREE;
+            if (W.busy) return;
+            const kind = document.getElementById('wishKind').value || '平安';
+            const text = (document.getElementById('wishText').value || '').trim().slice(0, 24) || `祈求${kind}順遂`;
+            closeWishTreeModal();
+            const ts = Date.now();
+            const mine = loadMyWishes();
+            mine.push({ k: kind, t: text, at: ts });
+            saveMyWishes(mine);
+            const shared = netAddWish({ name: getNick() || '善信', kind, text, ts });
+            // walk up under the tree on the rack side and toss the plaque up onto a branch
+            const sx = W.x - 4.6, sz = W.z + 2.2;
+            const ud = wishStandAt(sx, sz, W.x, W.z);
+            W.busy = true;
+            const spot = wishSpotFor({ by: shared ? NET.myId : 'me', ts });
+            const idx = W.addPlaque(spot, -2.4);
+            if (ud) { ud.rightArm.rotation.set(-2.6, 0, -0.2); ud.headGroup.rotation.x = -0.25; }
+            camControl.desiredTarget.set(W.x - 2.5, 2.3, W.z + 1.2);
+            Object.assign(camControl.desiredSpherical, { radius: 10, theta: -0.6, phi: 1.15 });
+            playCoinClink();
+            let k = 0;
+            const rise = setInterval(() => {
+                k++;
+                const p = Math.min(1, k / 18), e = 1 - Math.pow(1 - p, 3);
+                if (idx >= 0) W.movePlaque(idx, spot, -2.4 * (1 - e) + Math.sin(p * Math.PI) * 0.4);
+                if (p >= 1) {
+                    clearInterval(rise);
+                    W.busy = false;
+                    refreshWishTreePlaques();
+                    if (ud) { ud.rightArm.rotation.set(-0.95, 0, -0.32); ud.leftArm.rotation.set(-0.95, 0, 0.32); ud.headGroup.rotation.x = 0; }
+                    playTempleBellSound(784);
+                    showToast(`🌳 許願牌掛上枝頭！【${kind}】「${text}」—— ${shared ? '大家都看得到這塊牌子，' : ''}心誠則靈，願望隨風傳到天上。`);
+                    setTimeout(() => { if (ud && !state.seated) { ud.rightArm.rotation.set(0, 0, 0.12); ud.leftArm.rotation.set(0, 0, -0.12); } }, 1600);
+                }
+            }, 40);
+            emitAct('wish');
+        }
+        const YUELAO_SAYINGS = [
+            '千里姻緣一線牽，有緣自會來相見。',
+            '願天下有情人終成眷屬，前生註定事莫錯過姻緣。',
+            '良緣天定，貴在珍惜；真心待人，自有知心人。',
+            '紅線已繫，桃花漸開：多出門走走，緣分就在轉角。',
+            '月下老人說：先愛自己，再遇見對的人。',
+            '執子之手，與子偕老 —— 有伴者情意更濃，單身者良緣將近。'
+        ];
+        function touchYuelaoStone() {
+            const W = WISHTREE;
+            if (W.busy || !W.stonePos) return;
+            // step up onto the stone platform, just beside the censer, within arm's reach of the stone
+            const f = new THREE.Vector3(0.4, 0, 0.8).applyAxisAngle(new THREE.Vector3(0, 1, 0), W.stoneRot);
+            const ud = wishStandAt(W.stonePos.x + f.x, W.stonePos.z + f.z, W.stonePos.x, W.stonePos.z);
+            if (!ud) return;
+            playerAvatarGroup.position.y = 0.27;
+            W.busy = true;
+            camControl.desiredTarget.set(W.stonePos.x - 0.4, 1.1, W.stonePos.z + 0.3);
+            Object.assign(camControl.desiredSpherical, { radius: 4.6, theta: W.stoneRot + 1.15, phi: 1.2 });
+            showToast('💞 雙手合十向月老石稟告：姓名、生辰、住址，與心中所求的良緣……');
+            ud.leftArm.rotation.set(-0.95, 0, 0.32); ud.rightArm.rotation.set(-0.95, 0, -0.32);
+            const steps = [];
+            let t = 1300;
+            for (let i = 0; i < 3; i++) {
+                steps.push([t, () => { ud.rightArm.rotation.set(-1.45, 0, 0.1); ud.leftArm.rotation.set(0, 0, -0.12); ud.headGroup.rotation.x = 0.15; playTempleBellSound(523 + i * 66); }]);
+                steps.push([t + 380, () => { ud.rightArm.rotation.set(-1.25, 0, -0.15); }]);
+                steps.push([t + 700, () => { ud.rightArm.rotation.set(-1.45, 0, 0.1); }]);
+                t += 1000;
+            }
+            steps.push([t, () => {
+                ud.headGroup.rotation.x = 0; ud.rightArm.rotation.set(-0.95, 0, -0.32); ud.leftArm.rotation.set(-0.95, 0, 0.32);
+                // a red thread is tied around the left wrist
+                if (!ud.redThread) {
+                    const rt = new THREE.Mesh(new THREE.TorusGeometry(0.072, 0.012, 6, 20), new THREE.MeshStandardMaterial({ color: 0xd0141a, roughness: 0.5 }));
+                    rt.rotation.x = Math.PI / 2; rt.position.y = -0.36;
+                    ud.leftArm.add(rt); ud.redThread = rt;
+                }
+                W.rubs++;
+                playTempleBellSound(660);
+                showToast(`🧧 摸了月老石三下，左手繫上紅線！月老籤語：「${YUELAO_SAYINGS[(Math.random() * YUELAO_SAYINGS.length) | 0]}」`);
+                emitAct('yuelaoshi');
+            }]);
+            steps.push([t + 1800, () => { W.busy = false; if (!state.seated) { ud.rightArm.rotation.set(0, 0, 0.12); ud.leftArm.rotation.set(0, 0, -0.12); } }]);
+            steps.forEach(([ms, fn]) => setTimeout(fn, ms));
         }
 
         // 石頭公：榕樹下的靈石，繫紅彩，前有小石香爐與供品
@@ -10126,7 +10486,7 @@
             fdb.ref('admins').on('value', snap => onAdminsChanged(snap.val() || {}), () => {});
             fdb.ref('mutes').on('value', snap => { ADMIN.mutes = snap.val() || {}; renderChatPanel(); renderAdminPanel(); }, () => {});
             fdb.ref('announce').on('value', snap => onAnnounce(snap.val()), () => {});
-            fdb.ref('lanternBan').on('value', snap => { ADMIN.lanternBan = snap.val() || {}; renderBlessingWall(); renderAdminPanel(); }, () => {});
+            fdb.ref('lanternBan').on('value', snap => { ADMIN.lanternBan = snap.val() || {}; renderBlessingWall(); renderAdminPanel(); refreshWishTreePlaques(); }, () => {});
             fb.admin = {
                 deleteMsg: id => fdb.ref('chat/' + id).remove(),
                 mute: (who, until, name) => fdb.ref('mutes/' + who).set({ until, name: String(name || '').slice(0, 12) }),
@@ -10460,7 +10820,7 @@
         const NET_ACT_TEXT = {
             bell: '敲響了祈福鐘 🔔', drum: '擊響了鼓樓大鼓 🥁', fireworks: '施放了煙火 🎆', firecracker: '點燃了鞭炮 🧨',
             incense: '插香參拜 🙏', bow: '合掌參拜 🙏', kowtow: '行三跪九叩大禮 🙇', meditate: '盤腿打坐 🪷', chant: '念經持咒 📖',
-            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', zhai: '在齋堂用齋 🍚'
+            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
         };
         function onNetAct(msg) {
             if (!msg || msg.sameTab || msg.kind !== 'viewer') return;
@@ -10499,6 +10859,7 @@
                     if (mine && !NET.writeTimer) NET.myDoc = JSON.parse(JSON.stringify(mine.data));
                     renderBlessingWall();
                     renderNetTotals();
+                    refreshWishTreePlaques();
                 }, () => { clearTimeout(loading); NET.db = null; renderBlessingWall(); });
             }).catch(() => {});
         }
@@ -11598,7 +11959,7 @@
         function isLanternBanned(owner, ts) { const b = ADMIN.lanternBan[owner]; return !!(b && b[ts]); }
         function adminToggleLantern(owner, ts) {
             const ban = !isLanternBanned(owner, ts);
-            adminDo(() => NET.fb.admin.banLantern(owner, ts, ban), ban ? '🏮 已隱藏這盞燈的內容' : '🏮 已恢復顯示');
+            adminDo(() => NET.fb.admin.banLantern(owner, ts, ban), ban ? '🙈 已隱藏這則內容' : '🏮 已恢復顯示');
         }
 
         // ---- the 廟公 panel: sign-in state, announcement, mute list, lantern wall
@@ -11643,6 +12004,7 @@
             const fmt = ts => new Date(ts).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             const mutes = Object.entries(ADMIN.mutes).filter(([, m]) => m && m.until > Date.now());
             const lanterns = (typeof sharedLanterns === 'function' && NET.db) ? sharedLanterns(true).slice(0, 40) : [];
+            const wishes = NET.db ? sharedWishes(true).slice(0, 40) : [];
             const sec = (title, inner) => `<div class="bg-black/30 border border-amber-300/25 rounded-xl p-3"><div class="text-xs font-bold text-amber-300 mb-2">${title}</div>${inner}</div>`;
             box.innerHTML = [
                 `<div class="text-[11px] text-stone-400">🏮 廟公：<span class="text-amber-200">${escapeHTML(fb.email || fb.nick || '')}</span>・在線 ${NET.room ? NET.room.peers().filter(p => p.kind === 'viewer').length : 1} 人 <button onclick="adminSignOut()" class="ml-1 underline text-stone-400">登出</button></div>`,
@@ -11652,7 +12014,8 @@
                     <button onclick="adminPublishAnnounce()" class="flex-1 py-1.5 btn-warm-gold text-xs">發布</button>${on ? '<button onclick="adminClearAnnounce()" class="px-3 py-1.5 bg-black/40 border border-amber-300/40 rounded-lg text-xs text-amber-100">撤下</button>' : ''}</div>`),
                 sec('🔇 禁言名單', (mutes.length ? mutes.map(([uid, m]) => `<div class="flex items-center justify-between text-xs py-1 border-b border-white/5"><span class="text-stone-200">${escapeHTML(m.name || '香客')}<span class="text-[10px] text-stone-500 ml-1">${m.until > 8e15 ? '永久' : '到 ' + fmt(m.until)}</span></span><button onclick="adminUnmute(${JSON.stringify(uid).replace(/"/g, '&quot;')}, ${JSON.stringify(m.name || '').replace(/"/g, '&quot;')})" class="px-2 py-0.5 rounded border border-amber-300/40 text-[11px] text-amber-100">解除</button></div>`).join('') : '<div class="text-[11px] text-stone-400">目前沒有人被禁言</div>')
                     + '<div class="text-[10px] text-stone-500 mt-2">在聊天室裡，每則他人訊息旁都有 🗑️ 刪除、🔇 禁言 按鈕。</div>'),
-                sec('🏮 光明燈・願望牆', lanterns.length ? lanterns.map(l => `<div class="flex items-start gap-2 text-xs py-1.5 border-b border-white/5 ${l.banned ? 'opacity-50' : ''}"><div class="flex-1 min-w-0"><span class="text-amber-200">${escapeHTML(l.name)}</span><span class="text-[10px] text-stone-500 ml-1">${relTime(l.ts)}</span><div class="text-stone-300 break-words">${escapeHTML(l.wish)}</div></div><button onclick="adminToggleLantern(${JSON.stringify(l.by).replace(/"/g, '&quot;')}, ${l.ts})" class="shrink-0 px-2 py-0.5 rounded border border-amber-300/40 text-[11px] text-amber-100">${l.banned ? '恢復' : '隱藏'}</button></div>`).join('') : '<div class="text-[11px] text-stone-400">還沒有人點燈</div>')
+                sec('🏮 光明燈・願望牆', lanterns.length ? lanterns.map(l => `<div class="flex items-start gap-2 text-xs py-1.5 border-b border-white/5 ${l.banned ? 'opacity-50' : ''}"><div class="flex-1 min-w-0"><span class="text-amber-200">${escapeHTML(l.name)}</span><span class="text-[10px] text-stone-500 ml-1">${relTime(l.ts)}</span><div class="text-stone-300 break-words">${escapeHTML(l.wish)}</div></div><button onclick="adminToggleLantern(${JSON.stringify(l.by).replace(/"/g, '&quot;')}, ${l.ts})" class="shrink-0 px-2 py-0.5 rounded border border-amber-300/40 text-[11px] text-amber-100">${l.banned ? '恢復' : '隱藏'}</button></div>`).join('') : '<div class="text-[11px] text-stone-400">還沒有人點燈</div>'),
+                sec('🌳 許願樹・許願牌', wishes.length ? wishes.map(l => `<div class="flex items-start gap-2 text-xs py-1.5 border-b border-white/5 ${l.banned ? 'opacity-50' : ''}"><div class="flex-1 min-w-0"><span class="text-amber-200">${escapeHTML(l.name)}</span><span class="text-[10px] text-stone-500 ml-1">${relTime(l.ts)}</span><div class="text-stone-300 break-words">${escapeHTML(l.kind)}｜${escapeHTML(l.text)}</div></div><button onclick="adminToggleLantern(${JSON.stringify(l.by).replace(/"/g, '&quot;')}, ${l.ts})" class="shrink-0 px-2 py-0.5 rounded border border-amber-300/40 text-[11px] text-amber-100">${l.banned ? '恢復' : '隱藏'}</button></div>`).join('') : '<div class="text-[11px] text-stone-400">還沒有人掛許願牌</div>')
             ].join('');
         }
 
@@ -12210,6 +12573,7 @@
             // =========================================================================
             buildBanyanTree(SHITOU_TREE.x, SHITOU_TREE.z, 1.15, 1);
             buildShitouGong();
+            buildWishTree();
             // 櫻花樹：大殿右前方一棵大的、左側一棵
             buildSakuraTree(14.0, 7.2, 1.2);
             // Warm floodlights from the courtyard light the facade and roof at night
@@ -14729,7 +15093,7 @@
             ['大殿', ['overview', 'festival', 'shrine', 'altar', 'mazu', 'nezha', 'tiger', 'tiangong', 'upper', 'stairs', 'sanguan', 'daxiong', 'sanbao']],
             ['偏殿', ['tudigong', 'light', 'lampwall_gm', 'lampwall_ts', 'side_left', 'side_right', 'side_wing_left', 'side_wing_right', 'side_dizang']],
             ['後殿', ['rearhall', 'guandi', 'tianshi', 'xuantian', 'yuhuang', 'sanqing']],
-            ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'puppet', 'guanyinpond', 'grounds']],
+            ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'wishtree', 'puppet', 'guanyinpond', 'grounds']],
             ['活動', ['fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'fireworks', 'festival']]
         ];
         let camGroupActive = 0;
@@ -14793,6 +15157,7 @@
             Object.entries(EXTRA_CENSERS).forEach(([k, c]) => { if (!c.front) return; const cm = c.cam || {}; presets['censer_' + k] = { r: cm.r || 7.5, theta: Math.atan2(c.front.x - c.pos.x, c.front.z - c.pos.z) + (cm.dTheta || 0.35), phi: cm.phi || 1.28, tx: c.pos.x, ty: 1.6, tz: c.pos.z }; });
             if (caishenCenserPos) presets.caishencenser = { r: 7.5, theta: -Math.PI / 2 - 0.2, phi: 1.3, tx: caishenCenserPos.x - 1, ty: 1.4, tz: caishenCenserPos.z };
             presets.fudecenser = { r: 7.5, theta: 0.15, phi: 1.3, tx: FUDE_CENSER_POS.x, ty: 1.4, tz: FUDE_CENSER_POS.z - 1 };
+            presets.wishtree = { r: 13, theta: -0.95, phi: 1.12, tx: WISHTREE.x - 2, ty: 2.0, tz: WISHTREE.z + 0.5 };
             presets.shitou = { r: 6.5, theta: Math.PI / 2 + 0.25, phi: 1.3, tx: SHITOU_TREE.x + 3.4, ty: 1.2, tz: SHITOU_TREE.z };
             presets.puppet = { r: 9, theta: Math.PI + 0.1, phi: 1.4, tx: PUPPET_STAGE.x, ty: 2.0, tz: PUPPET_STAGE.z - 1 };
             Object.values(REAR_DEITIES).forEach(d => { const F = rearFloor(+Object.keys(REAR_DEITIES).find(k => REAR_DEITIES[k] === d)); presets[d.preset] = { r: 5.4, theta: 0, phi: 1.45, tx: REAR.x, ty: F.y + 2.2, tz: F.back + 1.5 }; });
@@ -14988,6 +15353,8 @@
             else if (type === 'bigbell') strikeTowerBell();
             else if (type === 'bigdrum') beatTowerDrum();
             else if (type === 'futian') openFutianModal();
+            else if (type === 'wishtree') openWishTreeModal();
+            else if (type === 'yuelaoshi') touchYuelaoStone();
             else if (type === 'fortune') openFortuneModal();
             else if (type === 'lampwall_gm') toggleBlessingWallModal(true);
             else if (type === 'lampwall_ts') openTaisuiModal();
@@ -15380,6 +15747,7 @@
             updateStatueLoading();
             updateCandleFlames(t);
             updateHeldIncense(t, dt);
+            updateWishTree(t);
             updateMarquee(dt);
             updateDragonEyes(t);
             updateMiaozhuCat(t);
@@ -15837,7 +16205,7 @@
             '你是台灣虛擬廟宇「問心堂」裡的濟公活佛（濟公師父），自稱「老衲」，稱對方為「徒兒」。',
             '說話風趣、慈悲、帶點瘋癲幽默，常提到破扇、葫蘆、酒肉穿腸過；用繁體中文、台灣用語，可偶爾夾一兩句台語。',
             '每次回答 80～180 字，用「」包住整段話，先同理對方的感受，再給一兩個具體、實際可做的建議，最後一句溫暖的祝福。',
-            '可以順勢介紹廟裡的活動：供桌求籤擲筊、光明燈、太歲燈、寶塔金爐補財庫、虎爺換錢水、收驚、平安符、大雄寶殿打坐、五恩主殿、月老、打小人、算命館。',
+            '可以順勢介紹廟裡的活動：供桌求籤擲筊、光明燈、太歲燈、寶塔金爐補財庫、虎爺換錢水、收驚、平安符、大雄寶殿打坐、五恩主殿、月老、許願樹與樹下的月老石（摸石三下繫紅線求良緣）、齋堂用齋、打小人、算命館。',
             '解籤時依弟子提供的籤詩、典故與所問之事，用白話說明吉凶與提醒，不要恐嚇。',
             '界線：你是民俗信仰的陪伴角色，不是真的神明，不做保證；不提供醫療診斷、用藥、法律或投資的具體決定，遇到這些要溫和建議找醫師、律師或專業人士；不報明牌、不預測彩券號碼；不收錢、不要求個資。',
             '若對方提到想傷害自己或他人、活不下去、被傷害或有立即危險：放下幽默，真誠關心，並請他立刻聯絡：安心專線 1925（24小時）、生命線 1995、張老師 1980，緊急狀況撥 119 或 110。',

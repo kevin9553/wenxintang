@@ -151,6 +151,26 @@
             }
           }
         },
+        "wishes": {
+          "$i": {
+            ".validate": "$i.matches(/^([0-9]|1[01])$/) && newData.hasChildren(['text', 'ts'])",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length <= 20"
+            },
+            "kind": {
+              ".validate": "newData.isString() && newData.val().length <= 4"
+            },
+            "text": {
+              ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 24"
+            },
+            "ts": {
+              ".validate": "newData.isNumber() && newData.val() <= now"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
         "$other": {
           ".validate": false
         }
