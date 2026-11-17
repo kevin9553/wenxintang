@@ -176,6 +176,7 @@
             <button onclick="moveCameraPreset('fortune')" id="camBtn-fortune" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🔮 算命館</button>
             <button onclick="moveCameraPreset('xiaoren')" id="camBtn-xiaoren" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">👡 打小人</button>
             <button onclick="moveCameraPreset('miaozhu')" id="camBtn-miaozhu" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏠 廟祝的窩</button>
+            <button onclick="moveCameraPreset('zhaitang')" id="camBtn-zhaitang" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🍚 齋堂</button>
             <button onclick="moveCameraPreset('fireworks')" id="camBtn-fireworks" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🎆 煙火區</button>
             <button onclick="moveCameraPreset('guandi')" id="camBtn-guandi" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">⚔️ 五恩主</button>
             <button onclick="moveCameraPreset('tianshi')" id="camBtn-tianshi" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🗡️ 張天師</button>
@@ -3571,6 +3572,7 @@
         function isOnSideHallFloor(pos) {
             if (isOnDaxiongFloor(pos)) return true;
             if (typeof isOnMiaozhuFloor === 'function' && isOnMiaozhuFloor(pos)) return true;
+            if (typeof isOnZhaitangFloor === 'function' && isOnZhaitangFloor(pos)) return true;
             return SIDE_HALLS.some(h => {
                 const r = h.rot || 0, dx = pos.x - h.x, dz = pos.z - h.z;
                 const lx = dx * Math.cos(r) - dz * Math.sin(r), lz = dx * Math.sin(r) + dz * Math.cos(r);
@@ -3580,7 +3582,7 @@
 
         // 增建預定地：先以木樁、紅繩與地面白線圈出範圍，地面保持空地，之後可依需求興建
         const RESERVE_PLOTS = [
-            { key: 'left',  name: '左側增建預定地', x: -60, z: 6,   w: 18, d: 40 },
+            { key: 'left',  name: '左側增建預定地', x: -60, z: 4,   w: 18, d: 36 },
             { key: 'right', name: '右側增建預定地', x: 57,  z: 6,   w: 18, d: 40 }
         ];
         function buildReservePlot(pl) {
@@ -7771,7 +7773,7 @@
         // 小神龕、盆栽、睡在蒲團上的廟貓。門口燈籠：有廟公（管理員）在線時點亮，牌子顯示「廟祝在廟」
         // =====================================================================
         const MIAOZHU_POS = { x: -54, z: 41, rot: Math.PI / 2 };   // front door faces +x, toward the courtyard
-        const MIAOZHU = { lantern: null, glowSprite: null, sign: null, texIn: null, texOut: null, online: null, cat: null, steam: null, lotus: [], W: 7, D: 6 };
+        const MIAOZHU = { lantern: null, glowSprite: null, sign: null, texIn: null, texOut: null, online: null, cat: null, steam: null, lotus: [], W: 10, D: 8 };
         function isOnMiaozhuFloor(pos) {
             const dx = pos.x - MIAOZHU_POS.x, dz = pos.z - MIAOZHU_POS.z, r = MIAOZHU_POS.rot;
             const lx = dx * Math.cos(r) - dz * Math.sin(r), lz = dx * Math.sin(r) + dz * Math.cos(r);
@@ -8150,9 +8152,9 @@
                 if (spot && playerAvatarGroup) {
                     playerAvatarGroup.userData.kowtowToken = null;
                     setPlayerPose('stand');
-                    playerAvatarGroup.position.set(spot.x, SIDE_HALL_FLOOR, spot.z);
-                    setPlayerPose('lotus', true);
+                    // stand on the cushion, then sit: the pose itself lowers the body onto the cushion
                     playerAvatarGroup.position.set(spot.x, spot.top, spot.z);
+                    setPlayerPose('lotus', true);
                     playerAvatarGroup.rotation.y = spot.face;
                     playBronzeBowlSound();
                     state.followCam = false;
@@ -8166,6 +8168,266 @@
         }
         function updateMiaozhuCat(t) {
             if (MIAOZHU.cat) MIAOZHU.cat.body.scale.y = MIAOZHU.cat.base + Math.sin(t * 2.5) * 0.03;   // breathing
+        }
+
+
+        // =====================================================================
+        // 齋堂（廟祝的窩旁）：紅磚燕尾頂；兩張長條餐桌與長凳、碗筷素菜；後方灶台大鍋、蒸籠、飯桶；今日素齋菜單
+        // =====================================================================
+        const ZHAITANG_POS = { x: -54, z: 29, rot: Math.PI / 2 };      // front door faces +x, in line with the keeper's lodge
+        const ZHAITANG = { W: 9.5, D: 8, steamAt: null, seats: [], dish: null, meal: null };
+        const ZHAITANG_MENU = ['香菇素燥飯', '什錦炒米粉', '羅漢齋', '紫菜豆腐湯', '麻油猴頭菇', '三杯杏鮑菇', '素肉羹麵', '紅豆紫米粥'];
+        function isOnZhaitangFloor(pos) {
+            const dx = pos.x - ZHAITANG_POS.x, dz = pos.z - ZHAITANG_POS.z, r = ZHAITANG_POS.rot;
+            const lx = dx * Math.cos(r) - dz * Math.sin(r), lz = dx * Math.sin(r) + dz * Math.cos(r);
+            return Math.abs(lx) < ZHAITANG.W / 2 && Math.abs(lz) < ZHAITANG.D / 2;
+        }
+        function buildZhaitang(goldMat, greenTrimMat) {
+            const P = ZHAITANG_POS, M = propMats();
+            const g = new THREE.Group();
+            g.position.set(P.x, 0, P.z);
+            g.rotation.y = P.rot;
+            templeGroup.add(g);
+            const rc = Math.cos(P.rot), rs = Math.sin(P.rot);
+            const hw = (lx, lz) => ({ x: P.x + lx * rc + lz * rs, z: P.z - lx * rs + lz * rc });
+            const W = ZHAITANG.W, D = ZHAITANG.D, H = 3.4, F = SIDE_HALL_FLOOR, front = D / 2, back = -D / 2;
+            const add = (geo, mat, x, y, z, parent = g) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
+            const tagAll = (obj, ud) => obj.traverse(o => { if (o.isMesh) { o.userData = { ...ud }; clickableMeshes.push(o); } });
+            const brick = createRedBrickWallTexture(); brick.repeat.set(3, 1.5);
+            const brickMat = new THREE.MeshStandardMaterial({ map: brick, roughness: 0.65 });
+            const red = new THREE.MeshStandardMaterial({ color: 0x9b1c16, roughness: 0.45 });
+            const wood = new THREE.MeshStandardMaterial({ color: 0x6b3e1f, roughness: 0.55 });
+            const darkWood = new THREE.MeshStandardMaterial({ color: 0x3a1f10, roughness: 0.5 });
+            const plaster = new THREE.MeshStandardMaterial({ color: 0xf1e6cc, roughness: 0.9 });
+            const clickHall = { interactType: 'zhaitang', label: '🍚 齋堂（點擊看今日素齋）' };
+
+            // base, floor, steps
+            add(new THREE.BoxGeometry(W + 0.6, F, D + 0.6), M.stone, 0, F / 2, 0);
+            addTileFloor(g, 0, F + 0.004, 0, W - 0.3, D - 0.3);
+            add(new THREE.BoxGeometry(2.2, 0.1, 0.6), M.stone, 0, 0.05, front + 0.55);
+            // walls (brick outside, cream plaster and a wood wainscot inside)
+            add(new THREE.BoxGeometry(W, H, 0.24), brickMat, 0, F + H / 2, back + 0.12);
+            [-1, 1].forEach(s => add(new THREE.BoxGeometry(0.24, H, D), brickMat, s * (W / 2 - 0.12), F + H / 2, 0));
+            add(new THREE.BoxGeometry(W - 0.5, H - 0.02, 0.02), plaster, 0, F + H / 2, back + 0.25);
+            [-1, 1].forEach(s => add(new THREE.BoxGeometry(0.02, H - 0.02, D - 0.5), plaster, s * (W / 2 - 0.25), F + H / 2, 0));
+            add(new THREE.BoxGeometry(W - 0.5, 0.9, 0.04), darkWood, 0, F + 0.45, back + 0.27);
+            [-1, 1].forEach(s => add(new THREE.BoxGeometry(0.04, 0.9, D - 0.5), darkWood, s * (W / 2 - 0.27), F + 0.45, 0));
+            const doorW = 1.8;
+            [-1, 1].forEach(s => {
+                const segW = (W - doorW) / 2, cx = s * (doorW / 2 + segW / 2);
+                add(new THREE.BoxGeometry(segW, 1.0, 0.24), brickMat, cx, F + 0.5, front - 0.12);
+                add(new THREE.BoxGeometry(segW, 0.75, 0.24), brickMat, cx, F + H - 0.375, front - 0.12);
+                const win = add(new THREE.BoxGeometry(segW - 0.6, 1.65, 0.08), new THREE.MeshStandardMaterial({ map: createLatticeWindowTexture(), emissive: 0xffa94d, emissiveIntensity: 0.15, roughness: 0.6 }), cx, F + 1.83, front - 0.12);
+                registerNightEmissive(win.material, 0.15, 1.0);
+                [-1, 1].forEach(e => add(new THREE.BoxGeometry(0.3, 1.65, 0.24), brickMat, cx + e * (segW / 2 - 0.15), F + 1.83, front - 0.12));
+                add(new THREE.BoxGeometry(0.16, H - 0.75, 0.3), red, s * (doorW / 2 + 0.08), F + (H - 0.75) / 2, front - 0.12);
+                const cp = add(new THREE.BoxGeometry(0.28, 1.7, 0.02), new THREE.MeshStandardMaterial({ map: createSignboardTexture(s < 0 ? '一粥一飯當思來處' : '粗茶淡飯滋養身心', 80, 500, '#b91c1c', '#facc15', '#1c1917', true, 46) }), s * (doorW / 2 + 0.4), F + 1.65, front + 0.01);
+                cp.castShadow = false;
+            });
+            add(new THREE.BoxGeometry(doorW + 0.4, 0.2, 0.32), red, 0, F + H - 0.85, front - 0.12);
+            const plaque = add(new THREE.BoxGeometry(1.9, 0.55, 0.08), new THREE.MeshStandardMaterial({ map: createSignboardTexture('齋 堂', 420, 124, '#2a0806', '#facc15', '#fef08a', false, 80), roughness: 0.35 }), 0, F + H - 0.42, front + 0.04);
+            tagAll(plaque, clickHall);
+            buildSwallowtailRoof(goldMat, greenTrimMat, { cx: 0, W: W + 1.2, ridgeZ: 0, ridgeY: F + H + 1.7, eaveY: F + H + 0.05, frontZ: front + 0.8, backZ: back - 0.8, lift: 0.5, ornaments: false, ceiling: false, sideWalls: false });
+            const roof = templeGroup.children[templeGroup.children.length - 1];
+            templeGroup.remove(roof); g.add(roof);
+            add(new THREE.BoxGeometry(W, 0.1, D), darkWood, 0, F + H + 0.05, 0);
+            const beamTex = createPaintedBeamTexture(); beamTex.repeat.set(2, 1);
+            [-2, 0, 2].forEach(z => add(new THREE.BoxGeometry(W - 0.5, 0.2, 0.22), new THREE.MeshStandardMaterial({ map: beamTex, roughness: 0.5 }), 0, F + H - 0.1, z));
+
+            // ---- two long dining tables with benches, bowls of rice, chopsticks and shared dishes
+            const porcelain = new THREE.MeshStandardMaterial({ color: 0xf5f1e8, roughness: 0.25 });
+            const rice = new THREE.MeshStandardMaterial({ color: 0xfbf8f0, roughness: 0.9 });
+            const dishCols = [0x3f7d2a, 0xd9b26a, 0xa0522d, 0x7a8a3a, 0xe8d8b0];
+            [-1.4, 1.6].forEach((tz, ti) => {
+                const t = new THREE.Group(); t.position.set(-0.6, F, tz); g.add(t);
+                const L = 4.6;
+                add(new THREE.BoxGeometry(L, 0.06, 0.95), wood, 0, 0.76, 0, t);
+                [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => add(new THREE.BoxGeometry(0.08, 0.73, 0.08), darkWood, sx * (L / 2 - 0.15), 0.365, sz * 0.38, t));
+                [-1, 1].forEach(sz => {
+                    add(new THREE.BoxGeometry(L - 0.2, 0.05, 0.3), wood, 0, 0.44, sz * 0.75, t);
+                    [-1, 1].forEach(sx => add(new THREE.BoxGeometry(0.06, 0.42, 0.24), darkWood, sx * (L / 2 - 0.3), 0.21, sz * 0.75, t));
+                });
+                // place settings: bowl of rice and chopsticks on both sides
+                for (let k = -2; k <= 2; k++) [-1, 1].forEach(sz => {
+                    const bx = k * 0.85, bz = sz * 0.3;
+                    const bowl = add(new THREE.CylinderGeometry(0.075, 0.05, 0.06, 16), porcelain, bx, 0.82, bz, t);
+                    const mound = add(new THREE.SphereGeometry(0.068, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), rice, bx, 0.845, bz, t); mound.scale.y = 0.6;
+                    // a seat on the bench facing this place setting
+                    const sp = hw(-0.6 + bx, tz + sz * 0.75), dl = [0, -sz];
+                    ZHAITANG.seats.push({ x: sp.x, z: sp.z, seatY: F + 0.465, rotY: Math.atan2(dl[0] * rc + dl[1] * rs, -dl[0] * rs + dl[1] * rc), bowl, mound, busy: false });
+                    const ch1 = add(new THREE.BoxGeometry(0.008, 0.008, 0.22), darkWood, bx + 0.12, 0.8, bz, t); ch1.castShadow = false;
+                    const ch2 = add(new THREE.BoxGeometry(0.008, 0.008, 0.22), darkWood, bx + 0.135, 0.8, bz, t); ch2.castShadow = false;
+                });
+                // shared dishes down the middle
+                for (let k = -1.5; k <= 1.5; k += 1) {
+                    const plate = add(new THREE.CylinderGeometry(0.14, 0.11, 0.03, 20), porcelain, k * 0.85, 0.805, 0, t);
+                    const food = add(new THREE.SphereGeometry(0.1, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: dishCols[(ti * 4 + k + 2) % dishCols.length | 0], roughness: 0.7 }), k * 0.85, 0.82, 0, t);
+                    food.scale.y = 0.45;
+                }
+                add(new THREE.CylinderGeometry(0.09, 0.08, 0.12, 12), new THREE.MeshStandardMaterial({ color: 0x7c2d12, roughness: 0.4 }), L / 2 - 0.3, 0.85, 0, t);   // teapot-ish soy jar
+                tagAll(t, { interactType: 'zhaitang_table', label: '🍚 長條餐桌（點擊坐下用齋）' });
+                for (let x = -L / 2; x <= L / 2; x += 0.9) colliders.push({ ...hw(-0.6 + x, tz), r: 0.55 });
+            });
+
+            // ---- kitchen counter along the back: stove with a big wok, steamer stack, rice bucket, soup pot
+            const kc = new THREE.Group(); kc.position.set(0.6, F, back + 0.75); g.add(kc);
+            const tileMat = new THREE.MeshStandardMaterial({ color: 0xe7e2d6, roughness: 0.4 });
+            add(new THREE.BoxGeometry(5.6, 0.85, 0.9), new THREE.MeshStandardMaterial({ color: 0x8a3a24, roughness: 0.6 }), 0, 0.425, 0, kc);   // brick stove (灶)
+            add(new THREE.BoxGeometry(5.7, 0.06, 0.95), tileMat, 0, 0.88, 0, kc);
+            // fire openings in the front of the stove, glowing
+            [-1.6, 0, 1.6].forEach(x => {
+                const hole = add(new THREE.BoxGeometry(0.36, 0.26, 0.02), new THREE.MeshStandardMaterial({ color: 0x1a0804, emissive: 0xff5a1a, emissiveIntensity: 0.5 }), x, 0.32, 0.46, kc);
+                registerNightEmissive(hole.material, 0.5, 1.2);
+            });
+            const iron = new THREE.MeshStandardMaterial({ color: 0x2b2b2b, metalness: 0.7, roughness: 0.45 });
+            // big wok with a wooden lid
+            const wok = add(new THREE.SphereGeometry(0.42, 24, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), iron, -1.6, 1.12, 0, kc); wok.scale.y = 0.55; wok.material = iron.clone(); wok.material.side = THREE.DoubleSide;
+            add(new THREE.CylinderGeometry(0.38, 0.4, 0.06, 24), wood, -1.6, 1.15, 0, kc);
+            add(new THREE.CylinderGeometry(0.05, 0.05, 0.08, 10), darkWood, -1.6, 1.22, 0, kc);
+            // three-tier bamboo steamer (蒸籠)
+            const bamboo = new THREE.MeshStandardMaterial({ color: 0xc8a25a, roughness: 0.7 });
+            for (let k = 0; k < 3; k++) {
+                add(new THREE.CylinderGeometry(0.3, 0.3, 0.16, 24), bamboo, 0, 0.98 + k * 0.17, 0, kc);
+                add(new THREE.TorusGeometry(0.3, 0.012, 6, 24), new THREE.MeshStandardMaterial({ color: 0x8a6a2a }), 0, 0.98 + k * 0.17 + 0.07, 0, kc).rotation.x = Math.PI / 2;
+            }
+            add(new THREE.ConeGeometry(0.31, 0.12, 24), bamboo, 0, 1.55, 0, kc);
+            // soup pot
+            add(new THREE.CylinderGeometry(0.28, 0.26, 0.38, 20), new THREE.MeshStandardMaterial({ color: 0x9aa0a6, metalness: 0.8, roughness: 0.3 }), 1.6, 1.1, 0, kc);
+            add(new THREE.CylinderGeometry(0.27, 0.27, 0.02, 20), new THREE.MeshStandardMaterial({ color: 0xcf8a3a, roughness: 0.5 }), 1.6, 1.27, 0, kc);
+            // wooden rice bucket (飯桶) on the floor beside the counter
+            const bucket = add(new THREE.CylinderGeometry(0.32, 0.28, 0.5, 18), new THREE.MeshStandardMaterial({ color: 0xb07a3a, roughness: 0.6 }), 3.25, 0.25, 0.1, kc);
+            [0.08, 0.38].forEach(y => add(new THREE.TorusGeometry(0.31, 0.015, 6, 24), goldMat, 3.25, y, 0.1, kc).rotation.x = Math.PI / 2);
+            add(new THREE.SphereGeometry(0.28, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), rice, 3.25, 0.5, 0.1, kc).scale.y = 0.35;
+            // ladles hanging on the wall above the stove
+            for (let k = 0; k < 4; k++) {
+                add(new THREE.CylinderGeometry(0.012, 0.012, 0.5, 6), darkWood, -2.4 + k * 0.3, 1.9, -0.38, kc);
+                add(new THREE.SphereGeometry(0.06, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), iron, -2.4 + k * 0.3, 1.64, -0.36, kc);
+            }
+            tagAll(kc, { interactType: 'zhaitang_kitchen', label: '🍲 灶台（點擊打一份素齋）' });
+            colliders.push({ ...hw(0.6, back + 0.75), r: 0.6 }, { ...hw(-1.4, back + 0.75), r: 0.6 }, { ...hw(2.6, back + 0.75), r: 0.6 }, { ...hw(3.85, back + 0.85), r: 0.45 });
+            ZHAITANG.steamAt = [hw(0, back + 0.75), hw(-1, back + 0.75), hw(2.2, back + 0.75)];
+            ZHAITANG.steamAt.forEach(p => addSmokeEmitter(p.x, F + 1.7, p.z, 3, 0.35, 1.0, 0xffffff, 0.18));
+            // menu board above the counter
+            const mc = document.createElement('canvas'); mc.width = 512; mc.height = 256;
+            const mx = mc.getContext('2d');
+            mx.fillStyle = '#2a1608'; mx.fillRect(0, 0, 512, 256);
+            mx.strokeStyle = '#d9a520'; mx.lineWidth = 10; mx.strokeRect(5, 5, 502, 246);
+            mx.fillStyle = '#fde68a'; mx.font = '900 40px "Noto Serif TC", serif'; mx.textAlign = 'center';
+            mx.fillText('今 日 素 齋', 256, 52);
+            mx.font = '700 26px "Noto Serif TC", serif'; mx.fillStyle = '#f5ead0';
+            ZHAITANG_MENU.slice(0, 8).forEach((d, i) => mx.fillText(d, i % 2 ? 380 : 132, 100 + Math.floor(i / 2) * 40));
+            const menu = add(new THREE.BoxGeometry(2.4, 1.2, 0.04), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(mc), roughness: 0.6 }), 0.6, F + 2.55, back + 0.3);
+            tagAll(menu, clickHall);
+            // hanging lanterns and warm light
+            [-2.4, 0.2, 2.8].forEach(lx => {
+                const lan = add(new THREE.SphereGeometry(0.22, 14, 12), new THREE.MeshStandardMaterial({ color: 0xdc2626, emissive: 0x991b1b, emissiveIntensity: 0.4 }), lx, F + H - 0.7, 0.2);
+                lan.scale.set(1, 1.2, 1);
+                registerNightEmissive(lan.material, 0.4, 1.4);
+                addNightGlow(g, lan.position, 0xff7a3c, 1.2);
+            });
+            addNightLight(hw(0, 0).x, F + 2.7, hw(0, 0).z, 0xffd59e, 1.2, 9, false, 0.7);
+            addCarpetRunner(g, 0, F, front - 1.6, front - 0.2, 1.4);
+            // walls are solid; the doorway stays open
+            for (let x = -W / 2 + 0.3; x <= W / 2 - 0.3; x += 0.6) colliders.push({ ...hw(x, back + 0.12), r: 0.35 });
+            [-1, 1].forEach(s => { for (let z = back + 0.3; z <= front - 0.3; z += 0.6) colliders.push({ ...hw(s * (W / 2 - 0.12), z), r: 0.35 }); });
+            [-1, 1].forEach(s => { for (let x = doorW / 2 + 0.25; x <= W / 2 - 0.2; x += 0.6) colliders.push({ ...hw(s * x, front - 0.12), r: 0.35 }); });
+            const anchor = new THREE.Object3D();
+            const ap = hw(0, front + 0.6);
+            anchor.position.set(ap.x, F + H + 2.0, ap.z);
+            templeGroup.add(anchor);
+            register3DLabel(anchor, 0, '🍚 齋堂', '#fbbf24', () => moveCameraPreset('zhaitang'));
+        }
+        // ---- 用齋：sit on the bench at the nearest free place, take the bowl and chopsticks, eat bite by bite
+        function stopZhaitangMeal(finished) {
+            const m = ZHAITANG.meal;
+            if (!m) return;
+            ZHAITANG.meal = null;
+            m.timers.forEach(clearTimeout);
+            m.props.forEach(o => o.parent && o.parent.remove(o));
+            m.seat.busy = false;
+            // the place is cleared, then set again a little later
+            if (finished) { m.seat.bowl.visible = true; m.seat.mound.visible = false; setTimeout(() => { m.seat.mound.visible = true; }, 30000); }
+            else { m.seat.bowl.visible = true; m.seat.mound.visible = true; }
+            const ud = playerAvatarGroup && playerAvatarGroup.userData;
+            if (ud) { ud.headGroup.rotation.x = 0; ud.leftArm.rotation.set(0, 0, -0.12); ud.rightArm.rotation.set(0, 0, 0.12); }
+        }
+        function zhaitangEat() {
+            if (!playerAvatarGroup || state.climb) return;
+            if (ZHAITANG.meal) { showToast('🍚 正在用齋中，慢慢吃～'); return; }
+            const p = playerAvatarGroup.position;
+            const seat = ZHAITANG.seats.filter(s => !s.busy).sort((a, b) => Math.hypot(a.x - p.x, a.z - p.z) - Math.hypot(b.x - p.x, b.z - p.z))[0];
+            if (!seat) { showToast('🍚 座位都滿了，等一下喔'); return; }
+            if (state.upstairs) { state.upstairs = false; state.followCam = false; updateStairsButton(); }
+            if (state.towerFloor) { state.towerFloor = 0; state.followCam = false; }
+            const ud = playerAvatarGroup.userData;
+            ud.kowtowToken = null;
+            setPlayerPose('stand', true);
+            const sc = ud.ageScale || 1;
+            playerAvatarGroup.position.set(seat.x, seat.seatY - 0.47 * sc, seat.z);
+            playerAvatarGroup.rotation.y = seat.rotY;
+            if (ud.legs) ud.legs.forEach(l => { l.rotation.x = -1.45; });
+            state.seated = true;
+            if (state.vel) state.vel.x = state.vel.z = 0;
+            seat.busy = true;
+            seat.bowl.visible = false; seat.mound.visible = false;
+            // bowl of rice (or the dish from the kitchen) in the left hand, chopsticks in the right
+            const porcelain = new THREE.MeshStandardMaterial({ color: 0xf5f1e8, roughness: 0.25 });
+            const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.055, 0.07, 16), porcelain);
+            const food = new THREE.Mesh(new THREE.SphereGeometry(0.078, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: ZHAITANG.dish ? 0xd9a35a : 0xfbf8f0, roughness: 0.85 }));
+            food.position.y = 0.025; food.scale.y = 0.7;
+            bowl.add(food);
+            bowl.position.set(0.04, -0.44, 0.1);
+            ud.leftArm.add(bowl);
+            const chop = new THREE.Group();
+            [-0.008, 0.008].forEach(dx => { const c = new THREE.Mesh(new THREE.BoxGeometry(0.009, 0.26, 0.009), new THREE.MeshStandardMaterial({ color: 0x3a1f10 })); c.position.set(dx, -0.05, 0); chop.add(c); });
+            chop.position.set(-0.02, -0.42, 0.08); chop.rotation.x = 1.1;
+            ud.rightArm.add(chop);
+            const m = ZHAITANG.meal = { seat, props: [bowl, chop], timers: [], food };
+            ud.leftArm.rotation.set(-1.15, 0, 0.45);
+            ud.rightArm.rotation.set(-0.9, 0, -0.3);
+            camControl.desiredTarget.set(seat.x, seat.seatY + 0.5, seat.z);
+            Object.assign(camControl.desiredSpherical, { radius: 3.6, theta: seat.rotY - 0.95, phi: 1.0 });
+            const dish = ZHAITANG.dish || '白飯配素菜';
+            playWoodenFishSound();
+            showToast(`🙏 合掌：「供養佛、供養法、供養僧、供養一切眾生。」開始享用「${dish}」`);
+            const BITES = 7;
+            let t = 1400;
+            for (let k = 0; k < BITES; k++) {
+                m.timers.push(setTimeout(() => { if (ZHAITANG.meal !== m) return; ud.rightArm.rotation.set(-2.05, 0, -0.55); ud.headGroup.rotation.x = 0.18; }, t));
+                m.timers.push(setTimeout(() => {
+                    if (ZHAITANG.meal !== m) return;
+                    ud.rightArm.rotation.set(-0.9, 0, -0.3); ud.headGroup.rotation.x = 0.05;
+                    const left = 1 - (k + 1) / BITES;
+                    food.scale.set(0.4 + left * 0.6, Math.max(0.05, 0.7 * left), 0.4 + left * 0.6);
+                    food.visible = left > 0.02;
+                    playTempleBellSound(1400 + (k % 2) * 120);
+                }, t + 450));
+                m.timers.push(setTimeout(() => { if (ZHAITANG.meal !== m) return; ud.headGroup.rotation.x = 0.12; }, t + 700));
+                m.timers.push(setTimeout(() => { if (ZHAITANG.meal !== m) return; ud.headGroup.rotation.x = 0.04; }, t + 900));
+                t += 1300;
+            }
+            m.timers.push(setTimeout(() => {
+                if (ZHAITANG.meal !== m) return;
+                ud.leftArm.rotation.set(-0.95, 0, 0.32); ud.rightArm.rotation.set(-0.95, 0, -0.32);   // hands together
+                playTempleBellSound(660);
+                showToast(`😋 「${dish}」吃得一粒不剩！合掌感恩：阿彌陀佛，吃飽了～ 移動搖桿即可起身。`);
+                ZHAITANG.dish = null;
+                if (typeof emitAct === 'function') emitAct('zhai');
+                stopZhaitangMeal(true);
+                ud.leftArm.rotation.set(-0.95, 0, 0.32); ud.rightArm.rotation.set(-0.95, 0, -0.32);
+            }, t + 300));
+        }
+        function zhaitangInteract(type) {
+            if (type === 'zhaitang') { moveCameraPreset('zhaitang'); showToast('🍚 齋堂今日素齋：' + ZHAITANG_MENU.slice(0, 4).join('、') + '……隨喜用齋，惜福感恩。'); }
+            else if (type === 'zhaitang_kitchen') {
+                const d = ZHAITANG_MENU[(Math.random() * ZHAITANG_MENU.length) | 0];
+                playTempleBellSound(660);
+                if (ZHAITANG.steamAt) ZHAITANG.steamAt.slice(0, 1).forEach(p => addSmokeEmitter(p.x, SIDE_HALL_FLOOR + 1.6, p.z, 3, 0.4, 1.2, 0xffffff, 0.25));
+                ZHAITANG.dish = d;
+                showToast(`🍲 師姐幫你打了一份「${d}」，熱騰騰的！點餐桌就可以坐下來吃。`);
+            } else if (type === 'zhaitang_table') {
+                zhaitangEat();
+            }
         }
 
         function buildXiaorenArea(goldMat) {
@@ -10198,7 +10460,7 @@
         const NET_ACT_TEXT = {
             bell: '敲響了祈福鐘 🔔', drum: '擊響了鼓樓大鼓 🥁', fireworks: '施放了煙火 🎆', firecracker: '點燃了鞭炮 🧨',
             incense: '插香參拜 🙏', bow: '合掌參拜 🙏', kowtow: '行三跪九叩大禮 🙇', meditate: '盤腿打坐 🪷', chant: '念經持咒 📖',
-            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟'
+            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', zhai: '在齋堂用齋 🍚'
         };
         function onNetAct(msg) {
             if (!msg || msg.sameTab || msg.kind !== 'viewer') return;
@@ -12175,6 +12437,7 @@
             buildExtraCensers(goldMat);
             buildXiaorenArea(goldMat);
             buildMiaozhuLodge(goldMat, greenTrimMat);
+            buildZhaitang(goldMat, greenTrimMat);
             buildFireworksArea(goldMat);
             buildStairTower(goldMat);
             [[-5.2, -0.6], [2.2, -0.6], [-8.6, 0.5], [5.6, 0.5]].forEach(([cx, cz]) => buildHangingIncenseCoil(cx, cz, 5.7));
@@ -14467,7 +14730,7 @@
             ['偏殿', ['tudigong', 'light', 'lampwall_gm', 'lampwall_ts', 'side_left', 'side_right', 'side_wing_left', 'side_wing_right', 'side_dizang']],
             ['後殿', ['rearhall', 'guandi', 'tianshi', 'xuantian', 'yuhuang', 'sanqing']],
             ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'puppet', 'guanyinpond', 'grounds']],
-            ['活動', ['fortune', 'xiaoren', 'miaozhu', 'fireworks', 'festival']]
+            ['活動', ['fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'fireworks', 'festival']]
         ];
         let camGroupActive = 0;
         function showCamGroup(i) {
@@ -14535,6 +14798,7 @@
             Object.values(REAR_DEITIES).forEach(d => { const F = rearFloor(+Object.keys(REAR_DEITIES).find(k => REAR_DEITIES[k] === d)); presets[d.preset] = { r: 5.4, theta: 0, phi: 1.45, tx: REAR.x, ty: F.y + 2.2, tz: F.back + 1.5 }; });
             presets.guandi = { r: 9.5, theta: 0, phi: 1.46, tx: REAR.x, ty: rearFloor(1).y + 1.9, tz: rearFloor(1).back + 1.5, fov: 70 };
             presets.sanqing = { r: 7.2, theta: 0, phi: 1.42, tx: REAR.x, ty: rearFloor(REAR.floors).y + 2.0, tz: rearFloor(REAR.floors).back + 1.2 };
+            presets.zhaitang = { r: 11, theta: ZHAITANG_POS.rot - 0.45, phi: 1.28, tx: ZHAITANG_POS.x + 1.5, ty: 1.5, tz: ZHAITANG_POS.z };
             presets.miaozhu = { r: 10, theta: MIAOZHU_POS.rot + 0.35, phi: 1.28, tx: MIAOZHU_POS.x + 1.5, ty: 1.4, tz: MIAOZHU_POS.z };
             presets.xiaoren = { r: 7.5, theta: XIAOREN_POS.rot - 0.9, phi: 1.2, tx: XIAOREN_POS.x, ty: 1.0, tz: XIAOREN_POS.z };
             presets.fireworks = { r: 33.4, theta: -1.297, phi: 1.98, tx: FIREWORK_POS.x, ty: 24, tz: FIREWORK_POS.z - 2 };
@@ -14705,6 +14969,7 @@
             else if (type === 'blacktiger') tigerRoar();
             else if (type === 'xiaoren') openXiaorenModal();
             else if (type && type.startsWith('miaozhu')) miaozhuInteract(type, ud);
+            else if (type && type.startsWith('zhaitang')) zhaitangInteract(type);
             else if (type === 'marquee') showToast('📟 跑馬燈：' + MARQUEE.lastText.replace(/　◆　/g, ' ◆ ').trim().slice(0, 120));
             else if (type === 'baihu') { playTempleBellSound(392); showToast('🐯 白虎爺：主掌是非口舌。打小人前先以肥豬肉、雞蛋祭白虎，白虎吃飽便不再傷人。'); }
             else if (type === 'fireworks') openFireworksModal();
@@ -14821,7 +15086,7 @@
             vel.z += (tz - vel.z) * k;
             const spd = Math.hypot(vel.x, vel.z);
             if (spd < 0.12) { vel.x = vel.z = 0; return false; }
-            if (state.seated) { state.seated = false; const pud = playerAvatarGroup.userData; pud.kowtowToken = null; if (pud.pose && pud.pose !== 'stand') { setDollPose(playerAvatarGroup, 'stand'); updatePoseButtons(); } showToast('🚶 起身繼續參訪'); }
+            if (state.seated) { state.seated = false; if (ZHAITANG.meal) stopZhaitangMeal(false); const pud = playerAvatarGroup.userData; pud.kowtowToken = null; if (pud.pose && pud.pose !== 'stand') { setDollPose(playerAvatarGroup, 'stand'); updatePoseButtons(); } showToast('🚶 起身繼續參訪'); }
             const dx = vel.x * dt, dz = vel.z * dt;
             if (state.towerFloor > 1) {
                 moveInTower(dx, dz);
