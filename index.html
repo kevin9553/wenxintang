@@ -202,6 +202,7 @@
             <button onclick="moveCameraPreset('side_right')" id="camBtn-side_right" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">右偏殿</button>
             <button onclick="moveCameraPreset('side_wing_left')" id="camBtn-side_wing_left" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">彌勒殿</button>
             <button onclick="moveCameraPreset('side_wing_right')" id="camBtn-side_wing_right" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">財神殿</button>
+            <button onclick="moveCameraPreset('tigercave')" id="camBtn-tigercave" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🐯 黑虎將軍洞</button>
             <button onclick="moveCameraPreset('side_dizang')" id="camBtn-side_dizang" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🪷 地藏殿</button>
             <button onclick="moveCameraPreset('grounds')" id="camBtn-grounds" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏗️ 廟地全覽</button>
         </div>
@@ -5048,10 +5049,8 @@
             caishen: {
                 title: '💰 財神殿・文武財神', interact: 'caishen', label: '💰 文武財神（點擊祈求財源廣進）', mandorla: 0x7c2d12, offering: 0xfacc15,
                 extras: (g, { F, shrineZ, hw, goldMat, h }) => {
-                    // 黑虎將軍 lying on the floor beside 趙公明's side of the altar
-                    buildBlackTiger(g, -2.6, F, shrineZ + 1.8, 0);
-                    const tp = hw(-2.6, shrineZ + 1.8);
-                    colliders.push({ x: tp.x, z: tp.z, r: 0.7 });
+                    // 黑虎將軍 in a small rock grotto on the floor, on 趙公明's side of the altar, opening toward the door
+                    buildTigerCave(g, -3.9, F, shrineZ + 1.45, 0, 0.5);
                     // 聚寶盆 on a red lacquer stand, mirroring the tiger on 比干's side
                     const lac = new THREE.MeshStandardMaterial({ color: 0x7f1d1d, roughness: 0.35, metalness: 0.1 });
                     const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.5, 0.7, 8), lac);
@@ -7668,6 +7667,245 @@
                 o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now + 0.95);
             }
             showToast('🐯 黑虎將軍一聲長嘯：黑虎咬錢，財源滾滾來！');
+        }
+
+        // =====================================================================
+        // 黑虎將軍洞：財神殿內、趙公明這側供桌旁的地面岩洞神龕（假山小洞），洞內石台供奉黑虎將軍，洞口香爐、雞蛋與虎爺金供品
+        // =====================================================================
+        const TIGER_CAVE = { kneelAt: null, face: 0, cam: null };
+        function rockyGeometry(r, seed, ws = 24, hs = 16, lumpy = 0.16) {
+            const rnd = seededRandom(seed);
+            const geo = new THREE.SphereGeometry(r, ws, hs);
+            const pos = geo.attributes.position, v = new THREE.Vector3();
+            const a = rnd() * 6, b = rnd() * 6, c = rnd() * 6;
+            for (let i = 0; i < pos.count; i++) {
+                v.fromBufferAttribute(pos, i);
+                const n = v.clone().normalize();
+                const k = 1 + lumpy * (Math.sin(n.x * 3.1 + a) * Math.sin(n.y * 2.7 + b) * Math.sin(n.z * 3.4 + c)) + lumpy * 0.35 * Math.sin(n.x * 9 + n.z * 7 + a);
+                pos.setXYZ(i, v.x * k, v.y * k, v.z * k);
+            }
+            geo.computeVertexNormals();
+            return geo;
+        }
+        // parent: the hall group; (ox, oy, oz, rotY) in hall space; S scales the rock grotto (the offering table stays full size)
+        function buildTigerCave(parent, ox, oy, oz, rotY, S) {
+            const M = propMats();
+            const base = new THREE.Group(); base.position.set(ox, oy, oz); base.rotation.y = rotY; parent.add(base);
+            const g = new THREE.Group(); g.scale.setScalar(S); base.add(g);
+            parent.updateMatrixWorld(true);
+            const toWorld = (obj, lx, ly, lz) => obj.localToWorld(new THREE.Vector3(lx, ly, lz));
+            const add = (geo, mat, x, y, z, parent = g) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
+            const click = { interactType: 'tigercave', label: '🐯 黑虎將軍洞（點擊參拜）' };
+            const tagAll = (obj, ud) => obj.traverse(o => { if (o.isMesh) { o.userData = { ...ud }; clickableMeshes.push(o); } });
+            const rockTex = createStoneTexture();
+            const rock = new THREE.MeshStandardMaterial({ map: rockTex, bumpMap: rockTex, bumpScale: 0.5, color: 0x8d877c, roughness: 0.95 });
+            const rockDark = new THREE.MeshStandardMaterial({ map: rockTex, color: 0x4a443c, roughness: 1, side: THREE.BackSide });
+            const moss = new THREE.MeshStandardMaterial({ color: 0x3b5228, roughness: 1 });
+
+            // ---- the rock mound: a lumpy dome with an arched opening carved out of the front
+            const R = 2.3, SX = 1.3, SY = 1.15, SZ = 1.05;
+            const archH = x => 1.95 - 0.55 * Math.pow(Math.min(1, Math.abs(x) / 1.15), 2);
+            const carve = (geo, scale) => {
+                const src = geo.toNonIndexed(), p = src.attributes.position, keep = [];
+                for (let i = 0; i < p.count; i += 3) {
+                    let cx = 0, cy = 0, cz = 0;
+                    for (let k = 0; k < 3; k++) { cx += p.getX(i + k); cy += p.getY(i + k); cz += p.getZ(i + k); }
+                    cx = cx / 3 * SX * scale; cy = cy / 3 * SY * scale; cz = cz / 3 * SZ * scale;
+                    if (cy < -0.02) continue;                                        // lower half of the sphere
+                    if (cz > 0 && Math.abs(cx) < 1.15 && cy < archH(cx)) continue;   // the cave mouth
+                    for (let k = 0; k < 3; k++) keep.push(p.getX(i + k), p.getY(i + k), p.getZ(i + k));
+                }
+                const out = new THREE.BufferGeometry();
+                out.setAttribute('position', new THREE.Float32BufferAttribute(keep, 3));
+                out.computeVertexNormals();
+                // planar uv so the stone texture shows
+                const uv = [], q = out.attributes.position;
+                for (let i = 0; i < q.count; i++) uv.push(q.getX(i) * 0.6 + q.getZ(i) * 0.3, q.getY(i) * 0.6);
+                out.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+                return out;
+            };
+            const shell = add(carve(rockyGeometry(R, 77, 48, 28, 0.12), 1), rock, 0, 0, -0.5);
+            shell.scale.set(SX, SY, SZ);
+            const inner = add(carve(rockyGeometry(R, 77, 48, 28, 0.12), 0.86), rockDark, 0, 0, -0.5);
+            inner.scale.set(SX * 0.86, SY * 0.86, SZ * 0.86);
+            inner.castShadow = false;
+            tagAll(shell, click);
+            // boulders framing the mouth (they also hide the shell thickness)
+            const rnd = seededRandom(4321);
+            for (let i = 0; i <= 14; i++) {
+                const u = i / 14, x = -1.2 + u * 2.4, y = i === 0 || i === 14 ? 0.35 : archH(x) + 0.05;
+                const pts = i === 0 || i === 14 ? [[x, 0.3], [x, 0.9], [x, 1.45]] : [[x, y]];
+                pts.forEach(([bx, by]) => {
+                    const s = 0.26 + rnd() * 0.16;
+                    const b = add(rockyGeometry(s, 100 + i * 7 + Math.round(by * 10), 12, 9, 0.22), rock, bx + (rnd() - 0.5) * 0.08, by, 1.75 + rnd() * 0.18);
+                    b.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
+                    tagAll(b, click);
+                });
+            }
+            // a few loose rocks and ferns around the base, moss on top
+            for (let i = 0; i < 12; i++) {
+                const a = -0.25 * Math.PI + (i / 11) * 1.5 * Math.PI + Math.PI / 2, rr = 2.9 + rnd() * 0.4;
+                const x = Math.cos(a) * rr * 1.05, z = -0.5 - Math.sin(a) * rr * 0.9;
+                if (z > 1.2 && Math.abs(x) < 1.6) continue;
+                const b = add(rockyGeometry(0.25 + rnd() * 0.3, 300 + i, 12, 9, 0.25), rock, x, 0.12, z);
+                b.scale.y = 0.7;
+            }
+            [[-0.8, 2.55, -0.3, 0.6], [0.6, 2.6, -0.9, 0.55], [1.5, 2.15, 0.1, 0.45], [-1.6, 2.0, -0.6, 0.5]].forEach(([x, y, z, s]) => {
+                const m = add(rockyGeometry(s * 0.8, 500 + x * 10, 12, 8, 0.35), moss, x, y - 0.12, z); m.scale.y = 0.45;
+            });
+            [[-1.9, 1.75], [1.95, 1.7], [-2.3, 0.9], [2.4, 0.6]].forEach(([x, z], k) => {
+                const fern = new THREE.Group(); fern.position.set(x, 0, z); g.add(fern);
+                for (let j = 0; j < 7; j++) { const leaf = add(new THREE.ConeGeometry(0.06, 0.6, 4), moss, 0, 0.3, 0, fern); leaf.rotation.set(0.6, j / 7 * Math.PI * 2, 0); leaf.position.set(Math.sin(j / 7 * 6.28) * 0.12, 0.28, Math.cos(j / 7 * 6.28) * 0.12); }
+            });
+
+            // ---- inside: stone floor, a low altar with a red cloth, the tiger, candles
+            add(new THREE.CylinderGeometry(1.9, 1.95, 0.06, 28), M.stone, 0, 0.03, -0.3).scale.set(1.25, 1, 1.05);
+            const altar = add(new THREE.BoxGeometry(1.9, 0.32, 1.25), M.darkStone, 0, 0.16, -0.95);
+            add(new THREE.BoxGeometry(1.95, 0.03, 1.3), M.stone, 0, 0.335, -0.95);
+            const cloth = add(new THREE.BoxGeometry(1.2, 0.3, 0.02), new THREE.MeshStandardMaterial({ map: createSignboardTexture('黑虎將軍', 380, 96, '#b91c1c', '#facc15', '#fde68a', false, 58), roughness: 0.6 }), 0, 0.17, -0.31);
+            buildBlackTiger(g, 0, 0.35, -1.05, 0);
+            [-1, 1].forEach(s => {
+                add(new THREE.CylinderGeometry(0.035, 0.035, 0.22, 10), new THREE.MeshStandardMaterial({ color: 0xdc2626 }), s * 0.82, 0.46, -0.5);
+                const fl = add(new THREE.SphereGeometry(0.022, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffd27a }), s * 0.82, 0.6, -0.5); fl.scale.y = 1.8; fl.castShadow = false;
+            });
+            const lw = toWorld(g, 0, 1.1, -0.2);
+            addNightLight(lw.x, lw.y, lw.z, 0xffa040, 1.4, 4, true, 0.9);
+
+            // ---- outside the mouth: plaque, couplets on the rock, lanterns, censer and offerings
+            const plaque = add(new THREE.BoxGeometry(1.6, 0.42, 0.08), new THREE.MeshStandardMaterial({ map: createSignboardTexture('黑虎將軍', 400, 106, '#2a0806', '#facc15', '#fef08a', false, 70), roughness: 0.35 }), 0, 2.5, 2.2);
+            plaque.rotation.x = -0.1;
+            tagAll(plaque, click);
+            [-1, 1].forEach(s => {
+                const cp = add(new THREE.BoxGeometry(0.24, 1.15, 0.03), new THREE.MeshStandardMaterial({ map: createSignboardTexture(s < 0 ? '虎威鎮四方' : '咬錢招財來', 70, 360, '#7f1d1d', '#facc15', '#fde68a', true, 44) }), s * 1.62, 0.95, 2.02);
+                cp.rotation.y = -s * 0.25; cp.castShadow = false;
+                const lan = add(new THREE.SphereGeometry(0.17, 14, 10), new THREE.MeshStandardMaterial({ color: 0xdc2626, emissive: 0xff5a1f, emissiveIntensity: 0.25, roughness: 0.5 }), s * 1.05, 1.75, 2.15);
+                lan.scale.y = 1.2; registerNightEmissive(lan.material, 0.25, 1.5);
+                add(new THREE.CylinderGeometry(0.004, 0.004, 0.35, 4), new THREE.MeshBasicMaterial({ color: 0x3a1f10 }), s * 1.05, 2.12, 2.15);
+            });
+            // low stone offering table with eggs and 虎爺金, stone censer in front
+            const offer = { interactType: 'tigercave_offer', label: '🥚 供奉雞蛋・虎爺金（點擊敬獻）' };
+            const front = 1.95 * S;
+            const table = new THREE.Group(); table.position.set(0, 0, front + 0.3); table.scale.set(0.8, 0.62, 0.8); base.add(table);
+            add(new THREE.BoxGeometry(1.3, 0.4, 0.5), M.darkStone, 0, 0.2, 0, table);
+            add(new THREE.BoxGeometry(1.36, 0.04, 0.56), M.stone, 0, 0.42, 0, table);
+            const plate = add(new THREE.CylinderGeometry(0.16, 0.12, 0.03, 16), new THREE.MeshStandardMaterial({ color: 0xdc2626 }), -0.38, 0.455, 0, table);
+            [[0, 0], [0.07, 0.04], [-0.06, 0.05], [0.02, -0.06], [0.0, 0.0, 1]].forEach(([ox, oz, top]) => {
+                const egg = add(new THREE.SphereGeometry(0.04, 12, 10), new THREE.MeshStandardMaterial({ color: 0xf3e9d9, roughness: 0.6 }), -0.38 + ox, 0.5 + (top ? 0.06 : 0), oz, table);
+                egg.scale.y = 1.3;
+            });
+            const paper = new THREE.MeshStandardMaterial({ color: 0xd8b04a, roughness: 0.7 });
+            for (let k = 0; k < 5; k++) { const p2 = add(new THREE.BoxGeometry(0.22, 0.008, 0.14), paper, 0.38, 0.45 + k * 0.009, 0, table); p2.rotation.y = (k - 2) * 0.08; }
+            const pork = add(new THREE.BoxGeometry(0.16, 0.08, 0.1), new THREE.MeshStandardMaterial({ color: 0xe8b39a, roughness: 0.5 }), 0.36, 0.5, 0.15, table);
+            tagAll(table, offer);
+            // small stone censer standing on the table, between the eggs and the 虎爺金
+            const cz = front + 0.3, ty = 0.44 * 0.62;
+            const censer = buildTigerCenser();
+            censer.position.set(0, ty, cz);
+            base.add(censer);
+            tagAll(censer, { interactType: 'tigercave_incense', label: '🐯 黑虎將軍香爐（點擊蹲下參拜）' });
+            const cw = toWorld(base, 0, ty + 0.42, cz);
+            addSmokeEmitter(cw.x, cw.y, cw.z, 4, 0.25, 0.9, 0xf1f5f9, 0.12);
+            // colliders: the mound, the table and censer
+            const mw = toWorld(base, 0, 0, -0.6 * S);
+            colliders.push({ x: mw.x, z: mw.z, r: 2.5 * S });
+            const tb = toWorld(base, 0, 0, front + 0.3); colliders.push({ x: tb.x, z: tb.z, r: 0.45 });
+            const lbl = new THREE.Object3D(); lbl.position.set(0, 3.3, -0.4); g.add(lbl);
+            register3DLabel(lbl, 0, '🐯 黑虎將軍', '#fbbf24', () => moveCameraPreset('tigercave'));
+            const kn = toWorld(base, 0, 0, cz + 0.75);
+            TIGER_CAVE.kneelAt = { x: kn.x, y: kn.y, z: kn.z };
+            TIGER_CAVE.face = Math.atan2(cw.x - kn.x, cw.z - kn.z);
+            const ct = toWorld(base, 0, 0.6, front - 0.2);
+            TIGER_CAVE.cam = { r: 4.6, theta: TIGER_CAVE.face + Math.PI + 0.45, phi: 1.22, tx: ct.x, ty: 0.6, tz: ct.z };
+        }
+        // small bronze tripod censer for 黑虎將軍: lathe-turned bulging body, rim lip and bands, upright ears,
+        // three lion-paw legs, a raised 「虎」 medallion, ash bed and three lit incense sticks, on a red lacquer stand
+        function buildTigerCenser() {
+            const c = new THREE.Group();
+            const bronze = new THREE.MeshStandardMaterial({ color: 0xa8803a, metalness: 0.75, roughness: 0.3 });
+            const bronzeDark = new THREE.MeshStandardMaterial({ color: 0x4a3a1a, metalness: 0.7, roughness: 0.45 });
+            const gold = new THREE.MeshStandardMaterial({ color: 0xd9a520, metalness: 0.85, roughness: 0.22 });
+            const lacquer = new THREE.MeshStandardMaterial({ color: 0x7f1d1d, roughness: 0.35 });
+            const put = (geo, mat, x, y, z, parent = c) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
+            // red lacquer stand with a gold edge
+            put(new THREE.CylinderGeometry(0.15, 0.16, 0.035, 24), lacquer, 0, 0.0175, 0);
+            put(new THREE.TorusGeometry(0.152, 0.006, 6, 32), gold, 0, 0.035, 0).rotation.x = Math.PI / 2;
+            // three legs with lion-paw feet, standing on the stand
+            const H0 = 0.035, legH = 0.045;
+            for (let k = 0; k < 3; k++) {
+                const a = k / 3 * Math.PI * 2 + Math.PI / 2, r = 0.075;
+                const leg = put(new THREE.CylinderGeometry(0.012, 0.016, legH, 8), bronze, Math.cos(a) * r, H0 + legH / 2 + 0.008, Math.sin(a) * r);
+                leg.rotation.z = Math.cos(a) * 0.15; leg.rotation.x = -Math.sin(a) * 0.15;
+                const paw = put(new THREE.SphereGeometry(0.018, 10, 8), bronze, Math.cos(a) * (r + 0.006), H0 + 0.008, Math.sin(a) * (r + 0.006));
+                paw.scale.set(1.2, 0.6, 1.2);
+                [-1, 0, 1].forEach(t => put(new THREE.SphereGeometry(0.006, 6, 5), bronze, Math.cos(a) * (r + 0.02) + Math.cos(a + Math.PI / 2) * t * 0.009, H0 + 0.007, Math.sin(a) * (r + 0.02) + Math.sin(a + Math.PI / 2) * t * 0.009));
+            }
+            // body: a bulging bowl turned on a lathe (inside wall included)
+            const y0 = H0 + legH + 0.005;
+            const prof = [[0.0, 0], [0.05, 0.0], [0.085, 0.012], [0.108, 0.04], [0.112, 0.07], [0.104, 0.095], [0.094, 0.108], [0.1, 0.116], [0.104, 0.122], [0.098, 0.124], [0.088, 0.118], [0.085, 0.09], [0.0, 0.088]];
+            const body = put(new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 40), bronze, 0, y0, 0);
+            // decorative bands: a gold rope at the shoulder and a dark band of raised studs on the belly
+            put(new THREE.TorusGeometry(0.104, 0.004, 6, 40), gold, 0, y0 + 0.095, 0).rotation.x = Math.PI / 2;
+            put(new THREE.TorusGeometry(0.111, 0.003, 6, 40), bronzeDark, 0, y0 + 0.055, 0).rotation.x = Math.PI / 2;
+            for (let k = 0; k < 18; k++) {
+                const a = k / 18 * Math.PI * 2;
+                if (Math.abs(Math.atan2(Math.sin(a - Math.PI / 2), Math.cos(a - Math.PI / 2))) < 0.45) continue;   // leave room for the medallion
+                put(new THREE.SphereGeometry(0.005, 6, 5), gold, Math.cos(a) * 0.111, y0 + 0.072, Math.sin(a) * 0.111);
+            }
+            // raised medallion with 「虎」 facing the worshipper (+z)
+            const mc = document.createElement('canvas'); mc.width = mc.height = 128;
+            const mx = mc.getContext('2d');
+            mx.fillStyle = '#5a1010'; mx.beginPath(); mx.arc(64, 64, 62, 0, Math.PI * 2); mx.fill();
+            mx.strokeStyle = '#e8b840'; mx.lineWidth = 7; mx.beginPath(); mx.arc(64, 64, 55, 0, Math.PI * 2); mx.stroke();
+            mx.fillStyle = '#f5cf5a'; mx.font = "bold 78px 'LXGW WenKai TC','Noto Serif TC',serif"; mx.textAlign = 'center'; mx.textBaseline = 'middle'; mx.fillText('虎', 64, 68);
+            put(new THREE.CylinderGeometry(0.031, 0.031, 0.008, 24), gold, 0, y0 + 0.062, 0.107).rotation.x = Math.PI / 2;
+            const med = put(new THREE.CircleGeometry(0.029, 28), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(mc), metalness: 0.4, roughness: 0.4 }), 0, y0 + 0.062, 0.1115);
+            med.castShadow = false;
+            // two upright loop ears on the rim
+            [-1, 1].forEach(sx => {
+                const ear = put(new THREE.TorusGeometry(0.025, 0.006, 6, 16, Math.PI), bronze, sx * 0.1, y0 + 0.124, 0);
+                ear.rotation.y = Math.PI / 2;
+                put(new THREE.BoxGeometry(0.014, 0.012, 0.06), bronze, sx * 0.1, y0 + 0.123, 0);
+            });
+            // ash bed and three lit incense sticks
+            const ash = put(new THREE.CircleGeometry(0.086, 28), new THREE.MeshStandardMaterial({ color: 0x9a948a, roughness: 1 }), 0, y0 + 0.1, 0);
+            ash.rotation.x = -Math.PI / 2;
+            for (let k = 0; k < 6; k++) { const st = put(new THREE.CylinderGeometry(0.0025, 0.0025, 0.03, 4), new THREE.MeshStandardMaterial({ color: 0x7a1d1d }), (Math.random() - 0.5) * 0.1, y0 + 0.11, (Math.random() - 0.5) * 0.08); st.rotation.set((Math.random() - 0.5) * 0.6, 0, (Math.random() - 0.5) * 0.6); }
+            const glow = new THREE.MeshBasicMaterial({ color: 0xff6a1a });
+            [-0.022, 0, 0.022].forEach((ix, k) => {
+                const tilt = (k - 1) * 0.08;
+                const stick = new THREE.Group(); stick.position.set(ix, y0 + 0.1, 0.01 * (k - 1)); stick.rotation.z = -tilt; c.add(stick);
+                put(new THREE.CylinderGeometry(0.004, 0.004, 0.09, 6), new THREE.MeshStandardMaterial({ color: 0xc81e1e }), 0, 0.045, 0, stick);
+                put(new THREE.CylinderGeometry(0.005, 0.005, 0.15, 6), new THREE.MeshStandardMaterial({ color: 0x3a2a1c, roughness: 0.9 }), 0, 0.165, 0, stick);
+                put(new THREE.CylinderGeometry(0.0052, 0.0052, 0.012, 6), new THREE.MeshStandardMaterial({ color: 0xcfc8bc }), 0, 0.246, 0, stick);
+                const tip = put(new THREE.SphereGeometry(0.006, 6, 5), glow, 0, 0.254, 0, stick); tip.castShadow = false;
+            });
+            c.traverse(o => { if (o.isMesh) o.receiveShadow = true; });
+            return c;
+        }
+        function tigerCaveInteract(type) {
+            if (type === 'tigercave_incense' || type === 'tigercave_offer') {
+                if (playerAvatarGroup && TIGER_CAVE.kneelAt) {
+                    if (state.upstairs) { state.upstairs = false; state.followCam = false; updateStairsButton(); }
+                    if (state.towerFloor) { state.towerFloor = 0; state.followCam = false; }
+                    playerAvatarGroup.userData.kowtowToken = null;
+                    setPlayerPose('stand', true);
+                    playerAvatarGroup.position.set(TIGER_CAVE.kneelAt.x, TIGER_CAVE.kneelAt.y || 0, TIGER_CAVE.kneelAt.z);
+                    playerAvatarGroup.rotation.y = TIGER_CAVE.face;
+                    setPlayerPose('kneel', true);
+                }
+                emitAct('tigercave');
+                if (type === 'tigercave_offer') {
+                    playTempleBellSound(659);
+                    showToast(['🥚 敬獻生雞蛋與虎爺金：黑虎將軍，咬錢來、保平安！', '🐯 供上雞蛋、豬肉：求黑虎將軍守護孩子平安長大、生意興隆。', '💰 虎爺金一疊奉上：黑虎咬錢，正財偏財滾滾來！'][(Math.random() * 3) | 0]);
+                    setTimeout(tigerRoar, 900);
+                } else {
+                    playWoodenFishSound();
+                    showToast('🙇 蹲低身子向洞內的黑虎將軍上香：虎爺神威，鎮宅驅邪、招財進寶。移動搖桿即可起身。');
+                }
+            } else {
+                playTempleBellSound(523);
+                showToast('🐯 黑虎將軍洞：武財神趙公明的坐騎黑虎，供奉在財神殿內供桌旁的地面岩洞中。參拜時蹲低身子，可獻雞蛋、豬肉與虎爺金，祈求招財與孩童平安。');
+            }
         }
 
         // =====================================================================
@@ -11080,7 +11318,7 @@
         const NET_ACT_TEXT = {
             bell: '敲響了祈福鐘 🔔', drum: '擊響了鼓樓大鼓 🥁', fireworks: '施放了煙火 🎆', firecracker: '點燃了鞭炮 🧨',
             incense: '插香參拜 🙏', bow: '合掌參拜 🙏', kowtow: '行三跪九叩大禮 🙇', meditate: '盤腿打坐 🪷', chant: '念經持咒 📖',
-            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
+            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
         };
         function onNetAct(msg) {
             if (!msg || msg.sameTab || msg.kind !== 'viewer') return;
@@ -15555,7 +15793,7 @@
         // 鏡頭按鈕分類：分頁切換，避免按鈕太多被畫面右側擋住
         const CAM_GROUPS = [
             ['大殿', ['overview', 'festival', 'shrine', 'altar', 'mazu', 'nezha', 'tiger', 'tiangong', 'upper', 'stairs', 'sanguan', 'daxiong', 'sanbao']],
-            ['偏殿', ['tudigong', 'light', 'lampwall_gm', 'lampwall_ts', 'side_left', 'side_right', 'side_wing_left', 'side_wing_right', 'side_dizang']],
+            ['偏殿', ['tudigong', 'light', 'lampwall_gm', 'lampwall_ts', 'side_left', 'side_right', 'side_wing_left', 'side_wing_right', 'tigercave', 'side_dizang']],
             ['後殿', ['rearhall', 'guandi', 'tianshi', 'xuantian', 'yuhuang', 'sanqing']],
             ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'wishtree', 'puppet', 'guanyinpond', 'grounds']],
             ['活動', ['fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'cat', 'fireworks', 'festival']]
@@ -15622,6 +15860,7 @@
             if (caishenCenserPos) presets.caishencenser = { r: 7.5, theta: -Math.PI / 2 - 0.2, phi: 1.3, tx: caishenCenserPos.x - 1, ty: 1.4, tz: caishenCenserPos.z };
             presets.fudecenser = { r: 7.5, theta: 0.15, phi: 1.3, tx: FUDE_CENSER_POS.x, ty: 1.4, tz: FUDE_CENSER_POS.z - 1 };
             presets.wishtree = { r: 13, theta: -0.95, phi: 1.12, tx: WISHTREE.x - 2, ty: 2.0, tz: WISHTREE.z + 0.5 };
+            if (TIGER_CAVE.cam) presets.tigercave = TIGER_CAVE.cam;
             presets.shitou = { r: 6.5, theta: Math.PI / 2 + 0.25, phi: 1.3, tx: SHITOU_TREE.x + 3.4, ty: 1.2, tz: SHITOU_TREE.z };
             presets.puppet = { r: 9, theta: Math.PI + 0.1, phi: 1.4, tx: PUPPET_STAGE.x, ty: 2.0, tz: PUPPET_STAGE.z - 1 };
             Object.values(REAR_DEITIES).forEach(d => { const F = rearFloor(+Object.keys(REAR_DEITIES).find(k => REAR_DEITIES[k] === d)); presets[d.preset] = { r: 5.4, theta: 0, phi: 1.45, tx: REAR.x, ty: F.y + 2.2, tz: F.back + 1.5 }; });
@@ -15796,6 +16035,7 @@
             else if (type && type.startsWith('censer_')) plantIncenseIntoCenser(type.slice(7));
             else if (type === 'jubaopen') triggerJubaopen();
             else if (type === 'blacktiger') tigerRoar();
+            else if (type && type.startsWith('tigercave')) tigerCaveInteract(type);
             else if (type === 'xiaoren') openXiaorenModal();
             else if (type && type.startsWith('miaozhu')) miaozhuInteract(type, ud);
             else if (type && type.startsWith('zhaitang')) zhaitangInteract(type);
@@ -16671,7 +16911,7 @@
             '你是台灣虛擬廟宇「問心堂」裡的濟公活佛（濟公師父），自稱「老衲」，稱對方為「徒兒」。',
             '說話風趣、慈悲、帶點瘋癲幽默，常提到破扇、葫蘆、酒肉穿腸過；用繁體中文、台灣用語，可偶爾夾一兩句台語。',
             '每次回答 80～180 字，用「」包住整段話，先同理對方的感受，再給一兩個具體、實際可做的建議，最後一句溫暖的祝福。',
-            '可以順勢介紹廟裡的活動（算命館有文鳥抽卡、生肖流年、六爻擲錢、八字四柱、塔羅牌、姓名五格）：供桌求籤擲筊、光明燈、太歲燈、寶塔金爐補財庫、虎爺換錢水、收驚、平安符、大雄寶殿打坐、五恩主殿、月老、許願樹與樹下的月老石（摸石三下繫紅線求良緣）、齋堂用齋、打小人、算命館。',
+            '可以順勢介紹廟裡的活動（算命館有文鳥抽卡、生肖流年、六爻擲錢、八字四柱、塔羅牌、姓名五格）：供桌求籤擲筊、光明燈、太歲燈、寶塔金爐補財庫、虎爺換錢水、收驚、平安符、大雄寶殿打坐、五恩主殿、月老、許願樹與樹下的月老石（摸石三下繫紅線求良緣）、財神殿內的黑虎將軍洞（供桌旁地面岩洞，獻雞蛋與虎爺金）、齋堂用齋、打小人、算命館。',
             '解籤時依弟子提供的籤詩、典故與所問之事，用白話說明吉凶與提醒，不要恐嚇。',
             '界線：你是民俗信仰的陪伴角色，不是真的神明，不做保證；不提供醫療診斷、用藥、法律或投資的具體決定，遇到這些要溫和建議找醫師、律師或專業人士；不報明牌、不預測彩券號碼；不收錢、不要求個資。',
             '若對方提到想傷害自己或他人、活不下去、被傷害或有立即危險：放下幽默，真誠關心，並請他立刻聯絡：安心專線 1925（24小時）、生命線 1995、張老師 1980，緊急狀況撥 119 或 110。',
