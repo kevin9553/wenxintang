@@ -118,6 +118,12 @@
         .scene-label-3d:hover {
             transform: translate(-50%, -105%) scale(1.06);
         }
+        .tarot-card { width: 78px; perspective: 600px; }
+        .tarot-in { position: relative; height: 122px; transform-style: preserve-3d; transition: transform 0.8s cubic-bezier(.4,0,.2,1); transition-delay: inherit; }
+        .tarot-card.flipped .tarot-in { transform: rotateY(180deg); }
+        .tarot-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 10px; border: 2px solid rgba(250,204,21,.7); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; }
+        .tarot-back { background: repeating-linear-gradient(45deg, #3b0a0a 0 6px, #561313 6px 12px); }
+        .tarot-front { background: linear-gradient(#2a1208, #120805); transform: rotateY(180deg); }
     </style>
 </head>
 <body class="w-screen h-screen overflow-hidden">
@@ -580,14 +586,17 @@
 
     <!-- MODAL: 問心算命館 -->
     <div id="fortuneModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
-        <div class="xinxiang-modal max-w-md w-full p-5 relative max-h-[90vh] overflow-y-auto">
+        <div class="xinxiang-modal max-w-lg w-full p-5 relative max-h-[90vh] overflow-y-auto">
             <button onclick="closeFortuneModal()" class="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-bold">✕</button>
             <h3 class="text-lg font-bold text-amber-300 tracking-wider mb-1">🔮 問心算命館</h3>
             <p class="text-[11px] text-stone-400 mb-3">民俗趣味，僅供參考；重大決定請理性判斷。想深入聊聊，可找<button onclick="closeFortuneModal(); toggleAIChatDrawer(true)" class="underline text-amber-200">師父問事</button>。</p>
-            <div class="flex gap-1.5 mb-3">
-                <button id="ftTab-bird" onclick="showFortuneTab('bird')" class="flex-1 py-1.5 rounded-full text-xs font-bold palace-pill text-amber-200">🐦 文鳥抽卡</button>
-                <button id="ftTab-zodiac" onclick="showFortuneTab('zodiac')" class="flex-1 py-1.5 rounded-full text-xs font-bold palace-pill text-amber-200">🐲 生肖流年</button>
-                <button id="ftTab-coin" onclick="showFortuneTab('coin')" class="flex-1 py-1.5 rounded-full text-xs font-bold palace-pill text-amber-200">☯️ 擲錢卦</button>
+            <div class="grid grid-cols-3 gap-1.5 mb-3">
+                <button id="ftTab-bird" onclick="showFortuneTab('bird')" class="py-1.5 rounded-full text-xs font-bold palace-pill text-amber-200">🐦 文鳥抽卡</button>
+                <button id="ftTab-zodiac" onclick="showFortuneTab('zodiac')" class="py-1.5 rounded-full text-xs font-bold palace-pill text-amber-200">🐲 生肖流年</button>
+                <button id="ftTab-coin" onclick="showFortuneTab('coin')" class="py-1.5 rounded-full text-xs font-bold palace-pill text-amber-200">☯️ 六爻擲錢</button>
+                <button id="ftTab-bazi" onclick="showFortuneTab('bazi')" class="py-1.5 rounded-full text-xs font-bold palace-pill text-amber-200">🧮 八字四柱</button>
+                <button id="ftTab-tarot" onclick="showFortuneTab('tarot')" class="py-1.5 rounded-full text-xs font-bold palace-pill text-amber-200">🃏 問心塔羅</button>
+                <button id="ftTab-name" onclick="showFortuneTab('name')" class="py-1.5 rounded-full text-xs font-bold palace-pill text-amber-200">✍️ 姓名五格</button>
             </div>
             <div id="ftPane-bird" class="bg-black/30 border border-amber-300/25 rounded-xl p-3 space-y-2">
                 <p class="text-xs text-stone-300">心中默想想問的事，請小文鳥替您叼出一張籤卡。</p>
@@ -605,6 +614,37 @@
                 <input id="ftQuestion" maxlength="40" placeholder="想問的事（可不填）" class="w-full px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white">
                 <button onclick="tossCoinHexagram()" class="w-full py-2.5 btn-warm-gold text-sm tracking-widest">☯️ 擲錢起卦</button>
             </div>
+            <div id="ftPane-bazi" class="hidden bg-black/30 border border-amber-300/25 rounded-xl p-3 space-y-2">
+                <p class="text-xs text-stone-300">依出生年月日時排出年、月、日、時四柱八字，看五行分佈與日主性格。</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="block text-[11px] text-amber-200">出生日期（國曆）
+                        <input id="bzDate" type="date" min="1900-01-01" max="2100-12-31" class="mt-1 w-full px-2 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white [color-scheme:dark]">
+                    </label>
+                    <label class="block text-[11px] text-amber-200">出生時辰
+                        <select id="bzHour" class="mt-1 w-full px-2 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white">
+                            <option value="">不知道</option><option value="0">早子 00–01 時</option><option value="1">丑 01–03 時</option><option value="3">寅 03–05 時</option><option value="5">卯 05–07 時</option><option value="7">辰 07–09 時</option><option value="9">巳 09–11 時</option><option value="11">午 11–13 時</option><option value="13">未 13–15 時</option><option value="15">申 15–17 時</option><option value="17">酉 17–19 時</option><option value="19">戌 19–21 時</option><option value="21">亥 21–23 時</option><option value="23">晚子 23–24 時</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="flex items-center gap-3 text-[11px] text-stone-300"><label class="flex items-center gap-1"><input type="radio" name="bzSex" value="M" checked> 乾造（男）</label><label class="flex items-center gap-1"><input type="radio" name="bzSex" value="F"> 坤造（女）</label></div>
+                <button onclick="calcBazi()" class="w-full py-2.5 btn-warm-gold text-sm tracking-widest">🧮 排四柱八字</button>
+            </div>
+            <div id="ftPane-tarot" class="hidden bg-black/30 border border-amber-300/25 rounded-xl p-3 space-y-2">
+                <p class="text-xs text-stone-300">靜心想著一件事，從 22 張大阿爾克那中抽牌。</p>
+                <input id="trQuestion" maxlength="40" placeholder="想問的事（可不填）" class="w-full px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white">
+                <select id="trSpread" class="w-full px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white"><option value="1">單張・當下指引</option><option value="3">三張・過去／現在／未來</option></select>
+                <button onclick="drawTarot()" class="w-full py-2.5 btn-warm-gold text-sm tracking-widest">🃏 洗牌抽牌</button>
+            </div>
+            <div id="ftPane-name" class="hidden bg-black/30 border border-amber-300/25 rounded-xl p-3 space-y-2">
+                <p class="text-xs text-stone-300">以康熙字典筆畫算天、人、地、外、總五格與三才。常用字已自動帶入筆畫；紅框的字請自行填入。</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <input id="nmSur" maxlength="2" placeholder="姓（例：陳、歐陽）" oninput="renderNameStrokes()" class="px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white">
+                    <input id="nmGiven" maxlength="2" placeholder="名（例：柏翰）" oninput="renderNameStrokes()" class="px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white">
+                </div>
+                <div id="nmStrokes" class="flex flex-wrap justify-center gap-3 py-1"></div>
+                <button onclick="analyzeName()" class="w-full py-2.5 btn-warm-gold text-sm tracking-widest">✍️ 剖析五格</button>
+            </div>
+            <div class="text-[10px] text-stone-500 mt-2 text-center">想求籤詩？請到大殿供桌<button onclick="closeFortuneModal(); moveCameraPreset('altar')" class="underline text-amber-200 ml-1">擲筊求籤</button></div>
             <div id="fortuneResult" class="hidden mt-3 bg-gradient-to-b from-red-950/70 to-black/50 border border-amber-300/40 rounded-xl p-3"></div>
         </div>
     </div>
@@ -11305,10 +11345,11 @@
         function openFortuneModal(tab) {
             document.getElementById('fortuneModal').classList.remove('hidden');
             showFortuneTab(tab || 'bird');
+            renderNameStrokes();
         }
         function closeFortuneModal() { document.getElementById('fortuneModal').classList.add('hidden'); }
         function showFortuneTab(k) {
-            ['bird', 'zodiac', 'coin'].forEach(t => {
+            ['bird', 'zodiac', 'coin', 'bazi', 'tarot', 'name'].forEach(t => {
                 document.getElementById('ftPane-' + t).classList.toggle('hidden', t !== k);
                 const b = document.getElementById('ftTab-' + t);
                 b.classList.toggle('cam-tab-on', t === k);
@@ -11371,7 +11412,210 @@
                 <div class="text-2xl font-black text-amber-200 my-1">屬${ZODIAC[zi]}・年干屬${STEM_ELEMENT[si]}</div>
                 ${ts ? `<div class="inline-block px-2 py-0.5 rounded bg-red-900/80 border border-amber-300/60 text-xs text-amber-100">2026 丙午年 ${ts}</div>` : '<div class="inline-block px-2 py-0.5 rounded bg-emerald-900/60 border border-emerald-300/50 text-xs text-emerald-100">2026 丙午年 未犯太歲</div>'}</div>
                 <div class="text-sm text-stone-100">${escapeHTML(ZODIAC_2026[zi])}</div>
-                ${ts ? '<div class="text-xs text-amber-200 mt-2">先生建議：犯太歲者可到光明燈處點一盞元辰燈、安太歲祈求平安。<button onclick="closeFortuneModal(); openTaisuiModal(${y})" class="ml-1 underline">去安太歲</button></div>' : ''}`);
+                ${ts ? `<div class="text-xs text-amber-200 mt-2">先生建議：犯太歲者可到光明燈處點一盞元辰燈、安太歲祈求平安。<button onclick="closeFortuneModal(); openTaisuiModal(${y})" class="ml-1 underline">去安太歲</button></div>` : ''}`);
+        }
+
+        // =====================================================================
+        // 算命館追加：八字四柱（節氣定月、立春換年）、塔羅大阿爾克那、姓名五格（康熙筆畫）
+        // =====================================================================
+        const GAN10 = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+        const ZHI12 = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+        const GAN_WX = ['木', '木', '火', '火', '土', '土', '金', '金', '水', '水'];
+        const ZHI_WX = ['水', '土', '木', '木', '土', '火', '火', '土', '金', '金', '土', '水'];
+        const WX_ORDER = ['木', '火', '土', '金', '水'];
+        const WX_COLOR = { 木: '#4ade80', 火: '#f87171', 土: '#facc15', 金: '#e5e7eb', 水: '#60a5fa' };
+        const WX_SHENG = { 木: '火', 火: '土', 土: '金', 金: '水', 水: '木' };   // 生
+        const WX_KE = { 木: '土', 土: '水', 水: '火', 火: '金', 金: '木' };      // 剋
+        const SHICHEN = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+        // Julian day number of a Gregorian date (noon)
+        function jdnOf(y, m, d) {
+            const a = Math.floor((14 - m) / 12), yy = y + 4800 - a, mm = m + 12 * a - 3;
+            return d + Math.floor((153 * mm + 2) / 5) + 365 * yy + Math.floor(yy / 4) - Math.floor(yy / 100) + Math.floor(yy / 400) - 32045;
+        }
+        // apparent ecliptic longitude of the sun (Meeus, low precision ≈ 0.01°), jd in UT
+        function sunLongitude(jd) {
+            const T = (jd - 2451545.0) / 36525, r = Math.PI / 180;
+            const L0 = 280.46646 + 36000.76983 * T + 0.0003032 * T * T;
+            const M = (357.52911 + 35999.05029 * T - 0.0001537 * T * T) * r;
+            const C = (1.914602 - 0.004817 * T - 0.000014 * T * T) * Math.sin(M) + (0.019993 - 0.000101 * T) * Math.sin(2 * M) + 0.000289 * Math.sin(3 * M);
+            const om = (125.04 - 1934.136 * T) * r;
+            return (((L0 + C - 0.00569 - 0.00478 * Math.sin(om)) % 360) + 360) % 360;
+        }
+        const DAY_MASTER = {
+            甲: '甲木如參天大樹：正直仁厚、有擔當，喜歡開創與帶領，缺點是固執、不易轉彎。',
+            乙: '乙木如花草藤蔓：柔韌靈活、善於變通與合作，心思細膩，需留意優柔寡斷。',
+            丙: '丙火如太陽：熱情開朗、光明磊落，感染力強，急躁時容易衝動，宜多沉住氣。',
+            丁: '丁火如燭光星火：溫和內斂、觀察敏銳、重情義，容易想太多，需多肯定自己。',
+            戊: '戊土如高山大地：穩重守信、包容力強，做事踏實，有時過於保守固執。',
+            己: '己土如田園沃土：溫和細心、多才多藝、善於照顧人，需避免過度操心。',
+            庚: '庚金如刀劍礦石：果斷剛毅、講義氣、重原則，宜學習柔軟表達、少硬碰硬。',
+            辛: '辛金如珠寶首飾：優雅自律、品味高、追求完美，容易對自己太嚴格。',
+            壬: '壬水如江河大海：聰明豪邁、適應力強、勇於冒險，需防三分鐘熱度。',
+            癸: '癸水如雨露甘霖：溫柔聰慧、直覺敏銳、善體人意，宜多給自己安全感。'
+        };
+        const WX_TIPS = {
+            木: '補木：多接近綠色植物、多閱讀學習，綠色系衣物配飾，東方為吉方。',
+            火: '補火：多曬太陽、運動流汗，紅紫色系，南方為吉方。',
+            土: '補土：作息規律、腳踏實地，黃棕色系，居中或東北、西南為吉方。',
+            金: '補金：整理收納、建立紀律，白金色系，西方為吉方。',
+            水: '補水：多喝水、多旅行交流，黑藍色系，北方為吉方。'
+        };
+        function calcBazi() {
+            const ds = document.getElementById('bzDate').value, hs = document.getElementById('bzHour').value;
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ds || '');
+            if (!m) { showToast('🧮 請先選擇出生日期（國曆）'); return; }
+            const Y = +m[1], Mo = +m[2], D = +m[3];
+            if (Y < 1900 || Y > 2100) { showToast('🧮 請輸入 1900 到 2100 年之間的日期'); return; }
+            const knowHour = hs !== '';
+            const hour = knowHour ? +hs : 12;
+            // birth instant in UT (Taiwan time, UTC+8), for the solar-term month
+            const jdBirth = jdnOf(Y, Mo, D) - 0.5 + (hour + 0.5 - 8) / 24;
+            const lon = sunLongitude(jdBirth);
+            const mIdx = Math.floor(((lon - 315 + 360) % 360) / 30);      // 0 = 寅月 (立春起)
+            let yy = Y;
+            if (Mo <= 2 && mIdx >= 10) yy = Y - 1;                         // before 立春 → previous year
+            const yGan = ((yy - 4) % 10 + 10) % 10, yZhi = ((yy - 4) % 12 + 12) % 12;
+            const mGan = ((yGan % 5) * 2 + 2 + mIdx) % 10, mZhi = (mIdx + 2) % 12;
+            // day pillar: 子時 (23:00 起) 換日
+            let jdn = jdnOf(Y, Mo, D);
+            if (knowHour && hour === 23) jdn += 1;
+            const di = ((jdn + 49) % 60 + 60) % 60;
+            const dGan = di % 10, dZhi = di % 12;
+            const hZhi = knowHour ? Math.floor(((hour + 1) % 24) / 2) : -1;
+            const hGan = knowHour ? ((dGan % 5) * 2 + hZhi) % 10 : -1;
+            const pillars = [['年柱', '祖上・根基', yGan, yZhi], ['月柱', '父母・事業', mGan, mZhi], ['日柱', '自己・配偶', dGan, dZhi], ['時柱', '子女・晚運', hGan, hZhi]];
+            const cnt = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
+            pillars.forEach(([, , g, z]) => { if (g >= 0) { cnt[GAN_WX[g]]++; cnt[ZHI_WX[z]]++; } });
+            const total = knowHour ? 8 : 6;
+            const me = GAN_WX[dGan];
+            const mother = Object.keys(WX_SHENG).find(k => WX_SHENG[k] === me);
+            const support = cnt[me] + cnt[mother];
+            const strong = support >= total / 2 + (knowHour ? 0.5 : 0);
+            // a simple 喜用 suggestion: strong → what drains / controls the day master; weak → same + resource
+            const favor = strong ? [WX_SHENG[me], WX_KE[me]] : [mother, me];
+            const lacking = WX_ORDER.filter(k => cnt[k] === 0);
+            const pillarHtml = pillars.map(([name, sub, g, z], i) => `<div class="rounded-lg p-1.5 text-center ${i === 2 ? 'border-2 border-amber-300/80 bg-amber-500/10' : 'border border-amber-300/25 bg-black/30'}">
+                <div class="text-[10px] ${i === 2 ? 'text-amber-200 font-bold' : 'text-stone-400'}">${name}${i === 2 ? '★' : ''}</div>
+                ${g >= 0 ? `<div class="text-2xl font-black leading-tight" style="color:${WX_COLOR[GAN_WX[g]]}">${GAN10[g]}</div><div class="text-2xl font-black leading-tight" style="color:${WX_COLOR[ZHI_WX[z]]}">${ZHI12[z]}</div><div class="text-[10px] text-stone-400">${GAN_WX[g]}${ZHI_WX[z]}</div>` : '<div class="text-xl text-stone-500 py-3">？</div><div class="text-[10px] text-stone-500">未填時辰</div>'}
+                <div class="text-[9px] text-stone-500">${sub}</div></div>`).join('');
+            const bars = WX_ORDER.map(k => `<div class="flex items-center gap-2 text-[11px]"><span class="w-4" style="color:${WX_COLOR[k]}">${k}</span><div class="flex-1 bg-black/50 rounded-full overflow-hidden" style="height:8px"><div class="rounded-full" style="height:8px;width:${Math.round(cnt[k] / total * 100)}%;background:${WX_COLOR[k]}"></div></div><span class="w-6 text-right text-stone-300">${cnt[k]}</span></div>`).join('');
+            seatAtFortune();
+            emitAct('fortune');
+            playTempleBellSound(587);
+            fortuneResult(`<div class="text-center text-[11px] text-amber-300/80 mb-2">國曆 ${Y}/${Mo}/${D}${knowHour ? ` ${String(hour).padStart(2, '0')} 時（${SHICHEN[hZhi]}時）` : '・時辰不詳'}・${document.querySelector('input[name=bzSex]:checked').value === 'F' ? '坤造（女）' : '乾造（男）'}</div>
+                <div class="gap-1.5 mb-3" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr))">${pillarHtml}</div>
+                <div class="text-xs text-amber-200 font-bold mb-1">五行分佈</div><div class="space-y-1 mb-3">${bars}</div>
+                <div class="text-xs text-amber-200 font-bold">日主：${GAN10[dGan]}${me}（身${strong ? '偏強' : '偏弱'}）</div>
+                <div class="text-sm text-stone-100 my-1">${DAY_MASTER[GAN10[dGan]]}</div>
+                <div class="text-xs text-stone-200 mt-2">五行${lacking.length ? `缺「${lacking.join('、')}」，` : '俱全，'}參考喜用：<span class="text-amber-200">${favor.join('、')}</span></div>
+                <div class="text-[11px] text-stone-300 mt-1 space-y-0.5">${favor.map(k => `<div>・${WX_TIPS[k]}</div>`).join('')}</div>
+                <div class="text-[10px] text-stone-500 mt-2">以節氣定月、立春換年，23 點起算隔日。身強弱與喜用為簡化算法（未計藏干、月令權重），僅供娛樂參考。</div>`);
+        }
+
+        // ---- 塔羅：22 張大阿爾克那，單張或過去・現在・未來
+        const TAROT = [
+            ['0', '愚者', '🃏', '新的開始・自由・冒險', '帶著好奇心踏出第一步，機會就在未知裡。', '衝動莽撞、準備不足，先看清楚再跳。'],
+            ['I', '魔術師', '🪄', '創造・行動・自信', '你已具備需要的資源，現在就是動手的時候。', '想法多卻沒執行，或小心被花言巧語誤導。'],
+            ['II', '女祭司', '🌙', '直覺・沉靜・智慧', '答案在內心，靜下來聽自己的聲音。', '忽略直覺、壓抑情緒，或資訊不夠透明。'],
+            ['III', '皇后', '🌾', '豐盛・滋養・美感', '付出會得到豐收，好好照顧自己與身邊的人。', '過度依賴或寵溺，創意卡關，需先休養。'],
+            ['IV', '皇帝', '🏛️', '秩序・責任・領導', '建立規則與結構，穩穩掌握局面。', '太強勢、控制欲高，或缺乏紀律。'],
+            ['V', '教皇', '📿', '傳統・指引・信念', '向有經驗的長輩或老師請益，循正道而行。', '拘泥形式，或該跳脫舊框架找自己的路。'],
+            ['VI', '戀人', '💞', '愛情・選擇・和諧', '真心相待，順著內心做出選擇。', '關係失衡、猶豫不決，價值觀需要溝通。'],
+            ['VII', '戰車', '🐎', '意志・前進・勝利', '目標明確、全力衝刺，就能突破阻礙。', '方向混亂、急躁失控，先穩住再出發。'],
+            ['VIII', '力量', '🦁', '勇氣・耐心・溫柔', '以柔克剛，用耐心化解難題。', '缺乏自信或壓抑情緒，記得善待自己。'],
+            ['IX', '隱者', '🏮', '內省・獨處・尋找', '暫時退一步，獨處思考會找到方向。', '過度封閉、孤立自己，該多與人交流。'],
+            ['X', '命運之輪', '☸️', '轉機・循環・機會', '運勢正在轉動，把握好時機。', '低潮循環，耐心等待，風水會輪流轉。'],
+            ['XI', '正義', '⚖️', '公平・決斷・因果', '誠實面對，理性判斷會帶來公正結果。', '偏頗不公或逃避責任，需要重新衡量。'],
+            ['XII', '倒吊人', '🙃', '等待・犧牲・換角度', '換個角度看事情，暫停反而是收穫。', '白白犧牲、停滯不前，該放下執著。'],
+            ['XIII', '死神', '🍂', '結束・轉化・重生', '舊的結束才有新的開始，勇敢放手。', '抗拒改變、拖延，讓痛苦延長。'],
+            ['XIV', '節制', '🍶', '平衡・調和・療癒', '凡事適度，慢慢調和會越來越好。', '失衡過度、急於求成，需重新調整步調。'],
+            ['XV', '惡魔', '⛓️', '慾望・束縛・誘惑', '看清讓你上癮或被綁住的事物。', '開始掙脫束縛，重新拿回主導權。'],
+            ['XVI', '高塔', '⚡', '突變・崩解・覺醒', '突發的變動會打破假象，危機也是轉機。', '變動將至或已過去，先做好防範。'],
+            ['XVII', '星星', '⭐', '希望・療癒・靈感', '保持希望，前景光明，願望有機會實現。', '失去信心或期望過高，先照顧好心情。'],
+            ['XVIII', '月亮', '🌕', '不安・幻象・潛意識', '情況未明，別被擔憂放大，多觀察。', '迷霧漸散，真相即將浮現。'],
+            ['XIX', '太陽', '☀️', '成功・喜悅・活力', '光明燦爛，努力得到肯定，好事臨門。', '小小陰霾，熱情稍減，但整體仍是好運。'],
+            ['XX', '審判', '📯', '覺醒・召喚・復活', '聽見內心召喚，是重新出發的時機。', '自我懷疑、錯過時機，先原諒過去的自己。'],
+            ['XXI', '世界', '🌍', '圓滿・完成・整合', '一個階段圓滿完成，準備迎接新旅程。', '還差最後一步，別在終點前放棄。']
+        ];
+        function drawTarot() {
+            if (fortuneStall.busy) return;
+            const n = +document.getElementById('trSpread').value || 1;
+            const q = document.getElementById('trQuestion').value.trim().slice(0, 40);
+            const pool = TAROT.map((c, i) => i);
+            for (let i = pool.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [pool[i], pool[j]] = [pool[j], pool[i]]; }
+            const pos = n === 1 ? ['當下指引'] : ['過去', '現在', '未來'];
+            const picks = pool.slice(0, n).map((id, k) => ({ c: TAROT[id], rev: Math.random() < 0.35, pos: pos[k] }));
+            seatAtFortune();
+            emitAct('fortune');
+            playCoinClink();
+            const card = (p, k) => `<div class="tarot-card" style="transition-delay:${k * 0.35}s"><div class="tarot-in">
+                <div class="tarot-face tarot-back"><div class="text-2xl">✴️</div><div class="text-[9px] tracking-widest text-amber-200/80 mt-1">問心塔羅</div></div>
+                <div class="tarot-face tarot-front"><div class="text-[9px] text-amber-300/80">${p.c[0]}</div><div class="text-3xl my-1 ${p.rev ? 'rotate-180' : ''}">${p.c[2]}</div><div class="text-sm font-black text-amber-100">${p.c[1]}</div><div class="text-[9px] ${p.rev ? 'text-sky-300' : 'text-amber-300'}">${p.rev ? '逆位' : '正位'}</div></div>
+                </div><div class="text-[10px] text-center text-amber-200 mt-1">${p.pos}</div></div>`;
+            const up = picks.filter(p => !p.rev).length;
+            const summary = n === 1 ? '' : `<div class="text-xs text-amber-200 mt-2">整體：${up >= 2 ? '正位居多，能量順暢，事情大致朝好的方向發展。' : '逆位較多，代表有些卡關或需要調整，先處理內在的阻礙。'}</div>`;
+            fortuneResult(`${q ? `<div class="text-[11px] text-center text-stone-300 mb-1">所問：${escapeHTML(q)}</div>` : ''}<div class="flex justify-center gap-2 mb-2" id="tarotRow">${picks.map(card).join('')}</div>
+                <div id="tarotText" class="space-y-1.5 opacity-0 transition-opacity duration-700">${picks.map(p => `<div class="text-xs"><span class="text-amber-200 font-bold">${p.pos}・${p.c[1]}${p.rev ? '（逆位）' : '（正位）'}</span><span class="text-stone-400">｜${p.c[3]}</span><div class="text-stone-100">${p.rev ? p.c[5] : p.c[4]}</div></div>`).join('')}${summary}
+                <div class="text-[10px] text-stone-500">塔羅反映當下的心境與趨勢，不是定數，僅供參考。</div></div>`);
+            fortuneStall.busy = true;
+            setTimeout(() => { document.querySelectorAll('#tarotRow .tarot-card').forEach(e => e.classList.add('flipped')); }, 250);
+            setTimeout(() => { const t = document.getElementById('tarotText'); if (t) t.classList.remove('opacity-0'); playTempleBellSound(659); fortuneStall.busy = false; }, 900 + n * 350);
+        }
+
+        // ---- 姓名五格：康熙筆畫（常用字內建，其餘請自行填入）
+        const KANGXI_STROKES = (() => {
+            const t = {
+                1: '一', 2: '二丁', 3: '三子', 4: '四王文心天方尤中仁', 5: '五石古田白司平民正', 6: '六朱宇安', 7: '七李吳何呂江余宋杜佑君志宏秀',
+                8: '八林周沈卓汪明佩承佳欣宜宗昌雨', 9: '九施柯紀姚姜侯怡柏俊建美冠信勇思', 10: '十徐洪高翁孫馬唐袁家恩珊庭芳玲珍祐哲軒宸洋泰',
+                11: '張許胡梁曹康涂國偉英婉祥晨若浩', 12: '黃曾邱彭傅阮馮程雅婷傑涵智惠淑晴雲凱鈞博清', 13: '楊游詹莊湯琪義', 14: '廖趙連豪華瑋鳳嘉福瑞銘睿誠',
+                15: '劉郭葉董歐黎葛德慧慶毅', 16: '陳賴潘盧諸翰穎龍靜達', 17: '謝蔡鍾蔣鄒陽', 18: '簡顏魏戴禮', 19: '鄭鄧薛麗', 20: '藍'
+            };
+            const m = {};
+            Object.entries(t).forEach(([n, s]) => [...s].forEach(ch => { m[ch] = +n; }));
+            return m;
+        })();
+        const LUCK81 = (() => {
+            const ji = [1, 3, 5, 6, 7, 8, 11, 13, 15, 16, 17, 18, 21, 23, 24, 25, 29, 31, 32, 33, 35, 37, 39, 41, 45, 47, 48, 52, 57, 61, 63, 65, 67, 68, 81];
+            const ban = [26, 27, 30, 38, 40, 49, 51, 55, 58, 71, 73, 75, 77, 78];
+            return n => { const k = ((n - 1) % 80) + 1; return ji.includes(k) ? '吉' : ban.includes(k) ? '半吉' : '凶'; };
+        })();
+        const LUCK_CLS = { 吉: 'bg-red-900/70 border-amber-300/60 text-amber-100', 半吉: 'bg-amber-900/50 border-amber-300/40 text-amber-100', 凶: 'bg-stone-800 border-stone-500 text-stone-300' };
+        function numElement(n) { return ['水', '木', '木', '火', '火', '土', '土', '金', '金', '水'][n % 10]; }
+        function renderNameStrokes() {
+            const s = [...(document.getElementById('nmSur').value || '').trim()].slice(0, 2);
+            const g = [...(document.getElementById('nmGiven').value || '').trim()].slice(0, 2);
+            const box = document.getElementById('nmStrokes');
+            const all = [...s.map(c => [c, 's']), ...g.map(c => [c, 'g'])];
+            box.innerHTML = all.length ? all.map(([c], i) => `<label class="flex flex-col items-center gap-0.5"><span class="text-lg font-black text-amber-100">${escapeHTML(c)}</span><input data-i="${i}" type="number" min="1" max="40" inputmode="numeric" value="${KANGXI_STROKES[c] || ''}" placeholder="?" class="nm-stroke w-12 px-1 py-0.5 text-center bg-black/50 border rounded text-sm text-white" style="border-color:${KANGXI_STROKES[c] ? 'rgba(252,211,77,.4)' : '#f87171'}"></label>`).join('') : '<span class="text-[11px] text-stone-500">輸入姓名後會列出每個字的筆畫</span>';
+        }
+        function analyzeName() {
+            const s = [...(document.getElementById('nmSur').value || '').trim()].slice(0, 2);
+            const g = [...(document.getElementById('nmGiven').value || '').trim()].slice(0, 2);
+            if (!s.length || !g.length) { showToast('✍️ 請輸入姓與名'); return; }
+            const v = [...document.querySelectorAll('#nmStrokes .nm-stroke')].map(e => parseInt(e.value, 10));
+            if (v.length !== s.length + g.length || v.some(x => !(x >= 1 && x <= 40))) { showToast('✍️ 有字沒有筆畫（紅框），請填入康熙字典筆畫'); return; }
+            const S = v.slice(0, s.length), G = v.slice(s.length);
+            const tian = s.length === 1 ? S[0] + 1 : S[0] + S[1];
+            const ren = S[S.length - 1] + G[0];
+            const di = g.length === 1 ? G[0] + 1 : G[0] + G[1];
+            const zong = S.reduce((a, b) => a + b, 0) + G.reduce((a, b) => a + b, 0);
+            const wai = tian + di - ren;
+            const grids = [['天格', '祖上', tian], ['人格', '主運★', ren], ['地格', '前運', di], ['外格', '人際', wai], ['總格', '後運★', zong]];
+            const e = [numElement(tian), numElement(ren), numElement(di)];
+            const rel = (a, b) => a === b ? ['比和', 1] : WX_SHENG[a] === b || WX_SHENG[b] === a ? ['相生', 2] : ['相剋', 0];
+            const r1 = rel(e[0], e[1]), r2 = rel(e[1], e[2]);
+            const sc = r1[1] + r2[1];
+            const sancai = sc >= 3 ? ['大吉', '三才相生，上有長輩貴人提攜、下有穩固基礎，做事順遂，身心安泰。'] : sc === 2 ? ['中吉', '三才配置尚稱平順，宜靠自身努力累積，穩紮穩打便能漸入佳境。'] : ['宜留意', '三才之間有相剋，容易感到壓力或與環境磨合；多修身養性、廣結善緣即可化解。'];
+            seatAtFortune();
+            emitAct('fortune');
+            playTempleBellSound(587);
+            fortuneResult(`<div class="text-center mb-2"><div class="text-2xl font-black text-amber-100 tracking-widest">${escapeHTML(s.join('') + g.join(''))}</div><div class="text-[10px] text-stone-400">康熙筆畫：${v.join('・')}</div></div>
+                <div class="gap-1 mb-3" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr))">${grids.map(([n, sub, val]) => { const L = LUCK81(val); return `<div class="text-center rounded-lg border ${sub.includes('★') ? 'border-amber-300/70 bg-amber-500/10' : 'border-amber-300/20 bg-black/30'} p-1"><div class="text-[10px] text-stone-300">${n}</div><div class="text-lg font-black text-amber-200">${val}</div><div class="text-[9px] text-stone-500">${sub.replace('★', '')}・${numElement(val)}</div><span class="inline-block mt-0.5 px-1 rounded border text-[10px] ${LUCK_CLS[L]}">${L}</span></div>`; }).join('')}</div>
+                <div class="text-xs text-amber-200 font-bold">三才配置：${e.join('・')}（${sancai[0]}）</div>
+                <div class="text-[11px] text-stone-400">天人${r1[0]}、人地${r2[0]}</div>
+                <div class="text-sm text-stone-100 my-1">${sancai[1]}</div>
+                <div class="text-xs text-stone-200">人格 ${ren} 數為${LUCK81(ren)}、總格 ${zong} 數為${LUCK81(zong)}。${LUCK81(ren) === '吉' && LUCK81(zong) === '吉' ? '主運與後運皆吉，名字能量穩健。' : '數理有起伏不必擔心，名字只是助力，行善積德、待人以誠才是改運根本。'}</div>
+                <div class="text-[10px] text-stone-500 mt-2">筆畫以康熙字典計（如氵算水 4 畫、艹算艸 6 畫），各派算法略有差異，僅供參考。</div>`);
         }
 
         // 擲錢卦：three coins × six tosses (heads = 3, tails = 2): 6 老陰(變) 7 少陽 8 少陰 9 老陽(變)
@@ -16206,7 +16450,7 @@
             '你是台灣虛擬廟宇「問心堂」裡的濟公活佛（濟公師父），自稱「老衲」，稱對方為「徒兒」。',
             '說話風趣、慈悲、帶點瘋癲幽默，常提到破扇、葫蘆、酒肉穿腸過；用繁體中文、台灣用語，可偶爾夾一兩句台語。',
             '每次回答 80～180 字，用「」包住整段話，先同理對方的感受，再給一兩個具體、實際可做的建議，最後一句溫暖的祝福。',
-            '可以順勢介紹廟裡的活動：供桌求籤擲筊、光明燈、太歲燈、寶塔金爐補財庫、虎爺換錢水、收驚、平安符、大雄寶殿打坐、五恩主殿、月老、許願樹與樹下的月老石（摸石三下繫紅線求良緣）、齋堂用齋、打小人、算命館。',
+            '可以順勢介紹廟裡的活動（算命館有文鳥抽卡、生肖流年、六爻擲錢、八字四柱、塔羅牌、姓名五格）：供桌求籤擲筊、光明燈、太歲燈、寶塔金爐補財庫、虎爺換錢水、收驚、平安符、大雄寶殿打坐、五恩主殿、月老、許願樹與樹下的月老石（摸石三下繫紅線求良緣）、齋堂用齋、打小人、算命館。',
             '解籤時依弟子提供的籤詩、典故與所問之事，用白話說明吉凶與提醒，不要恐嚇。',
             '界線：你是民俗信仰的陪伴角色，不是真的神明，不做保證；不提供醫療診斷、用藥、法律或投資的具體決定，遇到這些要溫和建議找醫師、律師或專業人士；不報明牌、不預測彩券號碼；不收錢、不要求個資。',
             '若對方提到想傷害自己或他人、活不下去、被傷害或有立即危險：放下幽默，真誠關心，並請他立刻聯絡：安心專線 1925（24小時）、生命線 1995、張老師 1980，緊急狀況撥 119 或 110。',
