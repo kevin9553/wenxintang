@@ -1803,7 +1803,7 @@
         // 主殿二樓・三官殿（重簷樓閣）：安奉三官大帝（天官・地官・水官）；三寶佛已移至平地新建的大雄寶殿
         // 平座殿基從一樓屋頂升起，殿內地板高於一樓屋脊；中間三間雕花門敞開，可從迴廊看見三官大帝
         // =====================================================================
-        const UPPER_HALL = { cx: -1.5, W: 14, zF: 0.6, zB: -6.0, y0: 6.0, floorY: 9.0, y1: 13.0, name: '三 官 殿' };
+        const UPPER_HALL = { cx: -1.5, W: 14, zF: 0.6, zB: -6.0, y0: 6.0, floorY: 9.0, y1: 14.5, name: '三 官 殿' };   // y1 raised so the enlarged 三官大帝 stay under the roof
         // 橫三世佛：中・釋迦牟尼佛；龍邊（佛的左手邊＝面向殿內右側）・藥師佛；虎邊・阿彌陀佛
         const SANBAO = [
             { key: 'shakya', pre: 'SK', x: 0, scale: 1.0, robe: ['rgba(150,40,30,A)', 'rgba(60,110,100,A)', '#fde68a'], kasaya: [0x9a2e22, '#3f7d6e'], label: '🪷 南無本師釋迦牟尼佛' },
@@ -9076,7 +9076,7 @@
                 lingyin: { file: 'lingyin_chant', dur: 63.3, bg: true,
                     credit: '杭州靈隱寺僧眾誦經錄音：LouiseBrown1981，Wikimedia Commons，CC BY-SA 3.0' }
             },
-            el: null, key: null, loading: {}
+            key: null, buf: null, src: null, gain: null, playing: false, ctxStart: 0, loading: {}
         };
         const MONK = { mesh: null, ud: null, seat: null, spots: null, seg: -1, plan: null, demoStart: 0, demoKey: null, lastBeat: -1, lastLine: '', bannerHidden: '', mallet: null };
         // build the program: a list of timed segments
@@ -9196,6 +9196,8 @@
             const now = Date.now();
             const ses = monkSession(now);
             const tk = ses ? chantTrackAt(ses) : null;
+            // fetch and decode this service's recordings ahead of time, once someone is near the hall
+            if (ses && !MONK.preloaded && nearHall() && ensureAudioCtx()) { MONK.preloaded = true; Object.keys(CHANT_AUDIO.tracks).forEach(k => loadChantTrack(k)); }
             syncChantAudio(tk && tk.key, tk && tk.at);
             if (!ses) {
                 if (M.seg !== -1) { M.seg = -1; M.plan = null; monkSit(); hideChantBanner(); }
@@ -9257,7 +9259,7 @@
                     ud.rightArm.rotation.x = -1.05;
                     const m = DAXIONG.muyu;
                     if (m) { m.put(m.hit); setTimeout(() => m.put(m.lift), 110); }
-                    if (nearHall() && !(CHANT_AUDIO.el && !CHANT_AUDIO.el.paused)) playWoodenFishSound();
+                    if (nearHall() && !CHANT_AUDIO.playing) playWoodenFishSound();
                 } else if (ce % 0.62 > 0.15) ud.rightArm.rotation.x = -1.35;
                 ud.headGroup.rotation.x = 0.1 + Math.sin(t * 2) * 0.03;
                 showChantBanner(ses, `〈${seg.title}〉`, seg.lines[li]);
@@ -9267,30 +9269,45 @@
         }
         // ---- recorded recitation: load on first use, follow the service clock, only audible near the 大雄寶殿
         function loadChantTrack(key) {
-            const A = CHANT_AUDIO, tr = A.tracks[key];
-            if (!tr) return Promise.resolve(null);
-            if (!A.loading[key]) A.loading[key] = fetch(A.base + tr.file + (A.b64 ? '.txt' : '.mp3')).then(r => { if (!r.ok) throw new Error('audio ' + r.status); return A.b64 ? r.text() : r.blob(); })
-                .then(d => { if (typeof d === 'string') { const bin = atob(d.trim()), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); d = new Blob([u], { type: 'audio/mpeg' }); } return URL.createObjectURL(d); })
+            // decoded once into a Web Audio buffer: plays through the same AudioContext as the 木魚 and bells,
+            // so it is not blocked by the browser's autoplay rules for <audio> elements
+            const A = CHANT_AUDIO, tr = A.tracks[key], ctx = ensureAudioCtx();
+            if (!tr || !ctx) return Promise.resolve(null);
+            if (!A.loading[key]) A.loading[key] = fetch(A.base + tr.file + (A.b64 ? '.txt' : '.mp3')).then(r => { if (!r.ok) throw new Error('audio ' + r.status); return A.b64 ? r.text() : r.arrayBuffer(); })
+                .then(d => { if (typeof d === 'string') { const bin = atob(d.trim()), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); d = u.buffer; } return new Promise((res, rej) => ctx.decodeAudioData(d, res, rej)); })
                 .catch(e => { console.warn('chant audio unavailable', e); A.loading[key] = null; return null; });
             return A.loading[key];
         }
+        function stopChantSource() {
+            const A = CHANT_AUDIO;
+            if (A.src) { try { A.src.stop(); } catch (e) {} A.src.disconnect(); A.src = null; }
+            A.playing = false;
+        }
         function syncChantAudio(key, at) {
             const A = CHANT_AUDIO;
-            const want = key && !state.audioMuted && nearHall() && !document.hidden;
-            if (!want) { if (A.el && !A.el.paused) A.el.pause(); return; }
+            const ctx = (key && !state.audioMuted) ? ensureAudioCtx() : null;
+            const want = key && ctx && nearHall() && !document.hidden;
+            if (!want) { stopChantSource(); return; }
             if (A.key !== key) {
-                A.key = key;
-                if (A.el) { A.el.pause(); A.el = null; }
-                loadChantTrack(key).then(url => { if (!url || A.key !== key) return; const el = new Audio(url); el.preload = 'auto'; A.el = el; });
+                stopChantSource();
+                A.key = key; A.buf = null;
+                loadChantTrack(key).then(buf => { if (buf && A.key === key) A.buf = buf; });
                 return;
             }
-            const el = A.el;
-            if (!el || at >= A.tracks[key].dur) { if (el && !el.paused) el.pause(); return; }
+            if (!A.buf || at >= A.buf.duration - 0.05 || ctx.state !== 'running') { if (A.playing && (!A.buf || at >= A.buf.duration - 0.05)) stopChantSource(); return; }
+            if (!A.gain) { A.gain = ctx.createGain(); A.gain.connect(ctx.destination); }
             // volume: louder the closer the camera is to the hall
             const p = camControl.target, d = Math.hypot(p.x - DAXIONG.x, p.z - DAXIONG.z);
-            el.volume = Math.max(0.15, Math.min(0.9, 1 - d / 26));
-            if (el.paused) { el.currentTime = Math.max(0, at); el.play().catch(() => {}); }
-            else if (Math.abs(el.currentTime - at) > 0.6) el.currentTime = Math.max(0, at);
+            A.gain.gain.setTargetAtTime(Math.max(0.15, Math.min(0.9, 1 - d / 26)), ctx.currentTime, 0.2);
+            const playedAt = A.playing ? ctx.currentTime - A.ctxStart : -1;
+            if (!A.playing || Math.abs(playedAt - at) > 0.6) {
+                stopChantSource();
+                const src = ctx.createBufferSource();
+                src.buffer = A.buf; src.connect(A.gain);
+                src.start(0, Math.max(0, at));
+                src.onended = () => { if (A.src === src) { A.src = null; A.playing = false; } };
+                A.src = src; A.playing = true; A.ctxStart = ctx.currentTime - Math.max(0, at);
+            }
         }
         // ---- the subtitle banner at the top of the screen
         function chantBannerEl() {
