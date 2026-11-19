@@ -9074,7 +9074,17 @@
                     credit: '〈楞嚴咒〉唱誦片段：宣化上人，Wikimedia Commons，CC BY-SA 3.0' },
                 // a background track: the monks of 靈隱寺 chanting, heard while the monk goes up to the altar and through 〈爐香讚〉
                 lingyin: { file: 'lingyin_chant', dur: 63.3, bg: true,
-                    credit: '杭州靈隱寺僧眾誦經錄音：LouiseBrown1981，Wikimedia Commons，CC BY-SA 3.0' }
+                    credit: '杭州靈隱寺僧眾誦經錄音：LouiseBrown1981，Wikimedia Commons，CC BY-SA 3.0' },
+                // 深圳寺院共修錄音（Freesound 825191, CC0）：念佛一段；另兩段當〈大悲咒〉〈阿彌陀經〉的殿內背景
+                nianfo: { file: 'sz_nianfo', dur: 34.0, from: 1.0, to: 33.0,
+                    credit: '深圳寺院僧眾與信眾共修念佛：bodawei，Freesound，CC0 公眾領域' },
+                dabei: { file: 'sz_dabei_bg', dur: 42.0, from: 1.0, to: 41.0,
+                    credit: '殿內共修唱誦（背景，非〈大悲咒〉本身）：bodawei，Freesound，CC0 公眾領域' },
+                mituo: { file: 'sz_mituo_bg', dur: 46.0, from: 1.0, to: 45.0,
+                    credit: '殿內共修唱誦（背景，非〈阿彌陀經〉本身）：bodawei，Freesound，CC0 公眾領域' },
+                // a second background track under 〈讚佛偈〉 through 〈迴向偈〉: nuns chanting in the hall at 志蓮淨苑
+                chilin: { file: 'chilin_chant', dur: 90.9, bg: true,
+                    credit: '香港志蓮淨苑殿內誦經（背景）：Oplurus，Freesound，CC0 公眾領域' }
             },
             key: null, buf: null, src: null, gain: null, playing: false, ctxStart: 0, loading: {}
         };
@@ -9083,6 +9093,7 @@
         function monkPlan(key) {
             const segs = [];
             const bgTr = CHANT_AUDIO.tracks.lingyin, bg = bgTr ? { track: 'lingyin', start: 12, end: 12 + bgTr.dur } : null;
+            const bgs = bg ? [bg] : [];
             segs.push({ kind: 'call', dur: 12 });                               // bell / drum from afar, monk rises
             segs.push({ kind: 'walk', dur: 6, from: 'seat', to: 'center' });
             segs.push({ kind: 'bows', dur: 12 });
@@ -9107,13 +9118,17 @@
             segs.push({ kind: 'walk', dur: 6, from: 'center', to: 'seat' });
             let t = 0;
             segs.forEach(s => { s.t0 = t; t += s.dur; });
-            return { segs, total: t, bg };
+            // 志蓮淨苑 under the closing pieces (讚佛偈 → 迴向偈), ending with the last of them
+            const cTr = CHANT_AUDIO.tracks.chilin, zan = segs.find(x => x.title === '讚佛偈'), hui = segs.find(x => x.title === '迴向偈');
+            if (cTr && zan && hui) bgs.push({ track: 'chilin', start: zan.t0, end: Math.min(zan.t0 + cTr.dur, hui.t0 + hui.dur) });
+            return { segs, total: t, bg, bgs };
         }
         // which recording should be heard at this moment of the service, and how far into it
         function chantTrackAt(ses) {
             const plan = MONK_PLANS[ses.key], seg = plan.segs.find(x => ses.e < x.t0 + x.dur);
             if (seg && seg.audio) return { key: seg.audio, at: ses.e - seg.t0 };
-            if (plan.bg && ses.e >= plan.bg.start && ses.e < plan.bg.end) return { key: plan.bg.track, at: ses.e - plan.bg.start };
+            const b = (plan.bgs || []).find(x => ses.e >= x.start && ses.e < x.end);
+            if (b) return { key: b.track, at: ses.e - b.start };
             return null;
         }
         const MONK_PLANS = { morning: monkPlan('morning'), evening: monkPlan('evening') };
