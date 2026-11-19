@@ -512,10 +512,14 @@
         <div class="xinxiang-modal max-w-md w-full p-5 relative">
             <button onclick="closeXiaorenModal()" class="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-bold">✕</button>
             <h3 class="text-lg font-bold text-amber-300 tracking-wider mb-1">👡 打小人・化解是非</h3>
-            <p class="text-xs text-stone-300 mb-3">民俗儀式：先祭白虎爺，再由神婆以拖鞋拍打紙人七下，最後火化紙人，驅走是非小人與霉運。只寫想化解的「事」，不寫真實人名，心存善念才是根本。</p>
+            <p class="text-xs text-stone-300 mb-3">民俗儀式：先祭白虎爺，神婆在紙人上寫下小人的稱呼，以拖鞋拍打七下，再火化紙人、擲筊請示，驅走是非小人與霉運。發洩完就放下，心存善念才是根本。</p>
             <div class="bg-black/30 border border-amber-300/25 rounded-xl p-3 space-y-3">
                 <label class="block text-[11px] text-amber-200">想化解的是
                     <select id="xiaorenType" class="mt-1 w-full px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white"></select>
+                </label>
+                <label class="block text-[11px] text-amber-200">小人的稱呼／名字（可不填，最多 6 字）
+                    <input id="xiaorenName" maxlength="6" placeholder="例：那個同事、王小明" class="mt-1 w-full px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white">
+                    <span class="block mt-1 text-[10px] text-stone-400">只寫在你自己畫面的紙人上，不會傳給其他香客、也不會保存。</span>
                 </label>
                 <button onclick="startDaXiaoren()" class="w-full py-2.5 bg-red-800 hover:bg-red-700 text-amber-100 border border-amber-400/50 rounded-lg text-sm font-bold tracking-widest">👡 開始打小人</button>
                 <div class="text-[11px] text-stone-400 text-center">已打小人 <span id="xiaorenCount">0</span> 次</div>
@@ -9598,16 +9602,17 @@
 
             // 白虎爺 shrine: small red-brick niche with a tiled roof, white tiger inside
             const sh = new THREE.Group();
-            sh.position.set(0, 0.12, -2.4);
+            // deep enough for the whole tiger (tail and haunches stay inside the back wall)
+            sh.position.set(0, 0.12, -2.15);
             g.add(sh);
             const shBox = (w, h, d, mat, px, py, pz) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(px, py, pz); m.castShadow = true; sh.add(m); return m; };
-            shBox(2.0, 0.5, 1.2, stone, 0, 0.25, 0);
-            shBox(2.0, 1.4, 0.15, brickMat, 0, 1.2, -0.52);
-            [-0.95, 0.95].forEach(x => shBox(0.15, 1.4, 1.2, brickMat, x, 1.2, 0));
-            shBox(2.3, 0.08, 1.5, goldMat, 0, 1.94, 0.05);
+            shBox(2.0, 0.5, 1.65, stone, 0, 0.25, -0.22);
+            shBox(2.0, 1.4, 0.15, brickMat, 0, 1.2, -0.97);
+            [-0.95, 0.95].forEach(x => shBox(0.15, 1.4, 1.65, brickMat, x, 1.2, -0.22));
+            shBox(2.3, 0.08, 1.95, goldMat, 0, 1.94, -0.17);
             const tile = new THREE.MeshStandardMaterial({ map: createRoofTileTexture(), roughness: 0.55 });
-            [-1, 1].forEach(s => { const r = shBox(2.5, 0.08, 0.95, tile, 0, 2.2, s * 0.35 + 0.05); r.rotation.x = s * 0.55; });
-            shBox(2.6, 0.12, 0.12, red, 0, 2.47, 0.05);
+            [-1, 1].forEach(s => { const r = shBox(2.5, 0.08, 1.2, tile, 0, 2.2, s * 0.46 - 0.17); r.rotation.x = s * 0.5; });
+            shBox(2.6, 0.12, 0.12, red, 0, 2.47, -0.17);
             const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.28), new THREE.MeshStandardMaterial({ map: createSignboardTexture('白 虎 爺', 300, 92, '#2a0806', '#facc15', '#fef08a', false, 56) }));
             sign.position.set(0, 1.72, 0.62);
             sh.add(sign);
@@ -9629,9 +9634,9 @@
             const censer = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.11, 0.16, 16), M.bronze);
             censer.position.set(0, 0.58, 0.45);
             sh.add(censer);
-            addSmokeEmitter(...localToWorld(XIAOREN_POS, 0, 0, -1.95).toArray().map((v, i) => i === 1 ? 0.95 : v), 4, 0.35, 0.9, 0xf1f5f9, 0.12);
-            const shw = localToWorld(XIAOREN_POS, 0, 0, -2.4);
-            colliders.push({ x: shw.x, z: shw.z, r: 1.15 });
+            addSmokeEmitter(...localToWorld(XIAOREN_POS, 0, 0, -1.7).toArray().map((v, i) => i === 1 ? 0.95 : v), 4, 0.35, 0.9, 0xf1f5f9, 0.12);
+            const shw = localToWorld(XIAOREN_POS, 0, 0, -2.35);
+            colliders.push({ x: shw.x, z: shw.z, r: 1.25 });
 
             // the striking stone with a brick, and the paper villain lying on it
             box(1.0, 0.5, 0.7, dark, 0, 0.37, 0.2);
@@ -9722,62 +9727,291 @@
             src.start(now);
         }
 
+        // ---- 打小人（精修）：紙人可寫上小人稱呼／名字（只在自己畫面，不傳送、不保存）。
+        // 流程：神婆轉身祭白虎（白虎爺吼一聲）→ 提筆在紙人上寫名字 → 拖鞋高舉、蓄力、重拍七下（每下留鞋印、紙皺、紙彈起、紙屑飛）
+        // → 紙人揉起丟進化紙桶，火焰由下往上燒、焦邊與灰燼飛散 → 擲筊問神（聖筊／笑筊／陰筊）
+        const XR = { canvas: null, ctx: null, tex: null, base: null, anim: null, pivot: null, brush: null, blocks: null, paperGeo: null, rest: null };
+        function drawXiaorenPaperBase(type) {
+            const c = XR.canvas, x = XR.ctx;
+            x.setTransform(1, 0, 0, 1, 0, 0);
+            x.globalAlpha = 1; x.globalCompositeOperation = 'source-over';
+            // aged yellow paper with fibres
+            const g = x.createLinearGradient(0, 0, 256, 384); g.addColorStop(0, '#f5e3a2'); g.addColorStop(1, '#e8cf82');
+            x.fillStyle = g; x.fillRect(0, 0, 256, 384);
+            x.globalAlpha = 0.12; x.strokeStyle = '#8a6a2a'; x.lineWidth = 1;
+            for (let i = 0; i < 70; i++) { const px = Math.random() * 256, py = Math.random() * 384; x.beginPath(); x.moveTo(px, py); x.lineTo(px + (Math.random() - 0.5) * 30, py + (Math.random() - 0.5) * 8); x.stroke(); }
+            x.globalAlpha = 1;
+            x.strokeStyle = '#b91c1c'; x.lineWidth = 7; x.strokeRect(8, 8, 240, 368);
+            x.lineWidth = 2; x.strokeRect(17, 17, 222, 350);
+            // the little villain: big head, scowl, spiky hair, wobbly limbs
+            x.strokeStyle = '#1c1917'; x.fillStyle = '#1c1917'; x.lineCap = 'round'; x.lineJoin = 'round';
+            x.lineWidth = 6; x.beginPath(); x.arc(128, 88, 36, 0, Math.PI * 2); x.stroke();
+            x.lineWidth = 4; x.beginPath(); for (let i = 0; i < 5; i++) { const a = Math.PI * (1.15 + i * 0.175); x.moveTo(128 + Math.cos(a) * 36, 88 + Math.sin(a) * 36); x.lineTo(128 + Math.cos(a) * 50, 88 + Math.sin(a) * 50); } x.stroke();
+            x.beginPath(); x.moveTo(106, 74); x.lineTo(121, 82); x.moveTo(150, 74); x.lineTo(135, 82); x.stroke();
+            x.beginPath(); x.arc(114, 90, 3, 0, 7); x.arc(142, 90, 3, 0, 7); x.fill();
+            x.beginPath(); x.moveTo(114, 110); x.quadraticCurveTo(128, 100, 142, 110); x.stroke();
+            x.lineWidth = 6;
+            x.beginPath(); x.moveTo(128, 124); x.lineTo(128, 222); x.moveTo(80, 150); x.quadraticCurveTo(128, 140, 176, 150); x.moveTo(128, 222); x.lineTo(96, 286); x.moveTo(128, 222); x.lineTo(160, 286); x.stroke();
+            x.fillStyle = '#b91c1c'; x.font = 'bold 30px "Noto Serif TC", serif'; x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+            x.fillText(type, 128, 350);
+            XR.base = x.getImageData(0, 0, 256, 384);
+            XR.tex.needsUpdate = true;
+        }
+        // reveal the name with a brush, k = 0..1
+        function drawXiaorenName(name, k) {
+            const x = XR.ctx;
+            x.putImageData(XR.base, 0, 0);
+            if (!name) { XR.tex.needsUpdate = true; return; }
+            const chars = [...name].slice(0, 6);
+            const fs = chars.length <= 2 ? 52 : chars.length <= 3 ? 46 : chars.length <= 4 ? 38 : 31;
+            x.save();
+            x.font = `bold ${fs}px "LXGW WenKai TC","Noto Serif TC",serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
+            // a name tablet written down the villain's body, vertically, in black ink inside a red frame
+            const colW = fs * 1.25, colH = chars.length * fs * 1.04 + 14, top = 132, left = 128 - colW / 2;
+            x.fillStyle = '#f6e7b4'; x.fillRect(left, top, colW, colH);
+            x.strokeStyle = '#b91c1c'; x.lineWidth = 3; x.strokeRect(left + 2, top + 2, colW - 4, colH - 4);
+            const shown = k * chars.length;
+            chars.forEach((ch, i) => {
+                const a = Math.max(0, Math.min(1, shown - i));
+                if (a <= 0) return;
+                const cy = top + 7 + fs * 0.52 + i * fs * 1.04;
+                x.save();
+                x.beginPath(); x.rect(0, cy - fs / 2 - 2, 256, (fs + 4) * a); x.clip();
+                x.fillStyle = '#0d0d0d'; x.fillText(ch, 128, cy + 1);
+                x.restore();
+            });
+            x.restore();
+            XR.tex.needsUpdate = true;
+        }
+        // a blue slipper print where the slipper landed
+        function stampSlipperPrint(u, v, rot) {
+            const x = XR.ctx;
+            x.save();
+            x.translate(u * 256, v * 384); x.rotate(rot);
+            x.globalAlpha = 0.5; x.fillStyle = '#1e3a8a';
+            x.beginPath(); x.ellipse(0, -24, 20, 28, 0, 0, Math.PI * 2); x.ellipse(0, 26, 16, 22, 0, 0, Math.PI * 2); x.fill();
+            x.globalAlpha = 0.35; x.strokeStyle = '#0b1a44'; x.lineWidth = 2;
+            for (let i = -3; i <= 3; i++) { x.beginPath(); x.moveTo(-14, i * 9 - 20); x.lineTo(14, i * 9 - 20); x.stroke(); }
+            x.restore();
+            XR.tex.needsUpdate = true;
+        }
+        // burn from the bottom up, k = 0..1
+        function drawXiaorenBurn(k) {
+            const x = XR.ctx;
+            const front = 384 - k * 430;
+            for (let i = 0; i < 18; i++) {
+                const px = Math.random() * 256, py = front + Math.random() * 30 + Math.sin(px * 0.08) * 14;
+                x.fillStyle = 'rgba(20,12,8,0.9)'; x.beginPath(); x.arc(px, py + 22, 16 + Math.random() * 12, 0, 7); x.fill();
+                x.fillStyle = 'rgba(255,140,30,0.85)'; x.beginPath(); x.arc(px, py, 4 + Math.random() * 5, 0, 7); x.fill();
+            }
+            x.fillStyle = 'rgba(15,10,6,1)'; x.fillRect(0, front + 40, 256, 400);
+            XR.tex.needsUpdate = true;
+        }
+        function crumplePaper(amount, seed) {
+            const g = XR.paperGeo, p = g.attributes.position, b = XR.rest;
+            const rnd = seededRandom(seed);
+            const cx = (rnd() - 0.5) * 0.3, cy = (rnd() - 0.5) * 0.5;
+            for (let i = 0; i < p.count; i++) {
+                const dx = b[i * 3] - cx, dy = b[i * 3 + 1] - cy;
+                const d = Math.exp(-(dx * dx + dy * dy) / 0.02);
+                p.setZ(i, p.getZ(i) + (rnd() - 0.4) * 0.025 * amount * (0.3 + d));
+            }
+            p.needsUpdate = true; g.computeVertexNormals();
+        }
+        function resetPaper() {
+            const g = XR.paperGeo, p = g.attributes.position;
+            for (let i = 0; i < p.count; i++) p.setXYZ(i, XR.rest[i * 3], XR.rest[i * 3 + 1], XR.rest[i * 3 + 2]);
+            p.needsUpdate = true; g.computeVertexNormals();
+            xiaoren.paper.position.set(0, 0.745, 0.2); xiaoren.paper.rotation.set(-Math.PI / 2, 0, 0); xiaoren.paper.scale.set(1, 1, 1);
+            xiaoren.paper.visible = true;
+        }
+        function setupXiaorenRig() {
+            // paper: a subdivided sheet on its own canvas so it can crumple, be written on, stamped and burned
+            XR.canvas = document.createElement('canvas'); XR.canvas.width = 256; XR.canvas.height = 384;
+            XR.ctx = XR.canvas.getContext('2d');
+            XR.tex = new THREE.CanvasTexture(XR.canvas);
+            xiaoren.paperMat.map = XR.tex; xiaoren.paperMat.needsUpdate = true;
+            XR.paperGeo = new THREE.PlaneGeometry(0.5, 0.74, 10, 14);
+            xiaoren.paper.geometry.dispose(); xiaoren.paper.geometry = XR.paperGeo;
+            XR.rest = Float32Array.from(XR.paperGeo.attributes.position.array);
+            drawXiaorenPaperBase(xiaoren.type);
+            // the granny turns on a pivot so she can lean into each strike
+            const gr = xiaoren.granny, pv = new THREE.Group();
+            pv.position.copy(gr.position); pv.rotation.y = gr.rotation.y;
+            gr.parent.add(pv); pv.add(gr);
+            gr.position.set(0, 0, 0); gr.rotation.set(0, 0, 0);
+            XR.pivot = pv; XR.pivotYaw = pv.rotation.y;
+            // a writing brush (hidden until she writes)
+            const brush = new THREE.Group();
+            const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.012, 0.2, 8), new THREE.MeshStandardMaterial({ color: 0x7a4a24 }));
+            const tip = new THREE.Mesh(new THREE.ConeGeometry(0.016, 0.05, 8), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+            tip.position.y = -0.12; tip.rotation.x = Math.PI;
+            brush.add(handle, tip); brush.position.set(0, -0.42, 0.06); brush.rotation.x = 0.9; brush.visible = false;
+            gr.userData.leftArm.add(brush);
+            XR.brush = brush;
+            // two red 筊杯 for the closing question
+            const jMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.4 });
+            XR.blocks = [0, 1].map(() => {
+                const b = new THREE.Mesh(new THREE.SphereGeometry(0.07, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2), jMat);
+                b.scale.set(0.7, 0.5, 1.5); b.visible = false; b.castShadow = true;
+                xiaoren.group.add(b); return b;
+            });
+        }
         function startDaXiaoren() {
             if (xiaoren.busy) return;
+            if (!XR.canvas) setupXiaorenRig();
             xiaoren.type = document.getElementById('xiaorenType').value || XIAOREN_TYPES[0];
+            const name = (document.getElementById('xiaorenName').value || '').trim().replace(/\s+/g, '').slice(0, 6);
             closeXiaorenModal();
             emitAct('xiaoren');
             xiaoren.busy = true;
-            xiaoren.paperMat.map = createXiaorenPaperTexture(xiaoren.type);
+            resetPaper();
             xiaoren.paperMat.color.set(0xffffff);
-            xiaoren.paperMat.needsUpdate = true;
-            xiaoren.paper.visible = true;
-            xiaoren.paper.scale.set(1, 1, 1);
+            drawXiaorenPaperBase(xiaoren.type);
             moveCameraPreset('xiaoren');
-            playTempleBellSound(440);
-            showToast('🐯 先以肥豬肉、雞蛋祭白虎爺：白虎吃飽，不再傷人、不惹是非。');
-            const arm = xiaoren.granny.userData.rightArm;
-            XIAOREN_CHANTS.forEach((line, i) => {
-                setTimeout(() => {
-                    // raise then strike
-                    if (arm) arm.rotation.x = -2.4;
-                    setTimeout(() => {
-                        if (arm) arm.rotation.x = -0.35;
-                        playSlapSound(1 + (i === 6 ? 0.5 : 0));
-                        xiaoren.paper.scale.set(1.04, 1.04, 1);
-                        setTimeout(() => xiaoren.paper.scale.set(1, 1, 1), 90);
-                        showToast(`👡 ${line}`);
-                    }, 180);
-                }, 2200 + i * 1100);
-            });
-            // burn the paper villain in the bucket
-            setTimeout(() => {
-                if (arm) arm.rotation.x = -0.5;
-                xiaoren.paperMat.color.set(0x3a2a1a);
-                xiaoren.brazierFire.visible = true;
-                xiaoren.brazierLight.intensity = 2.2;
-                playTempleBellSound(660);
-                let k = 0;
-                const shrink = setInterval(() => {
-                    k++;
-                    xiaoren.paper.scale.setScalar(Math.max(0.01, 1 - k / 20));
-                    if (k >= 20) { clearInterval(shrink); xiaoren.paper.visible = false; }
-                }, 60);
-                for (let i = 0; i < 40; i++) {
-                    const p = localToWorld(XIAOREN_POS, 1.5 + (Math.random() - 0.5) * 0.3, 0.8, 0.6 + (Math.random() - 0.5) * 0.3);
-                    spawnSpark(p, new THREE.Vector3((Math.random() - 0.5) * 0.8, 1.5 + Math.random() * 1.5, (Math.random() - 0.5) * 0.8), [1, 0.55 + Math.random() * 0.3, 0.15], 1.0 + Math.random() * 0.8, 0.96);
+            XR.anim = { t: 0, name, hit: -1, phase: '', seed: (Math.random() * 1e6) | 0,
+                chants: XIAOREN_CHANTS.map(l => name ? l.replace(/^打你個小人(.)，/, `打你個小人「${name}」的$1，`) : l) };
+        }
+        const XR_T = { offer: 0, write: 3.4, strike: 6.4, per: 1.25 };
+        function updateXiaoren(dt) {
+            // paper scraps: fall, spin, settle, then vanish
+            if (XR.scraps && XR.scraps.length) for (let i = XR.scraps.length - 1; i >= 0; i--) {
+                const sc = XR.scraps[i], d = Math.min(dt, 0.05);
+                sc.life -= d;
+                if (sc.m.position.y > 0.13) { sc.v.y -= 6 * d; sc.m.position.addScaledVector(sc.v, d); sc.m.rotation.x += sc.spin * d; sc.m.rotation.y += sc.spin * 0.7 * d; }
+                else { sc.m.position.y = 0.125; sc.m.rotation.set(-Math.PI / 2, 0, sc.m.rotation.z); }
+                if (sc.life <= 0) { sc.m.parent.remove(sc.m); sc.m.geometry.dispose(); XR.scraps.splice(i, 1); }
+            }
+            const A = XR.anim;
+            if (!A) return;
+            if (!XR.freeze) A.t += Math.min(dt, 0.05);
+            const t = A.t, gr = xiaoren.granny, ud = gr.userData, pv = XR.pivot;
+            const arm = ud.rightArm, larm = ud.leftArm;
+            const ease = k => k < 0 ? 0 : k > 1 ? 1 : k * k * (3 - 2 * k);
+            const sTotal = XR_T.strike + XR_T.per * XIAOREN_CHANTS.length;
+            if (t < XR_T.write) {
+                // turn toward the 白虎爺 shrine, bow twice, feed the tiger
+                if (A.phase !== 'offer') { A.phase = 'offer'; playTempleBellSound(440); showToast('🐯 先以肥豬肉、雞蛋祭白虎爺：白虎吃飽，不再傷人、不惹是非。'); }
+                const turn = ease(t / 0.8) - ease((t - 2.6) / 0.8);
+                pv.rotation.y = XR.pivotYaw + turn * 1.45;
+                const bow = Math.max(0, Math.sin(Math.max(0, t - 0.8) / 1.8 * Math.PI * 2)) * (t > 0.8 && t < 2.6 ? 1 : 0);
+                gr.rotation.x = bow * 0.35;
+                arm.rotation.x = larm.rotation.x = -0.9 - bow * 0.5;
+                if (!A.roared && t > 1.6) { A.roared = true; const w = blackTigers.find(b => b.g.parent && b.g.parent.parent === xiaoren.group); (w ? [w] : blackTigers).forEach(b => { b.roarUntil = performance.now() + 900; }); playBigDrum(0.25); }
+                return;
+            }
+            if (t < XR_T.strike) {
+                // write the name with a brush in the left hand
+                if (A.phase !== 'write') {
+                    A.phase = 'write'; pv.rotation.y = XR.pivotYaw; gr.rotation.x = 0.25; arm.rotation.x = -0.5;
+                    XR.brush.visible = !!A.name;
+                    showToast(A.name ? `🖌️ 神婆提筆在紙人身上寫下「${A.name}」` : '🖌️ 紙人放上打小人石');
                 }
-                xiaoren.count++;
-                showToast(`🔥 「${xiaoren.type}」紙人已火化，是非退散、貴人臨門！（已打小人 ${xiaoren.count} 次）`);
-            }, 2200 + XIAOREN_CHANTS.length * 1100 + 400);
-            setTimeout(() => {
-                xiaoren.brazierFire.visible = false;
-                xiaoren.brazierLight.intensity = 0;
-                xiaoren.paperMat.color.set(0xffffff);
-                xiaoren.paper.visible = true;
-                xiaoren.paper.scale.set(1, 1, 1);
-                xiaoren.busy = false;
-            }, 2200 + XIAOREN_CHANTS.length * 1100 + 5000);
+                const k = (t - XR_T.write) / (XR_T.strike - XR_T.write - 0.4);
+                larm.rotation.x = -1.1 + Math.sin(t * 14) * 0.08; larm.rotation.z = 0.25 + Math.sin(t * 9) * 0.08;
+                drawXiaorenName(A.name, Math.min(1, k));
+                return;
+            }
+            if (t < sTotal) {
+                if (A.phase !== 'strike') { A.phase = 'strike'; XR.brush.visible = false; larm.rotation.set(-0.6, 0, -0.12); XR.base = XR.ctx.getImageData(0, 0, 256, 384); }
+                const i = Math.floor((t - XR_T.strike) / XR_T.per), u = (t - XR_T.strike) / XR_T.per - i;
+                const last = i === XIAOREN_CHANTS.length - 1;
+                // windup (slow, lean back) → strike (fast, lean in) → hold → recover
+                let a, lean;
+                if (u < 0.5) { const k = ease(u / 0.5); a = -0.6 - k * 2.2; lean = -k * 0.12; }
+                else if (u < 0.6) { const k = (u - 0.5) / 0.1; a = -2.8 + k * k * 2.6; lean = -0.12 + k * 0.42; }
+                else if (u < 0.78) { a = -0.2; lean = 0.3; }
+                else { const k = ease((u - 0.78) / 0.22); a = -0.2 - k * 0.4; lean = 0.3 - k * 0.3; }
+                arm.rotation.x = a; gr.rotation.x = lean;
+                ud.headGroup.rotation.x = lean * 0.6;
+                if (i !== A.hit && u >= 0.6) {
+                    A.hit = i;
+                    playSlapSound(1 + (last ? 0.6 : 0.1 * i));
+                    stampSlipperPrint(0.3 + Math.random() * 0.4, 0.25 + Math.random() * 0.5, (Math.random() - 0.5) * 0.8);
+                    crumplePaper(last ? 2.2 : 1, A.seed + i);
+                    A.hop = 1;
+                    // little scraps of paper fly off the stone
+                    for (let k = 0; k < (last ? 10 : 4); k++) {
+                        const m = new THREE.Mesh(new THREE.PlaneGeometry(0.035, 0.025), XR.scrapMat || (XR.scrapMat = new THREE.MeshStandardMaterial({ color: 0xf0d890, side: THREE.DoubleSide, roughness: 0.8 })));
+                        m.position.set((Math.random() - 0.5) * 0.3, 0.78, 0.2 + (Math.random() - 0.5) * 0.4);
+                        xiaoren.group.add(m);
+                        (XR.scraps || (XR.scraps = [])).push({ m, v: new THREE.Vector3((Math.random() - 0.5) * 1.4, 1.0 + Math.random() * 1.0, (Math.random() - 0.5) * 1.4), spin: (Math.random() - 0.5) * 20, life: 1.6 });
+                    }
+                    showToast(`👡 ${A.chants[i]}`);
+                }
+                // the paper jumps and settles after each slap
+                if (A.hop) { A.hop = Math.max(0, A.hop - dt * 4.5); xiaoren.paper.position.y = 0.745 + Math.sin(A.hop * Math.PI) * 0.05; xiaoren.paper.rotation.z = (A.hop) * 0.15 * (i % 2 ? 1 : -1); }
+                return;
+            }
+            const burnStart = sTotal + 1.3, burnEnd = burnStart + 2.6, jiaoStart = burnEnd + 0.6, end = jiaoStart + 2.6;
+            if (t < burnStart) {
+                // crumple it up and toss it into the burning bucket
+                if (A.phase !== 'toss') { A.phase = 'toss'; arm.rotation.x = -0.6; gr.rotation.x = 0; ud.headGroup.rotation.x = 0; crumplePaper(3, A.seed + 99); showToast('🗞️ 紙人揉成一團，丟進化紙桶……'); }
+                const k = (t - sTotal) / 1.3;
+                xiaoren.paper.scale.setScalar(1 - Math.min(0.55, k * 0.9));
+                const from = new THREE.Vector3(0, 0.745, 0.2), to = new THREE.Vector3(1.5, 0.62, 0.6);
+                const kk = ease((k - 0.3) / 0.7);
+                xiaoren.paper.position.set(from.x + (to.x - from.x) * kk, from.y + (to.y - from.y) * kk + Math.sin(kk * Math.PI) * 0.6, from.z + (to.z - from.z) * kk);
+                xiaoren.paper.rotation.z += dt * 6 * kk;
+                larm.rotation.x = -0.6 - Math.sin(Math.min(1, k * 1.6) * Math.PI) * 1.4;
+                return;
+            }
+            if (t < burnEnd) {
+                if (A.phase !== 'burn') {
+                    A.phase = 'burn';
+                    xiaoren.paper.position.set(1.5, 0.62, 0.6); xiaoren.paper.scale.setScalar(0.45);
+                    xiaoren.brazierFire.visible = true; xiaoren.brazierLight.intensity = 2.4;
+                    playTempleBellSound(660);
+                    xiaoren.count++;
+                    showToast(`🔥 「${A.name ? A.name + '・' : ''}${xiaoren.type}」紙人火化，是非退散、貴人臨門！（已打小人 ${xiaoren.count} 次）`);
+                }
+                const k = (t - burnStart) / (burnEnd - burnStart);
+                drawXiaorenBurn(k);
+                xiaoren.paperMat.color.setRGB(1 - k * 0.6, 1 - k * 0.7, 1 - k * 0.75);
+                xiaoren.paper.scale.setScalar(0.45 * (1 - k * 0.9));
+                const f = xiaoren.brazierFire;
+                f.scale.set(1 + Math.sin(t * 23) * 0.12, 1.2 + Math.sin(t * 17) * 0.3 + (1 - k) * 0.6, 1 + Math.cos(t * 19) * 0.12);
+                f.material.opacity = 0.75 + Math.sin(t * 31) * 0.15;
+                xiaoren.brazierLight.intensity = 2.0 + Math.sin(t * 27) * 0.5;
+                if (Math.random() < 0.6) {
+                    const p = localToWorld(XIAOREN_POS, 1.5 + (Math.random() - 0.5) * 0.3, 0.85, 0.6 + (Math.random() - 0.5) * 0.3);
+                    const ash = Math.random() < 0.4;
+                    spawnSpark(p, new THREE.Vector3((Math.random() - 0.5) * 0.6, 1.2 + Math.random() * 1.6, (Math.random() - 0.5) * 0.6), ash ? [0.35, 0.33, 0.3] : [1, 0.5 + Math.random() * 0.3, 0.12], 1.0 + Math.random() * 0.9, 0.97);
+                }
+                return;
+            }
+            if (t < end) {
+                if (A.phase !== 'jiao') {
+                    A.phase = 'jiao';
+                    xiaoren.paper.visible = false; xiaoren.brazierFire.visible = false; xiaoren.brazierLight.intensity = 0;
+                    // 擲筊: 聖筊 (one up one down) is the most likely
+                    const r = Math.random();
+                    A.jiao = r < 0.6 ? 'sheng' : r < 0.8 ? 'xiao' : 'yin';
+                    XR.blocks.forEach((b, k) => { b.visible = true; b.userData.from = new THREE.Vector3(-0.6, 1.0, 0.25 + k * 0.08); b.userData.to = new THREE.Vector3(0.35 + k * 0.25, 0.15, 1.15 + k * 0.12); b.userData.up = A.jiao === 'xiao' ? true : A.jiao === 'yin' ? false : k === 0; });
+                    larm.rotation.x = -1.6; arm.rotation.x = -1.6;
+                    showToast('🙏 神婆雙手合捧筊杯，向白虎爺請示……');
+                }
+                const k = Math.min(1, (t - jiaoStart) / 0.9);
+                XR.blocks.forEach((b, j) => {
+                    const { from, to, up } = b.userData;
+                    b.position.set(from.x + (to.x - from.x) * k, from.y + (to.y - from.y) * k + Math.sin(k * Math.PI) * 0.5, from.z + (to.z - from.z) * k);
+                    b.rotation.set((1 - k) * 9 + (up ? 0 : Math.PI), j * 0.7 + k * 0.4, (1 - k) * 5);
+                });
+                if (k >= 1 && !A.jiaoShown) {
+                    A.jiaoShown = true; larm.rotation.x = arm.rotation.x = -0.6;
+                    playCoinClink();
+                    showToast(A.jiao === 'sheng' ? '🌙 聖筊！白虎爺應允：小人退散、是非已解，好運到！' : A.jiao === 'xiao' ? '😊 笑筊：神明笑而不語，心放寬、多行善，自然化解。' : '🌑 陰筊：還需靜心反省，退一步海闊天空，下回再來。');
+                }
+                return;
+            }
+            // reset
+            XR.blocks.forEach(b => { b.visible = false; });
+            xiaoren.paperMat.color.set(0xffffff);
+            drawXiaorenPaperBase(xiaoren.type);
+            resetPaper();
+            gr.rotation.set(0, 0, 0); pv.rotation.y = XR.pivotYaw; arm.rotation.set(-0.5, 0, 0.12); larm.rotation.set(0, 0, -0.12); ud.headGroup.rotation.x = 0;
+            XR.anim = null;
+            xiaoren.busy = false;
         }
 
         // ---------------------------------------------------------------- fireworks area
@@ -15567,9 +15801,13 @@
             group.add(sash, collarL, collarR);
 
             // Arms hang from shoulder pivots
+            // hands hang about 0.4 below the shoulder; keep them just outside the robe at that height so they never sink in
+            const prof = [[hemR, hemY], [0.29 * waistW, 0.62], [0.26 * (shW + waistW) / 2, 0.82]];
+            const robeR = y => { for (let i = 0; i < prof.length - 1; i++) { const [r0, y0] = prof[i], [r1, y1] = prof[i + 1]; if (y >= y0 && y <= y1) return r0 + (r1 - r0) * (y - y0) / (y1 - y0); } return prof[0][0]; };
+            const armX = Math.max(0.25 * shW, robeR(0.55) + 0.045 - 0.048, robeR(0.62) + 0.06 - 0.03);
             const makeArm = s => {
                 const arm = new THREE.Group();
-                arm.position.set(s * 0.25 * shW, 0.94, 0);
+                arm.position.set(s * armX, 0.94, 0);
                 const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.095, 0.34, 12), clothesMat);
                 sleeve.position.y = -0.17;
                 sleeve.castShadow = true;
@@ -16658,6 +16896,7 @@
             updateLotusPond(t, dt);
             updateTowersAndPond(t, dt);
             updateFortuneStall(t, dt);
+            updateXiaoren(dt);
             netTick(dt);
 
             npcWalkers.forEach(w => {
