@@ -9059,28 +9059,62 @@
             zanfo: ['讚佛偈', ['阿彌陀佛身金色　相好光明無等倫', '白毫宛轉五須彌　紺目澄清四大海', '光中化佛無數億　化菩薩眾亦無邊', '四十八願度眾生　九品咸令登彼岸', '南無西方極樂世界　大慈大悲阿彌陀佛']],
             nianfo: ['念佛', ['南無阿彌陀佛', '南無阿彌陀佛', '南無阿彌陀佛', '南無阿彌陀佛', '南無觀世音菩薩', '南無大勢至菩薩', '南無清淨大海眾菩薩']],
             sanguiyi: ['三皈依', ['自皈依佛　當願眾生　體解大道　發無上心', '自皈依法　當願眾生　深入經藏　智慧如海', '自皈依僧　當願眾生　統理大眾　一切無礙']],
+            lengyan: ['楞嚴咒（節錄）', ['（宣化上人唱誦〈楞嚴咒〉片段）']],
             huixiang: ['迴向偈', ['願以此功德　莊嚴佛淨土', '上報四重恩　下濟三途苦', '若有見聞者　悉發菩提心', '盡此一報身　同生極樂國']]
         };
-        const CHANT_ORDER = { morning: ['luxiang', 'dabei', 'xinjing', 'zanfo', 'nianfo', 'sanguiyi', 'huixiang'], evening: ['luxiang', 'mituo', 'xinjing', 'zanfo', 'nianfo', 'sanguiyi', 'huixiang'] };
+        const CHANT_ORDER = { morning: ['luxiang', 'lengyan', 'dabei', 'xinjing', 'zanfo', 'nianfo', 'sanguiyi', 'huixiang'], evening: ['luxiang', 'mituo', 'xinjing', 'zanfo', 'nianfo', 'sanguiyi', 'huixiang'] };
         const LINE_SEC = 4.2;
+        // real recitation recordings (free licences, from Wikimedia Commons); the subtitles follow the recording
+        const CHANT_AUDIO = {
+            base: 'audio/', b64: false,
+            tracks: {
+                xinjing: { file: 'heart_sutra', dur: 132.8, from: 0.86, to: 131.2,
+                    credit: '《心經》誦讀錄音：Nyarlathotep1001，Wikimedia Commons，CC0 公眾領域' },
+                lengyan: { file: 'shurangama', dur: 30.8, from: 0, to: 30.8,
+                    credit: '〈楞嚴咒〉唱誦片段：宣化上人，Wikimedia Commons，CC BY-SA 3.0' },
+                // a background track: the monks of 靈隱寺 chanting, heard while the monk goes up to the altar and through 〈爐香讚〉
+                lingyin: { file: 'lingyin_chant', dur: 63.3, bg: true,
+                    credit: '杭州靈隱寺僧眾誦經錄音：LouiseBrown1981，Wikimedia Commons，CC BY-SA 3.0' }
+            },
+            el: null, key: null, loading: {}
+        };
         const MONK = { mesh: null, ud: null, seat: null, spots: null, seg: -1, plan: null, demoStart: 0, demoKey: null, lastBeat: -1, lastLine: '', bannerHidden: '', mallet: null };
         // build the program: a list of timed segments
         function monkPlan(key) {
             const segs = [];
+            const bgTr = CHANT_AUDIO.tracks.lingyin, bg = bgTr ? { track: 'lingyin', start: 12, end: 12 + bgTr.dur } : null;
             segs.push({ kind: 'call', dur: 12 });                               // bell / drum from afar, monk rises
             segs.push({ kind: 'walk', dur: 6, from: 'seat', to: 'center' });
             segs.push({ kind: 'bows', dur: 12 });
             segs.push({ kind: 'walk', dur: 5, from: 'center', to: 'muyu' });
             CHANT_ORDER[key].forEach((t, i) => {
                 const [title, lines] = CHANT_TEXTS[t];
-                segs.push({ kind: 'chant', dur: lines.length * LINE_SEC + 2, title, lines, bowl: true });
+                const tr = CHANT_AUDIO.tracks[t];
+                if (tr) {
+                    // subtitle timing: spread the recording over the lines by character count
+                    const n = lines.map(l => l.replace(/\s|　/g, '').length), tot = n.reduce((a, b) => a + b, 0);
+                    let acc = 0; const lt = n.map(c => { const s0 = tr.from + (tr.to - tr.from) * acc / tot; acc += c; return s0; });
+                    segs.push({ kind: 'chant', dur: tr.dur + 2, title, lines, bowl: true, audio: t, lt });
+                } else {
+                    let dur = lines.length * LINE_SEC + 2;
+                    // 〈爐香讚〉 is sung slowly over the monks' chanting, until the background recording ends
+                    if (t === 'luxiang' && bg) dur = Math.max(dur, bg.end - segs.reduce((a, x) => a + x.dur, 0));
+                    segs.push({ kind: 'chant', dur, title, lines, bowl: true });
+                }
             });
             segs.push({ kind: 'walk', dur: 5, from: 'muyu', to: 'center' });
             segs.push({ kind: 'bows', dur: 12 });
             segs.push({ kind: 'walk', dur: 6, from: 'center', to: 'seat' });
             let t = 0;
             segs.forEach(s => { s.t0 = t; t += s.dur; });
-            return { segs, total: t };
+            return { segs, total: t, bg };
+        }
+        // which recording should be heard at this moment of the service, and how far into it
+        function chantTrackAt(ses) {
+            const plan = MONK_PLANS[ses.key], seg = plan.segs.find(x => ses.e < x.t0 + x.dur);
+            if (seg && seg.audio) return { key: seg.audio, at: ses.e - seg.t0 };
+            if (plan.bg && ses.e >= plan.bg.start && ses.e < plan.bg.end) return { key: plan.bg.track, at: ses.e - plan.bg.start };
+            return null;
         }
         const MONK_PLANS = { morning: monkPlan('morning'), evening: monkPlan('evening') };
         function buildResidentMonk() {
@@ -9161,6 +9195,8 @@
             if (!M.mesh) return;
             const now = Date.now();
             const ses = monkSession(now);
+            const tk = ses ? chantTrackAt(ses) : null;
+            syncChantAudio(tk && tk.key, tk && tk.at);
             if (!ses) {
                 if (M.seg !== -1) { M.seg = -1; M.plan = null; monkSit(); hideChantBanner(); }
                 M.ud.headGroup.rotation.x = 0.12 + Math.sin(t * 0.5) * 0.04;   // calm breathing while sitting
@@ -9212,7 +9248,8 @@
                 ud.leftArm.rotation.x = ud.rightArm.rotation.x = -0.95 - b * 0.6;
             } else if (seg.kind === 'chant') {
                 const ce = ses.e - seg.t0;
-                const li = Math.min(seg.lines.length - 1, Math.floor(ce / LINE_SEC));
+                let li = Math.min(seg.lines.length - 1, Math.floor(ce / LINE_SEC));
+                if (seg.lt) { li = 0; while (li < seg.lt.length - 1 && ce >= seg.lt[li + 1]) li++; }
                 // 木魚: one beat per character-pair, about 1.6 per second
                 const beat = Math.floor(ce / 0.62);
                 if (beat !== M.lastBeat) {
@@ -9220,13 +9257,40 @@
                     ud.rightArm.rotation.x = -1.05;
                     const m = DAXIONG.muyu;
                     if (m) { m.put(m.hit); setTimeout(() => m.put(m.lift), 110); }
-                    if (nearHall()) playWoodenFishSound();
+                    if (nearHall() && !(CHANT_AUDIO.el && !CHANT_AUDIO.el.paused)) playWoodenFishSound();
                 } else if (ce % 0.62 > 0.15) ud.rightArm.rotation.x = -1.35;
                 ud.headGroup.rotation.x = 0.1 + Math.sin(t * 2) * 0.03;
                 showChantBanner(ses, `〈${seg.title}〉`, seg.lines[li]);
                 return;
             }
             showChantBanner(ses, seg.kind === 'call' ? (ses.key === 'morning' ? '晨鐘響起，法師準備上殿' : '暮鼓聲中，法師準備上殿') : seg.kind === 'bows' ? '頂禮三拜' : '入殿', '');
+        }
+        // ---- recorded recitation: load on first use, follow the service clock, only audible near the 大雄寶殿
+        function loadChantTrack(key) {
+            const A = CHANT_AUDIO, tr = A.tracks[key];
+            if (!tr) return Promise.resolve(null);
+            if (!A.loading[key]) A.loading[key] = fetch(A.base + tr.file + (A.b64 ? '.txt' : '.mp3')).then(r => { if (!r.ok) throw new Error('audio ' + r.status); return A.b64 ? r.text() : r.blob(); })
+                .then(d => { if (typeof d === 'string') { const bin = atob(d.trim()), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); d = new Blob([u], { type: 'audio/mpeg' }); } return URL.createObjectURL(d); })
+                .catch(e => { console.warn('chant audio unavailable', e); A.loading[key] = null; return null; });
+            return A.loading[key];
+        }
+        function syncChantAudio(key, at) {
+            const A = CHANT_AUDIO;
+            const want = key && !state.audioMuted && nearHall() && !document.hidden;
+            if (!want) { if (A.el && !A.el.paused) A.el.pause(); return; }
+            if (A.key !== key) {
+                A.key = key;
+                if (A.el) { A.el.pause(); A.el = null; }
+                loadChantTrack(key).then(url => { if (!url || A.key !== key) return; const el = new Audio(url); el.preload = 'auto'; A.el = el; });
+                return;
+            }
+            const el = A.el;
+            if (!el || at >= A.tracks[key].dur) { if (el && !el.paused) el.pause(); return; }
+            // volume: louder the closer the camera is to the hall
+            const p = camControl.target, d = Math.hypot(p.x - DAXIONG.x, p.z - DAXIONG.z);
+            el.volume = Math.max(0.15, Math.min(0.9, 1 - d / 26));
+            if (el.paused) { el.currentTime = Math.max(0, at); el.play().catch(() => {}); }
+            else if (Math.abs(el.currentTime - at) > 0.6) el.currentTime = Math.max(0, at);
         }
         // ---- the subtitle banner at the top of the screen
         function chantBannerEl() {
@@ -9238,6 +9302,7 @@
             el.innerHTML = `<div class="xinxiang-modal px-4 py-2 text-center" style="border-radius:14px">
                 <div class="text-[11px] text-amber-300" id="chantHead"></div>
                 <div class="text-base font-bold text-amber-100 tracking-widest" id="chantLine" style="font-family:'LXGW WenKai TC','Noto Serif TC',serif"></div>
+                <div class="text-[9px] text-stone-400" id="chantCredit"></div>
                 <div class="flex justify-center gap-2 mt-1">
                     <button onclick="goToMonk()" class="px-2 py-0.5 rounded-full text-[11px] palace-pill text-amber-200">🏯 前往大雄寶殿</button>
                     <button onclick="joinChant()" class="px-2 py-0.5 rounded-full text-[11px] palace-pill text-amber-200">🙏 隨眾共修</button>
@@ -9257,6 +9322,8 @@
             const h = `🙏 駐廟法師${name}${ses.demo ? '（示範）' : ''}進行中・${head}・約剩 ${left} 分鐘`;
             if (MONK.lastHead !== h) { document.getElementById('chantHead').textContent = h; MONK.lastHead = h; }
             if (MONK.lastLine !== line) { document.getElementById('chantLine').textContent = line || '　'; MONK.lastLine = line; }
+            const tk = chantTrackAt(ses), cr = tk ? '🔊 ' + CHANT_AUDIO.tracks[tk.key].credit + (nearHall() ? '' : '（到大雄寶殿附近才聽得到）') : '';
+            if (MONK.lastCredit !== cr) { document.getElementById('chantCredit').textContent = cr; MONK.lastCredit = cr; }
         }
         function hideChantBanner(byUser) {
             const el = document.getElementById('chantBanner');
@@ -9298,6 +9365,7 @@
             const mins = Math.round((nx.t - now) / 60000);
             el.style.display = '';
             el.dataset.ses = 'info';
+            document.getElementById('chantCredit').textContent = ''; MONK.lastCredit = null;
             document.getElementById('chantHead').textContent = `🙏 駐廟法師・每日 06:00 早課、18:00 晚課（約 ${Math.round(MONK_PLANS.morning.total / 60)} 分鐘，依您的當地時間）`;
             document.getElementById('chantLine').innerHTML = `下一場：${nx.s.name} ${fmt(new Date(nx.t))}（${mins >= 60 ? Math.floor(mins / 60) + ' 小時 ' : ''}${mins % 60} 分鐘後）<div class="flex justify-center gap-2 mt-1"><button onclick="startMonkDemo('morning')" class="px-2 py-0.5 rounded-full text-[11px] btn-warm-gold">▶ 看早課示範</button><button onclick="startMonkDemo('evening')" class="px-2 py-0.5 rounded-full text-[11px] btn-warm-gold">▶ 看晚課示範</button></div>`;
             MONK.lastLine = null; MONK.lastHead = null;
