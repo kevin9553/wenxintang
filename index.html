@@ -186,6 +186,7 @@
             <button onclick="moveCameraPreset('miaozhu')" id="camBtn-miaozhu" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏠 廟祝的窩</button>
             <button onclick="moveCameraPreset('zhaitang')" id="camBtn-zhaitang" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🍚 齋堂</button>
             <button onclick="focusTempleCat()" id="camBtn-cat" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🐈 廟貓在哪</button>
+            <button onclick="openMonkInfo()" id="camBtn-monk" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🙏 法師早晚課</button>
             <button onclick="moveCameraPreset('fireworks')" id="camBtn-fireworks" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🎆 煙火區</button>
             <button onclick="moveCameraPreset('guandi')" id="camBtn-guandi" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">⚔️ 五恩主</button>
             <button onclick="moveCameraPreset('tianshi')" id="camBtn-tianshi" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🗡️ 張天師</button>
@@ -9040,6 +9041,271 @@
             showToast(T.state === 'sleep' ? '🐈 廟貓在廟祝的窩裡睡覺中' : `🐈 廟貓在這裡${T.dest && TCAT_DEST[T.dest] ? '・' + TCAT_DEST[T.dest].name : ''}`);
         }
 
+        // =====================================================================
+        // 駐廟法師・早晚課：每天 06:00 早課、18:00 晚課（依看的人的當地時間）。
+        // 課前法師敲鐘（早）或擊鼓（晚），入大雄寶殿三拜，到木魚前領眾唱誦，最後迴向、三拜，回蒲團靜坐。
+        // 進度由時鐘推算，同一時間在線的人看到的是同一段經文；平時法師在大雄寶殿蒲團上打坐。
+        // =====================================================================
+        const MONK_SCHEDULE = [{ key: 'morning', name: '早課', h: 6, m: 0 }, { key: 'evening', name: '晚課', h: 18, m: 0 }];
+        const CHANT_TEXTS = {
+            luxiang: ['爐香讚', ['爐香乍爇　法界蒙熏', '諸佛海會悉遙聞', '隨處結祥雲', '誠意方殷　諸佛現全身', '南無香雲蓋菩薩摩訶薩']],
+            dabei: ['大悲咒（節錄）', ['南無喝囉怛那　哆囉夜耶', '南無阿唎耶　婆盧羯帝　爍鉢囉耶', '菩提薩埵婆耶　摩訶薩埵婆耶', '摩訶迦盧尼迦耶　唵', '薩皤囉罰曳　數怛那怛寫', '南無悉吉慄埵　伊蒙阿唎耶', '婆盧吉帝　室佛囉愣馱婆', '南無那囉謹墀　醯利摩訶　皤哆沙咩', '薩婆阿他　豆輸朋　阿逝孕']],
+            mituo: ['佛說阿彌陀經（節錄）', ['如是我聞　一時佛在舍衛國', '祇樹給孤獨園　與大比丘僧', '千二百五十人俱', '爾時佛告長老舍利弗', '從是西方　過十萬億佛土', '有世界名曰極樂', '其土有佛　號阿彌陀　今現在說法', '舍利弗　彼土何故名為極樂', '其國眾生　無有眾苦　但受諸樂', '故名極樂']],
+            xinjing: ['般若波羅蜜多心經', ['觀自在菩薩　行深般若波羅蜜多時', '照見五蘊皆空　度一切苦厄', '舍利子　色不異空　空不異色', '色即是空　空即是色', '受想行識　亦復如是', '舍利子　是諸法空相', '不生不滅　不垢不淨　不增不減', '是故空中無色　無受想行識', '無眼耳鼻舌身意　無色聲香味觸法', '無眼界　乃至無意識界', '無無明　亦無無明盡', '乃至無老死　亦無老死盡', '無苦集滅道　無智亦無得', '以無所得故　菩提薩埵', '依般若波羅蜜多故　心無罣礙', '無罣礙故　無有恐怖', '遠離顛倒夢想　究竟涅槃', '三世諸佛　依般若波羅蜜多故', '得阿耨多羅三藐三菩提', '故知般若波羅蜜多　是大神咒', '是大明咒　是無上咒　是無等等咒', '能除一切苦　真實不虛', '故說般若波羅蜜多咒　即說咒曰', '揭諦揭諦　波羅揭諦', '波羅僧揭諦　菩提薩婆訶']],
+            zanfo: ['讚佛偈', ['阿彌陀佛身金色　相好光明無等倫', '白毫宛轉五須彌　紺目澄清四大海', '光中化佛無數億　化菩薩眾亦無邊', '四十八願度眾生　九品咸令登彼岸', '南無西方極樂世界　大慈大悲阿彌陀佛']],
+            nianfo: ['念佛', ['南無阿彌陀佛', '南無阿彌陀佛', '南無阿彌陀佛', '南無阿彌陀佛', '南無觀世音菩薩', '南無大勢至菩薩', '南無清淨大海眾菩薩']],
+            sanguiyi: ['三皈依', ['自皈依佛　當願眾生　體解大道　發無上心', '自皈依法　當願眾生　深入經藏　智慧如海', '自皈依僧　當願眾生　統理大眾　一切無礙']],
+            huixiang: ['迴向偈', ['願以此功德　莊嚴佛淨土', '上報四重恩　下濟三途苦', '若有見聞者　悉發菩提心', '盡此一報身　同生極樂國']]
+        };
+        const CHANT_ORDER = { morning: ['luxiang', 'dabei', 'xinjing', 'zanfo', 'nianfo', 'sanguiyi', 'huixiang'], evening: ['luxiang', 'mituo', 'xinjing', 'zanfo', 'nianfo', 'sanguiyi', 'huixiang'] };
+        const LINE_SEC = 4.2;
+        const MONK = { mesh: null, ud: null, seat: null, spots: null, seg: -1, plan: null, demoStart: 0, demoKey: null, lastBeat: -1, lastLine: '', bannerHidden: '', mallet: null };
+        // build the program: a list of timed segments
+        function monkPlan(key) {
+            const segs = [];
+            segs.push({ kind: 'call', dur: 12 });                               // bell / drum from afar, monk rises
+            segs.push({ kind: 'walk', dur: 6, from: 'seat', to: 'center' });
+            segs.push({ kind: 'bows', dur: 12 });
+            segs.push({ kind: 'walk', dur: 5, from: 'center', to: 'muyu' });
+            CHANT_ORDER[key].forEach((t, i) => {
+                const [title, lines] = CHANT_TEXTS[t];
+                segs.push({ kind: 'chant', dur: lines.length * LINE_SEC + 2, title, lines, bowl: true });
+            });
+            segs.push({ kind: 'walk', dur: 5, from: 'muyu', to: 'center' });
+            segs.push({ kind: 'bows', dur: 12 });
+            segs.push({ kind: 'walk', dur: 6, from: 'center', to: 'seat' });
+            let t = 0;
+            segs.forEach(s => { s.t0 = t; t += s.dur; });
+            return { segs, total: t };
+        }
+        const MONK_PLANS = { morning: monkPlan('morning'), evening: monkPlan('evening') };
+        function buildResidentMonk() {
+            const X = DAXIONG.x, Z = DAXIONG.z, F = SIDE_HALL_FLOOR;
+            const monk = createWoodenDollCharacter({ shirtColor: 0x6b4a2e, accentColor: 0x3e2a18, pantsColor: 0x3a2c20, shoeColor: 0x2a2018, hairStyle: 'bald', skirt: true, mood: 'smile', skin: 0xf0c8a4 });
+            const ud = monk.userData;
+            // 袈裟: a saffron-red patched robe draped over the left shoulder (田相 grid), with a gold ring on the chest
+            const kc = document.createElement('canvas'); kc.width = 256; kc.height = 128;
+            const kx = kc.getContext('2d');
+            kx.fillStyle = '#a3321c'; kx.fillRect(0, 0, 256, 128);
+            kx.strokeStyle = '#d9a03a'; kx.lineWidth = 4;
+            for (let i = 0; i <= 8; i++) { kx.beginPath(); kx.moveTo(i * 32, 0); kx.lineTo(i * 32, 128); kx.stroke(); }
+            [0, 42, 86, 128].forEach(y => { kx.beginPath(); kx.moveTo(0, y); kx.lineTo(256, y); kx.stroke(); });
+            const kasaya = new THREE.Mesh(new THREE.CylinderGeometry(0.315, 0.36, 0.52, 28, 1, true, -0.4, 4.2), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(kc), roughness: 0.75, side: THREE.DoubleSide }));
+            kasaya.position.y = 0.8; kasaya.rotation.z = -0.22; kasaya.castShadow = true;
+            monk.add(kasaya);
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.008, 8, 18), new THREE.MeshStandardMaterial({ color: 0xe0b040, metalness: 0.8, roughness: 0.25 }));
+            ring.position.set(-0.12, 0.95, 0.31); monk.add(ring);
+            // 念珠: a string of dark wooden beads round the neck
+            const beadMat = new THREE.MeshStandardMaterial({ color: 0x3a2312, roughness: 0.4 });
+            for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2; const b = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), beadMat); b.position.set(Math.cos(a) * 0.2, 1.0 - (Math.sin(a) > 0 ? 0 : Math.sin(a) * -0.16), Math.sin(a) * 0.2 + 0.03); monk.add(b); }
+            // a small 木魚 mallet held in the right hand while chanting
+            const mallet = new THREE.Group();
+            const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.28, 8), new THREE.MeshStandardMaterial({ color: 0x8a5a2b }));
+            stick.rotation.x = Math.PI / 2; stick.position.z = 0.12;
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 10), new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.6 }));
+            head.position.z = 0.27;
+            mallet.add(stick, head); mallet.position.y = -0.42; mallet.visible = false;
+            ud.rightArm.add(mallet);
+            monk.traverse(o => { if (o.isMesh) { o.userData = { interactType: 'monk', label: '🙏 駐廟法師（點擊看早晚課時間）' }; clickableMeshes.push(o); } });
+            templeGroup.add(monk);
+            // the monk's own cushion: the front 蒲團 on the right; NPCs and the player leave it to him
+            const seat = DAXIONG.lotus.find(s => s.x > X && !s.npc) || DAXIONG.lotus.find(s => !s.npc) || DAXIONG.lotus[0];
+            seat.npc = monk;
+            Object.assign(MONK, { mesh: monk, ud, seat, mallet,
+                spots: { seat: { x: seat.x, z: seat.z }, center: { x: X, z: Z - 0.55 }, muyu: { x: X - 5.7, z: Z - 0.6 } } });
+            register3DLabel(monk, 2.2, '🙏 駐廟法師', '#fde68a', () => openMonkInfo());
+            monkSit();
+        }
+        function monkSit() {
+            const M = MONK;
+            setDollPose(M.mesh, 'stand');
+            M.mesh.position.set(M.seat.x, M.seat.top, M.seat.z);
+            M.mesh.rotation.y = Math.PI;
+            setDollPose(M.mesh, 'lotus');
+            M.mallet.visible = false;
+        }
+        // which session is on now (or the local demo), and how far into it
+        function monkSession(nowMs) {
+            if (MONK.demoStart) {
+                const e = (nowMs - MONK.demoStart) / 1000;
+                if (e < MONK_PLANS[MONK.demoKey].total) return { key: MONK.demoKey, e, demo: true };
+                MONK.demoStart = 0;
+            }
+            const d = new Date(nowMs);
+            for (const s of MONK_SCHEDULE) {
+                const st = new Date(d.getFullYear(), d.getMonth(), d.getDate(), s.h, s.m, 0).getTime();
+                const e = (nowMs - st) / 1000;
+                if (e >= 0 && e < MONK_PLANS[s.key].total) return { key: s.key, e, demo: false };
+            }
+            return null;
+        }
+        function nextMonkSession(nowMs) {
+            const d = new Date(nowMs);
+            let best = null;
+            for (let k = 0; k < 2; k++) MONK_SCHEDULE.forEach(s => {
+                const st = new Date(d.getFullYear(), d.getMonth(), d.getDate() + k, s.h, s.m, 0).getTime();
+                if (st > nowMs && (!best || st < best.t)) best = { t: st, s };
+            });
+            return best;
+        }
+        function nearHall() {
+            const p = camControl.target;
+            return Math.abs(p.x - DAXIONG.x) < 22 && Math.abs(p.z - DAXIONG.z) < 18;
+        }
+        function updateResidentMonk(t, dt) {
+            const M = MONK;
+            if (!M.mesh) return;
+            const now = Date.now();
+            const ses = monkSession(now);
+            if (!ses) {
+                if (M.seg !== -1) { M.seg = -1; M.plan = null; monkSit(); hideChantBanner(); }
+                M.ud.headGroup.rotation.x = 0.12 + Math.sin(t * 0.5) * 0.04;   // calm breathing while sitting
+                return;
+            }
+            const plan = MONK_PLANS[ses.key];
+            const idx = plan.segs.findIndex(s => ses.e < s.t0 + s.dur);
+            const seg = plan.segs[idx], u = (ses.e - seg.t0) / seg.dur;
+            const ud = M.ud;
+            if (idx !== M.seg || plan !== M.plan) {
+                // entering a new segment: set the pose
+                M.seg = idx; M.plan = plan; M.lastBeat = -1; M.stood = false; M.sat = false;
+                setDollPose(M.mesh, 'stand');
+                ud.leftArm.rotation.set(0, 0, -0.12); ud.rightArm.rotation.set(0, 0, 0.12); ud.headGroup.rotation.set(0, 0, 0);
+                M.mallet.visible = false;
+                if (seg.kind === 'call') {
+                    monkSit();
+                    if (ses.e < 3) {
+                        // 晨鐘暮鼓: the call to service, heard across the grounds
+                        if (ses.key === 'morning') [0, 4000, 8000].forEach(ms => setTimeout(() => { towerAnim.strikeT = -1; strikeTowerBell('駐廟法師'); }, ms));
+                        else beatTowerDrum('駐廟法師');
+                    }
+                } else if (seg.kind === 'bows') {
+                    const c = M.spots.center;
+                    M.mesh.position.set(c.x, SIDE_HALL_FLOOR, c.z); M.mesh.rotation.y = Math.PI;
+                    setDollPose(M.mesh, 'kneel');
+                } else if (seg.kind === 'chant') {
+                    const m = M.spots.muyu;
+                    M.mesh.position.set(m.x, SIDE_HALL_FLOOR, m.z); M.mesh.rotation.y = Math.PI;
+                    M.mallet.visible = true;
+                    ud.leftArm.rotation.set(-1.0, 0, 0.35);     // left hand raised in 合掌 half-gesture
+                    if (seg.bowl && nearHall() && ses.e - seg.t0 < 1.5) strikeBronzeBowl();
+                }
+            }
+            if (seg.kind === 'call') {
+                if (u > 0.7 && !M.stood) { M.stood = true; setDollPose(M.mesh, 'stand'); M.mesh.position.set(M.seat.x, SIDE_HALL_FLOOR, M.seat.z); }
+            } else if (seg.kind === 'walk') {
+                const a = M.spots[seg.from], b = M.spots[seg.to];
+                const k = Math.min(1, u * 1.1);
+                M.mesh.position.set(a.x + (b.x - a.x) * k, SIDE_HALL_FLOOR, a.z + (b.z - a.z) * k);
+                if (k < 1) { M.mesh.rotation.y = Math.atan2(b.x - a.x, b.z - a.z); animateWalk(M.mesh, true, t * 6); }
+                else if (!M.sat) { M.sat = true; M.mesh.rotation.y = Math.PI; animateWalk(M.mesh, false, 0); if (seg.to === 'seat') monkSit(); }
+                if (!M.sat) { ud.leftArm.rotation.x = -0.9; ud.rightArm.rotation.x = -0.9; }   // hands together while walking in the hall
+            } else if (seg.kind === 'bows') {
+                // three full bows: down, hold, up
+                const ph = (u * 3) % 1;
+                const b = ph < 0.35 ? ph / 0.35 : ph < 0.6 ? 1 : 1 - (ph - 0.6) / 0.4;
+                applyBow(M.mesh, b * 0.85);
+                ud.leftArm.rotation.x = ud.rightArm.rotation.x = -0.95 - b * 0.6;
+            } else if (seg.kind === 'chant') {
+                const ce = ses.e - seg.t0;
+                const li = Math.min(seg.lines.length - 1, Math.floor(ce / LINE_SEC));
+                // 木魚: one beat per character-pair, about 1.6 per second
+                const beat = Math.floor(ce / 0.62);
+                if (beat !== M.lastBeat) {
+                    M.lastBeat = beat;
+                    ud.rightArm.rotation.x = -1.05;
+                    const m = DAXIONG.muyu;
+                    if (m) { m.put(m.hit); setTimeout(() => m.put(m.lift), 110); }
+                    if (nearHall()) playWoodenFishSound();
+                } else if (ce % 0.62 > 0.15) ud.rightArm.rotation.x = -1.35;
+                ud.headGroup.rotation.x = 0.1 + Math.sin(t * 2) * 0.03;
+                showChantBanner(ses, `〈${seg.title}〉`, seg.lines[li]);
+                return;
+            }
+            showChantBanner(ses, seg.kind === 'call' ? (ses.key === 'morning' ? '晨鐘響起，法師準備上殿' : '暮鼓聲中，法師準備上殿') : seg.kind === 'bows' ? '頂禮三拜' : '入殿', '');
+        }
+        // ---- the subtitle banner at the top of the screen
+        function chantBannerEl() {
+            let el = document.getElementById('chantBanner');
+            if (el) return el;
+            el = document.createElement('div');
+            el.id = 'chantBanner';
+            el.style.cssText = 'position:fixed;left:50%;top:58px;transform:translateX(-50%);z-index:40;max-width:min(92vw,560px);width:max-content;display:none;';
+            el.innerHTML = `<div class="xinxiang-modal px-4 py-2 text-center" style="border-radius:14px">
+                <div class="text-[11px] text-amber-300" id="chantHead"></div>
+                <div class="text-base font-bold text-amber-100 tracking-widest" id="chantLine" style="font-family:'LXGW WenKai TC','Noto Serif TC',serif"></div>
+                <div class="flex justify-center gap-2 mt-1">
+                    <button onclick="goToMonk()" class="px-2 py-0.5 rounded-full text-[11px] palace-pill text-amber-200">🏯 前往大雄寶殿</button>
+                    <button onclick="joinChant()" class="px-2 py-0.5 rounded-full text-[11px] palace-pill text-amber-200">🙏 隨眾共修</button>
+                    <button onclick="hideChantBanner(true)" class="px-2 py-0.5 rounded-full text-[11px] palace-pill text-stone-300">收起</button>
+                </div></div>`;
+            document.body.appendChild(el);
+            return el;
+        }
+        function showChantBanner(ses, head, line) {
+            const id = ses.key + (ses.demo ? 'demo' : '') + Math.floor((Date.now() - ses.e * 1000) / 60000);
+            if (MONK.bannerHidden === id) return;
+            const el = chantBannerEl();
+            el.style.display = '';
+            el.dataset.ses = id;
+            const name = ses.key === 'morning' ? '早課' : '晚課';
+            const plan = MONK_PLANS[ses.key], left = Math.max(0, Math.ceil((plan.total - ses.e) / 60));
+            const h = `🙏 駐廟法師${name}${ses.demo ? '（示範）' : ''}進行中・${head}・約剩 ${left} 分鐘`;
+            if (MONK.lastHead !== h) { document.getElementById('chantHead').textContent = h; MONK.lastHead = h; }
+            if (MONK.lastLine !== line) { document.getElementById('chantLine').textContent = line || '　'; MONK.lastLine = line; }
+        }
+        function hideChantBanner(byUser) {
+            const el = document.getElementById('chantBanner');
+            if (!el) return;
+            if (byUser) MONK.bannerHidden = el.dataset.ses || '';
+            el.style.display = 'none';
+        }
+        function goToMonk() {
+            if (!MONK.mesh) return;
+            // look at the monk from inside the hall, near the front doors
+            // during a service frame the whole route (center bows → 木魚 on the left); otherwise the monk on his cushion
+            const on = !!monkSession(Date.now());
+            const p = MONK.mesh.position;
+            const tx = on ? DAXIONG.x - 2.8 : p.x, ty = SIDE_HALL_FLOOR + 0.9, tz = on ? DAXIONG.z - 0.6 : p.z;
+            const cx = on ? DAXIONG.x + 1.2 : DAXIONG.x + (p.x - DAXIONG.x) * 0.35, cz = DAXIONG.z + DAXIONG.D / 2 - 1.4, cy = SIDE_HALL_FLOOR + (on ? 2.8 : 2.3);
+            const dx = cx - tx, dy = cy - ty, dz = cz - tz, hd = Math.hypot(dx, dz);
+            camControl.desiredTarget.set(tx, ty, tz);
+            Object.assign(camControl.desiredSpherical, { radius: Math.hypot(hd, dy), theta: Math.atan2(dx, dz), phi: Math.atan2(hd, dy) });
+        }
+        function joinChant() {
+            // kneel on a free 拜墊 behind the monk
+            const k = DAXIONG.kneelers.find(s => !s.npc) || DAXIONG.kneelers[0];
+            if (!playerAvatarGroup || !k) return;
+            if (state.upstairs) { state.upstairs = false; state.followCam = false; updateStairsButton(); }
+            if (state.towerFloor) { state.towerFloor = 0; state.followCam = false; }
+            playerAvatarGroup.userData.kowtowToken = null;
+            setPlayerPose('stand', true);
+            playerAvatarGroup.position.set(k.x, 0, k.z);
+            setPlayerPose('kneel', true);
+            goToMonk();
+            emitAct('chant');
+            showToast('🙏 隨眾共修：跪於拜墊，跟著法師一起唱誦。移動搖桿即可起身。');
+        }
+        function openMonkInfo() {
+            const now = Date.now(), ses = monkSession(now), nx = nextMonkSession(now);
+            if (ses) { MONK.bannerHidden = ''; goToMonk(); showToast(`🙏 法師正在${ses.key === 'morning' ? '早課' : '晚課'}，歡迎隨眾共修。`); return; }
+            const el = chantBannerEl();
+            const fmt = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            const mins = Math.round((nx.t - now) / 60000);
+            el.style.display = '';
+            el.dataset.ses = 'info';
+            document.getElementById('chantHead').textContent = `🙏 駐廟法師・每日 06:00 早課、18:00 晚課（約 ${Math.round(MONK_PLANS.morning.total / 60)} 分鐘，依您的當地時間）`;
+            document.getElementById('chantLine').innerHTML = `下一場：${nx.s.name} ${fmt(new Date(nx.t))}（${mins >= 60 ? Math.floor(mins / 60) + ' 小時 ' : ''}${mins % 60} 分鐘後）<div class="flex justify-center gap-2 mt-1"><button onclick="startMonkDemo('morning')" class="px-2 py-0.5 rounded-full text-[11px] btn-warm-gold">▶ 看早課示範</button><button onclick="startMonkDemo('evening')" class="px-2 py-0.5 rounded-full text-[11px] btn-warm-gold">▶ 看晚課示範</button></div>`;
+            MONK.lastLine = null; MONK.lastHead = null;
+            goToMonk();
+        }
+        function startMonkDemo(key) {
+            MONK.demoKey = key; MONK.demoStart = Date.now(); MONK.seg = -1; MONK.bannerHidden = '';
+            playTempleBellSound(523);
+            goToMonk();
+            showToast(`🙏 開始${key === 'morning' ? '早課' : '晚課'}示範（只在您的畫面播放）`);
+        }
+
         function updateMiaozhuCat(t) {
             if (MIAOZHU.cat) MIAOZHU.cat.body.scale.y = MIAOZHU.cat.base + Math.sin(t * 2.5) * 0.03;   // breathing
         }
@@ -11334,7 +11600,7 @@
         const NET_ACT_TEXT = {
             bell: '敲響了祈福鐘 🔔', drum: '擊響了鼓樓大鼓 🥁', fireworks: '施放了煙火 🎆', firecracker: '點燃了鞭炮 🧨',
             incense: '插香參拜 🙏', bow: '合掌參拜 🙏', kowtow: '行三跪九叩大禮 🙇', meditate: '盤腿打坐 🪷', chant: '念經持咒 📖',
-            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
+            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
         };
         function onNetAct(msg) {
             if (!msg || msg.sameTab || msg.kind !== 'viewer') return;
@@ -15812,7 +16078,7 @@
             ['偏殿', ['tudigong', 'light', 'lampwall_gm', 'lampwall_ts', 'side_left', 'side_right', 'side_wing_left', 'side_wing_right', 'tigercave', 'side_dizang']],
             ['後殿', ['rearhall', 'guandi', 'tianshi', 'xuantian', 'yuhuang', 'sanqing']],
             ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'wishtree', 'puppet', 'guanyinpond', 'grounds']],
-            ['活動', ['fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'cat', 'fireworks', 'festival']]
+            ['活動', ['fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'cat', 'monk', 'fireworks', 'festival']]
         ];
         let camGroupActive = 0;
         function showCamGroup(i) {
@@ -16074,6 +16340,7 @@
             else if (type === 'bigdrum') beatTowerDrum();
             else if (type === 'futian') openFutianModal();
             else if (type === 'temple_cat') petTempleCat();
+            else if (type === 'monk') openMonkInfo();
             else if (type === 'wishtree') openWishTreeModal();
             else if (type === 'yuelaoshi') touchYuelaoStone();
             else if (type === 'fortune') openFortuneModal();
@@ -16473,6 +16740,8 @@
             updateDragonEyes(t);
             updateMiaozhuCat(t);
             updateTempleCat(t, dt);
+            if (!MONK.mesh && DAXIONG.lotus.length && typeof towerAnim !== 'undefined') buildResidentMonk();
+            updateResidentMonk(t, dt);
             renderer.render(scene, camera);
         }
 
@@ -16927,7 +17196,7 @@
             '你是台灣虛擬廟宇「問心堂」裡的濟公活佛（濟公師父），自稱「老衲」，稱對方為「徒兒」。',
             '說話風趣、慈悲、帶點瘋癲幽默，常提到破扇、葫蘆、酒肉穿腸過；用繁體中文、台灣用語，可偶爾夾一兩句台語。',
             '每次回答 80～180 字，用「」包住整段話，先同理對方的感受，再給一兩個具體、實際可做的建議，最後一句溫暖的祝福。',
-            '可以順勢介紹廟裡的活動（算命館有文鳥抽卡、生肖流年、六爻擲錢、八字四柱、塔羅牌、姓名五格）：供桌求籤擲筊、光明燈、太歲燈、寶塔金爐補財庫、虎爺換錢水、收驚、平安符、大雄寶殿打坐、五恩主殿、月老、許願樹與樹下的月老石（摸石三下繫紅線求良緣）、財神殿內的黑虎將軍洞（供桌旁地面岩洞，獻雞蛋與虎爺金）、齋堂用齋、打小人、算命館。',
+            '可以順勢介紹廟裡的活動（算命館有文鳥抽卡、生肖流年、六爻擲錢、八字四柱、塔羅牌、姓名五格）：供桌求籤擲筊、光明燈、太歲燈、寶塔金爐補財庫、虎爺換錢水、收驚、平安符、大雄寶殿打坐、五恩主殿、月老、許願樹與樹下的月老石（摸石三下繫紅線求良緣）、財神殿內的黑虎將軍洞（供桌旁地面岩洞，獻雞蛋與虎爺金）、齋堂用齋、駐廟法師每天 06:00 早課與 18:00 晚課（在大雄寶殿，可隨眾共修）、打小人、算命館。',
             '解籤時依弟子提供的籤詩、典故與所問之事，用白話說明吉凶與提醒，不要恐嚇。',
             '界線：你是民俗信仰的陪伴角色，不是真的神明，不做保證；不提供醫療診斷、用藥、法律或投資的具體決定，遇到這些要溫和建議找醫師、律師或專業人士；不報明牌、不預測彩券號碼；不收錢、不要求個資。',
             '若對方提到想傷害自己或他人、活不下去、被傷害或有立即危險：放下幽默，真誠關心，並請他立刻聯絡：安心專線 1925（24小時）、生命線 1995、張老師 1980，緊急狀況撥 119 或 110。',
