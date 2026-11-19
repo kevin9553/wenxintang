@@ -230,6 +230,8 @@
             <i class="fa-solid fa-tag text-xs"></i>
         </button>
 
+        <button id="statueAdminBtn" onclick="openStatueAdmin()" class="hidden w-9 h-9 rounded-full palace-pill flex items-center justify-center text-stone-100 hover:text-amber-300 transition text-sm" title="更換神像（管理員）">🗿</button>
+
         <button onclick="openAvatarEditor()" class="w-9 h-9 rounded-full palace-pill flex items-center justify-center text-stone-100 hover:text-amber-300 transition text-sm" title="捏偶：自訂我的人物">🎨</button>
 
         <button onclick="openPilgrimModal()" class="w-9 h-9 rounded-full palace-pill flex items-center justify-center text-stone-100 hover:text-amber-300 transition" title="新增香客">
@@ -11768,6 +11770,13 @@
                 try { NET.myId = await u.id(); } catch (e) { NET.myId = null; }
                 claude.use('db').then(db => startSharedDb(db)).catch(() => {});
             }).catch(() => {});
+            // 更換神像：所有登入的香客都讀取；只有擁有者／編輯者拿得到 assets，才看得到管理按鈕
+            claude.use('db').then(db => startCustomStatues(db)).catch(() => {});
+            claude.use('assets').then(a => {
+                CUSTOM_STATUE.assets = a;
+                const b = document.getElementById('statueAdminBtn');
+                if (a && b) b.classList.remove('hidden');
+            }).catch(() => {});
             claude.use('room').then(r => {
                 if (!r) { setTimeout(() => showToast('🌐 目前為單機模式：受邀並登入的香客才能看見彼此、同步活動'), 4000); return; }
                 attachRoom(r);
@@ -14718,9 +14727,265 @@
             statueQueueTail = statueQueueTail.then(() => new Promise(done => setTimeout(() => { try { fn(); } catch (e) { console.warn('statue setup failed', e); } done(); }, 120)));
         }
 
+        // ---------------------------------------------------------------- 更換神像
+        // 管理員（擁有者／編輯者）可以上傳任何 AI 生成的 .glb 換掉神像：存進網頁的雲端資料，所有香客都會看到。
+        // statues/<key> = { assetId, fit:{s,x,y,z,rot}, file, at }；模型以 base64 文字存成 asset。
+        const CUSTOM_STATUE = { specs: {}, docs: {}, preview: {}, bufs: {}, db: null, assets: null, origBox: {} };
+        function customStatueBuffer(key) {
+            const pv = CUSTOM_STATUE.preview[key];
+            if (pv) return Promise.resolve(withFit(pv.buffer, pv.fit));
+            const d = CUSTOM_STATUE.docs[key];
+            if (!d || !d.assetId || !d.fit) return null;
+            if (!CUSTOM_STATUE.bufs[d.assetId]) CUSTOM_STATUE.bufs[d.assetId] = fetch('/_blob/' + encodeURIComponent(d.assetId)).then(r => {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            }).then(t => decodeBase64ToArrayBuffer(t.trim()));
+            return CUSTOM_STATUE.bufs[d.assetId].then(b => withFit(b, d.fit));
+        }
+        // the same bytes may be shown with different fits, so each use gets its own copy carrying the fit
+        function withFit(buffer, fit) { const b = buffer.slice(0); b.__statueFit = fit; return b; }
+        function retireStatueModel(old) {
+            for (let i = clickableMeshes.length - 1; i >= 0; i--) {
+                let p = clickableMeshes[i];
+                while (p && p !== old) p = p.parent;
+                if (p === old) clickableMeshes.splice(i, 1);
+            }
+            if (old.parent) old.parent.remove(old);
+            old.traverse(o => {
+                if (o.geometry) o.geometry.dispose();
+                (Array.isArray(o.material) ? o.material : (o.material ? [o.material] : [])).forEach(m => {
+                    ['map', 'bumpMap', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap', 'aoMap'].forEach(k => { if (m[k]) m[k].dispose(); });
+                    m.dispose();
+                });
+            });
+        }
+        // put a statue (already shown or still waiting for the visitor to come near) onto its current model
+        function refreshStatue(key, force) {
+            (CUSTOM_STATUE.specs[key] || []).forEach(spec => {
+                const i = statueLoader.pending.findIndex(e => e.spec === spec);
+                if (i >= 0) {
+                    if (!force) return;           // not loaded yet: it will pick up the new model when the visitor comes near
+                    statueLoader.pending.splice(i, 1);
+                }
+                const custom = customStatueBuffer(key);
+                (custom || fetchOriginalStatue(key)).then(b => spec.run(b)).catch(err => {
+                    console.warn('statue refresh failed', key, err);
+                    if (custom) showToast('⚠️ 更換的神像下載失敗，維持原樣');
+                });
+            });
+        }
+        function startCustomStatues(db) {
+            if (!db) return;
+            CUSTOM_STATUE.db = db;
+            db.collection('statues').onSnapshot(snap => {
+                const next = {};
+                snap.docs.forEach(d => { const v = d.data() || {}; if (v.assetId && v.fit) next[d.id] = v; });
+                const changed = new Set([...Object.keys(next), ...Object.keys(CUSTOM_STATUE.docs)].filter(k => {
+                    const a = next[k], b = CUSTOM_STATUE.docs[k];
+                    return !a || !b || a.assetId !== b.assetId || JSON.stringify(a.fit) !== JSON.stringify(b.fit);
+                }));
+                CUSTOM_STATUE.docs = next;
+                changed.forEach(k => { if (!CUSTOM_STATUE.preview[k]) refreshStatue(k, false); });
+                if (document.getElementById('statueAdminModal')) renderStatueAdmin();
+            }, err => console.warn('statues db unavailable', err));
+        }
+
+        // ---- fitting: scale/rotate/align a new model onto the original statue's bounding box
+        function makeStatueGLTFLoader() {
+            const loader = new THREE.GLTFLoader();
+            if (typeof THREE.DRACOLoader === 'function') {
+                if (!upgradeStatuesFromGLB.draco) {
+                    upgradeStatuesFromGLB.draco = new THREE.DRACOLoader();
+                    upgradeStatuesFromGLB.draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/gltf/');
+                }
+                loader.setDRACOLoader(upgradeStatuesFromGLB.draco);
+            }
+            return loader;
+        }
+        function parseGLBBox(buffer, rot) {
+            return new Promise((ok, fail) => makeStatueGLTFLoader().parse(buffer.slice(0), '', gltf => {
+                const sc = gltf.scene;
+                sc.rotation.y = rot || 0;
+                sc.updateMatrixWorld(true);
+                const box = new THREE.Box3().setFromObject(sc);
+                sc.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+                if (box.isEmpty()) fail(new Error('模型裡沒有網格')); else ok(box);
+            }, fail));
+        }
+        function originalStatueBox(key) {
+            if (!CUSTOM_STATUE.origBox[key]) CUSTOM_STATUE.origBox[key] = fetchOriginalStatue(key).then(b => parseGLBBox(b, 0));
+            return CUSTOM_STATUE.origBox[key];
+        }
+        async function computeStatueFit(key, buffer, rotDeg, sizeMul) {
+            const rot = (rotDeg || 0) * Math.PI / 180;
+            const [ob, nb] = await Promise.all([originalStatueBox(key), parseGLBBox(buffer, rot)]);
+            const oh = ob.max.y - ob.min.y, nh = nb.max.y - nb.min.y;
+            const s = oh / nh * (sizeMul || 1);
+            const oc = ob.getCenter(new THREE.Vector3()), nc = nb.getCenter(new THREE.Vector3());
+            const r = v => Math.round(v * 1e5) / 1e5;
+            return { s: r(s), x: r(oc.x - nc.x * s), y: r(ob.min.y - nb.min.y * s), z: r(oc.z - nc.z * s), rot: r(rot) };
+        }
+
+        // ---- admin panel
+        const STATUE_ADMIN = { key: null, file: null, buffer: null, rot: 0, size: 1, busy: false };
+        function statueLabel(key) {
+            const sp = (CUSTOM_STATUE.specs[key] || [])[0];
+            const l = sp && sp.interact && sp.interact.label || key;
+            return l.replace(/（[^）]*）/g, '').trim();
+        }
+        function openStatueAdmin() {
+            if (!CUSTOM_STATUE.assets || !CUSTOM_STATUE.db) { showToast('🔒 只有網頁擁有者或編輯者可以更換神像'); return; }
+            let m = document.getElementById('statueAdminModal');
+            if (!m) {
+                m = document.createElement('div');
+                m.id = 'statueAdminModal';
+                m.className = 'fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-3';
+                m.addEventListener('pointerdown', e => { if (e.target === m) closeStatueAdmin(); });
+                ['keydown', 'keyup', 'wheel', 'pointermove', 'touchstart', 'touchmove'].forEach(t => m.addEventListener(t, e => e.stopPropagation()));
+                document.body.appendChild(m);
+            }
+            if (!STATUE_ADMIN.key) STATUE_ADMIN.key = CUSTOM_STATUE.specs.jigong ? 'jigong' : Object.keys(CUSTOM_STATUE.specs)[0];
+            renderStatueAdmin();
+        }
+        function closeStatueAdmin() {
+            const k = STATUE_ADMIN.key;
+            if (k && CUSTOM_STATUE.preview[k]) { delete CUSTOM_STATUE.preview[k]; refreshStatue(k, true); }
+            STATUE_ADMIN.file = STATUE_ADMIN.buffer = null;
+            const m = document.getElementById('statueAdminModal');
+            if (m) m.remove();
+        }
+        function renderStatueAdmin() {
+            const m = document.getElementById('statueAdminModal');
+            if (!m) return;
+            const A = STATUE_ADMIN, k = A.key, saved = CUSTOM_STATUE.docs[k];
+            const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+            const keys = Object.keys(CUSTOM_STATUE.specs).sort((a, b) => statueLabel(a).localeCompare(statueLabel(b), 'zh-Hant'));
+            const btn = 'ritual-action-btn px-3 py-2 text-sm font-bold disabled:opacity-40';
+            const pill = on => `px-2.5 py-1 rounded-full text-xs font-bold border ${on ? 'bg-amber-400 text-stone-900 border-amber-300' : 'text-amber-100 border-amber-300/50'}`;
+            m.innerHTML = `
+              <div class="xinxiang-modal w-full max-w-md p-5 text-stone-100 max-h-[92vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-3">
+                  <h2 class="text-lg font-black text-amber-300">🗿 更換神像</h2>
+                  <button id="saClose" class="w-8 h-8 rounded-full palace-pill text-stone-200">✕</button>
+                </div>
+                <label class="block text-xs text-amber-200/90 mb-1">要更換的神明</label>
+                <select id="saKey" class="w-full mb-1 rounded-lg bg-stone-900/80 border border-amber-300/40 px-2 py-2 text-sm">
+                  ${keys.map(x => `<option value="${esc(x)}" ${x === k ? 'selected' : ''}>${esc(statueLabel(x))}${CUSTOM_STATUE.docs[x] ? '　★已更換' : ''}</option>`).join('')}
+                </select>
+                <p class="text-xs text-stone-400 mb-3">${saved ? `目前使用：${esc(saved.file || '上傳的模型')}` : '目前使用：原本的神像'}</p>
+
+                <label id="saDrop" class="block rounded-xl border-2 border-dashed border-amber-300/50 p-4 text-center cursor-pointer hover:bg-amber-300/10 mb-3">
+                  <input id="saFile" type="file" accept=".glb,model/gltf-binary" class="hidden">
+                  <div class="text-sm font-bold text-amber-100">${A.file ? '📦 ' + esc(A.file.name) : '選擇或拖曳 .glb 模型檔'}</div>
+                  <div class="text-[11px] text-stone-400 mt-1">${A.file ? (A.file.size / 1048576).toFixed(1) + ' MB　（已在場景中預覽）' : 'TRELLIS、Hunyuan3D、Tripo、Meshy 下載的 .glb 都可以'}</div>
+                </label>
+
+                <div class="${A.buffer ? '' : 'opacity-40 pointer-events-none'}">
+                  <div class="text-xs text-amber-200/90 mb-1">方向（神像要面向香客）</div>
+                  <div class="flex gap-1.5 mb-3">${[0, 90, 180, 270].map(d => `<button data-rot="${d}" class="${pill(A.rot === d)}">${d}°</button>`).join('')}</div>
+                  <div class="text-xs text-amber-200/90 mb-1">大小 <span id="saSizeVal">${Math.round(A.size * 100)}%</span></div>
+                  <input id="saSize" type="range" min="50" max="150" step="5" value="${Math.round(A.size * 100)}" class="w-full mb-3 accent-amber-400">
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  <button id="saGo" class="${btn}">📍 前往查看</button>
+                  <button id="saSave" class="${btn}" ${A.buffer && !A.busy ? '' : 'disabled'}>${A.busy ? '儲存中…' : '✅ 儲存給所有香客'}</button>
+                  <button id="saReset" class="${btn}" ${saved && !A.busy ? '' : 'disabled'}>↩︎ 還原原本神像</button>
+                </div>
+                <p class="text-[11px] text-stone-400 mt-3 leading-relaxed">選好檔案會先在場景裡預覽（只有你看得到），調整好方向和大小再按「儲存」。檔案上限約 14 MB，建議用 10 MB 以下的模型，香客載入比較快。</p>
+              </div>`;
+            m.querySelector('#saClose').onclick = closeStatueAdmin;
+            m.querySelector('#saKey').onchange = e => {
+                if (CUSTOM_STATUE.preview[A.key]) { delete CUSTOM_STATUE.preview[A.key]; refreshStatue(A.key, true); }
+                A.key = e.target.value;
+                if (A.buffer) previewStatue(); else renderStatueAdmin();
+            };
+            const fileIn = m.querySelector('#saFile');
+            fileIn.onchange = () => fileIn.files[0] && pickStatueFile(fileIn.files[0]);
+            const drop = m.querySelector('#saDrop');
+            drop.addEventListener('dragover', e => e.preventDefault());
+            drop.addEventListener('drop', e => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) pickStatueFile(f); });
+            m.querySelectorAll('[data-rot]').forEach(b => b.onclick = () => { A.rot = +b.dataset.rot; previewStatue(); });
+            const size = m.querySelector('#saSize');
+            size.oninput = () => { m.querySelector('#saSizeVal').textContent = size.value + '%'; };
+            size.onchange = () => { A.size = size.value / 100; previewStatue(); };
+            m.querySelector('#saGo').onclick = () => goToStatue(A.key);
+            m.querySelector('#saSave').onclick = saveStatue;
+            m.querySelector('#saReset').onclick = resetStatue;
+        }
+        async function pickStatueFile(f) {
+            if (!/\.glb$/i.test(f.name)) { showToast('⚠️ 請選擇 .glb 檔（單一檔案的 glTF）'); return; }
+            if (f.size > 14 * 1048576) { showToast('⚠️ 檔案太大（上限約 14 MB），請先壓縮或降低面數'); return; }   // saved as base64 text (+33%) under the 20 MiB asset limit
+            const buf = await f.arrayBuffer();
+            if (new TextDecoder().decode(new Uint8Array(buf, 0, 4)) !== 'glTF') { showToast('⚠️ 這不是有效的 .glb 檔'); return; }
+            Object.assign(STATUE_ADMIN, { file: f, buffer: buf, rot: 0, size: 1 });
+            previewStatue();
+        }
+        async function previewStatue() {
+            const A = STATUE_ADMIN;
+            renderStatueAdmin();
+            if (!A.buffer) return;
+            try {
+                const fit = await computeStatueFit(A.key, A.buffer, A.rot, A.size);
+                CUSTOM_STATUE.preview[A.key] = { buffer: A.buffer, fit };
+                refreshStatue(A.key, true);
+            } catch (e) {
+                console.warn('statue preview failed', e);
+                showToast('⚠️ 模型讀取失敗：' + (e && e.message || e));
+            }
+        }
+        function goToStatue(key) {
+            if (document.getElementById('camBtn-' + key)) { moveCameraPreset(key); return; }
+            showToast('🚶 請走到「' + statueLabel(key) + '」前面查看');
+        }
+        function bufferToBase64(buf) {
+            const u = new Uint8Array(buf); let s = '';
+            for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000));
+            return btoa(s);
+        }
+        async function saveStatue() {
+            const A = STATUE_ADMIN, key = A.key, pv = CUSTOM_STATUE.preview[key];
+            if (!pv || A.busy) return;
+            A.busy = true; renderStatueAdmin();
+            try {
+                const up = await CUSTOM_STATUE.assets.upload(new Blob([bufferToBase64(pv.buffer)], { type: 'text/plain' }));
+                const prev = CUSTOM_STATUE.docs[key];
+                await CUSTOM_STATUE.db.doc('statues/' + key).set({ assetId: up.id, fit: pv.fit, file: A.file ? A.file.name : '', at: Date.now() });
+                CUSTOM_STATUE.bufs[up.id] = Promise.resolve(pv.buffer);
+                if (prev && prev.assetId && prev.assetId !== up.id) CUSTOM_STATUE.assets.delete(prev.assetId).catch(() => {});
+                delete CUSTOM_STATUE.preview[key];
+                A.file = A.buffer = null;
+                showToast('✅ 已更換「' + statueLabel(key) + '」，所有香客都會看到新的神像');
+            } catch (e) {
+                console.warn('statue save failed', e);
+                showToast('⚠️ 儲存失敗：' + (e && e.message || e));
+            }
+            A.busy = false; renderStatueAdmin();
+        }
+        async function resetStatue() {
+            const A = STATUE_ADMIN, key = A.key, prev = CUSTOM_STATUE.docs[key];
+            if (!prev || A.busy) return;
+            A.busy = true; renderStatueAdmin();
+            try {
+                delete CUSTOM_STATUE.preview[key];
+                await CUSTOM_STATUE.db.doc('statues/' + key).delete();
+                if (prev.assetId) CUSTOM_STATUE.assets.delete(prev.assetId).catch(() => {});
+                showToast('↩︎ 已還原「' + statueLabel(key) + '」原本的神像');
+            } catch (e) {
+                showToast('⚠️ 還原失敗：' + (e && e.message || e));
+            }
+            A.busy = false; renderStatueAdmin();
+        }
+
         // 神像模型：獨立檔案 models/<key>.glb，走近才載入（網頁本身因此很小、開啟快）
         const statueLoader = { pending: [], buffers: {}, base: 'models/', all: false, lastCheck: 0 };
         function fetchStatueModel(key) {
+            // 更換過的神像（管理員上傳或本機預覽）優先，失敗時退回原本的模型
+            const custom = customStatueBuffer(key);
+            if (custom) return custom.catch(err => { console.warn('custom statue unavailable; using original', key, err); return fetchOriginalStatue(key); });
+            return fetchOriginalStatue(key);
+        }
+        function fetchOriginalStatue(key) {
             // b64 mode: hosts that only serve text get models/<key>.txt holding the same .glb as base64
             if (!statueLoader.buffers[key]) statueLoader.buffers[key] = fetch(statueLoader.base + key + (statueLoader.b64 ? '.txt' : '.glb')).then(r => {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -14777,10 +15042,21 @@
                 spec.container.scale.multiplyScalar(STATUE_ENLARGE);
             });
             // each statue waits until the visitor comes near; its model file is then fetched and set up
-            specs.forEach(spec => statueLoader.pending.push({ spec, run: buffer => queueStatueTask(() => {
+            specs.forEach(spec => {
+            (CUSTOM_STATUE.specs[spec.key] = CUSTOM_STATUE.specs[spec.key] || []).push(spec);
+            const run = buffer => queueStatueTask(() => {
                 loader.parse(buffer, '', gltf => {
                     const model = gltf.scene;
                     model.position.y = spec.offsetY || 0;
+                    // 更換的神像：依原本神像的外框縮放、對齊、旋轉
+                    const fit = buffer.__statueFit;
+                    if (fit) {
+                        model.rotation.y = fit.rot || 0;
+                        model.scale.setScalar(fit.s);
+                        model.position.set(fit.x, (spec.offsetY || 0) + fit.y, fit.z);
+                    }
+                    // 換掉已經擺上去的神像
+                    if (spec.model) retireStatueModel(spec.model);
                     const finalMats = new Map();
                     const newClickables = [];
                     const prepare = m => {
@@ -14840,9 +15116,17 @@
                     });
                     if (spec.figure.parent) spec.figure.parent.remove(spec.figure);
                     spec.container.add(model);
+                    spec.model = model;
+                    spec.isCustom = !!fit;
                     if (spec.onReady) spec.onReady(model);
-                }, err => console.warn('statue model failed to load; keeping procedural statue', spec.key, err));
-            }) }));
+                }, err => {
+                    console.warn('statue model failed to load; keeping current statue', spec.key, err);
+                    if (fit) showToast('⚠️ 這個模型無法載入，請換一個 .glb 檔');
+                });
+            });
+            spec.run = run;
+            statueLoader.pending.push({ spec, run });
+            });
         }
 
         // 六十甲子籤筒：紅漆金箍竹節筒、金字「六十甲子靈籤」、八角漆座、六十支紅頭竹籤（抽中時一支升出筒口）
