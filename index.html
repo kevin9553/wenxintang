@@ -180,6 +180,7 @@
             <button onclick="moveCameraPreset('shitou')" id="camBtn-shitou" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">石頭公</button>
             <button onclick="moveCameraPreset('wishtree')" id="camBtn-wishtree" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🌳 許願樹</button>
             <button onclick="moveCameraPreset('puppet')" id="camBtn-puppet" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🎭 布袋戲</button>
+            <button onclick="moveCameraPreset('longquan')" id="camBtn-longquan" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🐉 龍泉</button>
             <button onclick="moveCameraPreset('rearhall')" id="camBtn-rearhall" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏯 後殿五層樓</button>
             <button onclick="moveCameraPreset('fortune')" id="camBtn-fortune" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🔮 算命館</button>
             <button onclick="moveCameraPreset('xiaoren')" id="camBtn-xiaoren" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">👡 打小人</button>
@@ -12014,7 +12015,7 @@
         const NET_ACT_TEXT = {
             bell: '敲響了祈福鐘 🔔', drum: '擊響了鼓樓大鼓 🥁', fireworks: '施放了煙火 🎆', firecracker: '點燃了鞭炮 🧨',
             incense: '插香參拜 🙏', bow: '合掌參拜 🙏', kowtow: '行三跪九叩大禮 🙇', meditate: '盤腿打坐 🪷', chant: '念經持咒 📖',
-            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
+            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
         };
         function onNetAct(msg) {
             if (!msg || msg.sameTab || msg.kind !== 'viewer') return;
@@ -14288,7 +14289,8 @@
             buildCourtyardProps();
             buildCourtyardLights(goldMat);
             buildYufoArea(goldMat);
-            RESERVE_PLOTS.forEach(buildReservePlot);   // the left plot now holds the 地藏殿
+            buildLongquan(goldMat);
+            RESERVE_PLOTS.filter(pl => pl.key !== 'right').forEach(buildReservePlot);   // the right plot now holds the 龍泉 rockery   // the left plot now holds the 地藏殿
             buildFudeCenser(goldMat);
             buildPuppetStage(goldMat);
             buildRearHall(goldMat, greenTrimMat);
@@ -15192,7 +15194,7 @@
         }
 
         const STATUE_ENLARGE = 1.25;
-        const STATUE_NO_ENLARGE = new Set(['baiwu', 'heiwu', 'jianjun', 'yinjun', 'guanyin', 'taizi']);
+        const STATUE_NO_ENLARGE = new Set(['baiwu', 'heiwu', 'jianjun', 'yinjun', 'guanyin', 'taizi', 'longquan']);
         function upgradeStatuesFromGLB(specs) {
             if (typeof THREE.GLTFLoader !== 'function') return;
             const loader = new THREE.GLTFLoader();
@@ -15386,6 +15388,209 @@
             return c;
         }
 
+
+
+        // =====================================================================
+        // 龍泉：右側增建預定地改建為巨型假山龍泉造景——層疊假山靠東牆而立，金鱗青龍自山中探出，
+        // 龍頭張口吐出一道泉水落入山前龍泉池；龍身拱出山頂、龍尾捲雲、龍爪攀石。點擊可在池邊裝一瓶龍泉水
+        // =====================================================================
+        const LONGQUAN = { x: 57, z: 6, mouth: null, land: null, busy: false, t0: 0, waterY: 0.38 };
+        function mergeGeos(geos) {
+            // concatenate non-indexed geometries (position, normal, uv) into one mesh to save draw calls
+            const list = geos.map(g => g.index ? g.toNonIndexed() : g);
+            let n = 0; list.forEach(g => n += g.attributes.position.count);
+            const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2);
+            let o = 0;
+            list.forEach(g => { pos.set(g.attributes.position.array, o * 3); nor.set(g.attributes.normal.array, o * 3); if (g.attributes.uv) uv.set(g.attributes.uv.array, o * 2); o += g.attributes.position.count; });
+            const out = new THREE.BufferGeometry();
+            out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            out.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+            out.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+            return out;
+        }
+        // one craggy boulder: a noise-displaced icosahedron, flattened and sheared like layered limestone
+        function rockGeo(cx, cy, cz, rx, ry, rz, seed, detail = 2) {
+            const g = new THREE.IcosahedronGeometry(1, detail);
+            const a = g.attributes.position, v = new THREE.Vector3();
+            const h = (x, y, z) => { const q = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719 + seed * 4.13) * 43758.5453; return q - Math.floor(q); };
+            for (let i = 0; i < a.count; i++) {
+                v.fromBufferAttribute(a, i);
+                const n = 0.75 + 0.35 * h(Math.round(v.x * 3), Math.round(v.y * 3), Math.round(v.z * 3)) + 0.12 * Math.sin(v.y * 9 + seed) ;
+                const ledge = 1 + 0.08 * Math.sign(Math.sin(v.y * 6 + seed));   // horizontal strata
+                a.setXYZ(i, cx + v.x * rx * n * ledge, cy + v.y * ry * n, cz + v.z * rz * n * ledge);
+            }
+            g.computeVertexNormals();
+            return g;
+        }
+        function createRockTexture() {
+            const c = document.createElement('canvas'); c.width = c.height = 512;
+            const x = c.getContext('2d');
+            x.fillStyle = '#8a8378'; x.fillRect(0, 0, 512, 512);
+            for (let i = 0; i < 9000; i++) { const t = Math.random(); x.fillStyle = t < 0.5 ? `rgba(60,55,48,${Math.random() * 0.25})` : `rgba(190,182,166,${Math.random() * 0.22})`; x.fillRect(Math.random() * 512, Math.random() * 512, 2 + Math.random() * 4, 1 + Math.random() * 2); }
+            x.strokeStyle = 'rgba(40,36,30,0.35)'; x.lineWidth = 2;
+            for (let i = 0; i < 60; i++) { x.beginPath(); let px = Math.random() * 512, py = Math.random() * 512; x.moveTo(px, py); for (let k = 0; k < 5; k++) { px += (Math.random() - 0.5) * 40; py += Math.random() * 25; x.lineTo(px, py); } x.stroke(); }
+            for (let i = 0; i < 80; i++) { x.fillStyle = `rgba(70,110,60,${0.15 + Math.random() * 0.2})`; x.beginPath(); x.arc(Math.random() * 512, Math.random() * 512, 4 + Math.random() * 14, 0, Math.PI * 2); x.fill(); }   // moss
+            const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4;
+            return t;
+        }
+        function createFlowTexture() {
+            const c = document.createElement('canvas'); c.width = 64; c.height = 256;
+            const x = c.getContext('2d');
+            x.fillStyle = 'rgba(190,230,240,0.55)'; x.fillRect(0, 0, 64, 256);
+            for (let i = 0; i < 90; i++) { x.fillStyle = `rgba(255,255,255,${0.3 + Math.random() * 0.6})`; x.fillRect(Math.random() * 64, Math.random() * 256, 1 + Math.random() * 3, 10 + Math.random() * 40); }
+            const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping;
+            return t;
+        }
+        function buildLongquan(goldMat) {
+            const L = LONGQUAN;
+            const g = new THREE.Group(); templeGroup.add(g); L.group = g;
+            const click = { interactType: 'longquan', label: '🐉 龍泉（點擊在池邊裝龍泉水）' };
+            const tag = m => { m.userData = { ...click }; clickableMeshes.push(m); return m; };
+            const rockTex = createRockTexture(); rockTex.repeat.set(2, 2);
+            const rockMat = new THREE.MeshStandardMaterial({ map: rockTex, bumpMap: rockTex, bumpScale: 0.12, color: 0xd8d0c2, roughness: 0.92 });
+            const rockDark = new THREE.MeshStandardMaterial({ map: rockTex, bumpMap: rockTex, bumpScale: 0.12, color: 0x9c958a, roughness: 0.95 });
+            // ---- giant rockery against the east wall: stacked boulders rising to three peaks
+            const geos = [], geosDark = [];
+            let seed = 1;
+            const peaks = [[-8, 4.2, 3.2], [-3, 7.5, 3.8], [2, 6.4, 3.4], [6, 10.5, 4.2], [10.5, 7.8, 3.6], [15, 8.6, 3.8], [19.5, 5.2, 3.2]];
+            peaks.forEach(([dz, H, W]) => {
+                let y = 0, r = W;
+                while (y < H) {
+                    const ry = Math.min(r * 0.62, 1.6);
+                    const jitter = () => (Math.sin(seed * 7.1) * 0.5);
+                    (seed % 3 ? geos : geosDark).push(rockGeo(63.2 + jitter() * 0.8 + (y / H) * 0.6, y + ry * 0.7, L.z + dz + jitter() * 0.9, r * 0.95, ry, r * 0.85, seed++, 3));
+                    // side boulders that make the silhouette craggy
+                    if (r > 1.4) geos.push(rockGeo(61.4 + jitter(), y + ry * 0.5, L.z + dz + (seed % 2 ? 1 : -1) * r * 0.75, r * 0.55, ry * 0.8, r * 0.5, seed++, 1));
+                    y += ry * 1.25; r *= 0.8;
+                }
+                geosDark.push(rockGeo(63.4, H + 0.3, L.z + dz, W * 0.3, 0.9, W * 0.28, seed++, 1));   // pointed summit
+            });
+            // base apron of boulders filling between the peaks
+            for (let dz = -10; dz <= 21; dz += 2.2) geos.push(rockGeo(64.5, 1.1, L.z + dz, 3.2, 1.4, 1.8, seed++, 1));
+            const rocks = tag(new THREE.Mesh(mergeGeos(geos), rockMat)); rocks.castShadow = rocks.receiveShadow = true; g.add(rocks);
+            const rocks2 = tag(new THREE.Mesh(mergeGeos(geosDark), rockDark)); rocks2.castShadow = rocks2.receiveShadow = true; g.add(rocks2);
+            // ---- 龍泉池: an irregular pool ringed with low rocks, clear green water
+            const px = 52.5, pz = L.z + 3.5, prx = 5.2, prz = 8.6;
+            L.pool = { x: px, z: pz, rx: prx, rz: prz };
+            const rim = [];
+            for (let k = 0; k < 30; k++) {
+                const a = k / 30 * Math.PI * 2, wob = 1 + 0.08 * Math.sin(a * 5);
+                rim.push(rockGeo(px + Math.cos(a) * prx * wob, 0.22, pz + Math.sin(a) * prz * wob, 0.75 + 0.25 * Math.sin(k * 2.3), 0.38, 0.65, seed++, 1));
+            }
+            const rimMesh = tag(new THREE.Mesh(mergeGeos(rim), rockDark)); rimMesh.receiveShadow = true; g.add(rimMesh);
+            const shape = new THREE.Shape();
+            for (let k = 0; k <= 48; k++) { const a = k / 48 * Math.PI * 2, wob = 1 + 0.08 * Math.sin(a * 5); const X = Math.cos(a) * prx * wob * 0.98, Z = Math.sin(a) * prz * wob * 0.98; k ? shape.lineTo(X, Z) : shape.moveTo(X, Z); }
+            const bed = new THREE.Mesh(new THREE.ShapeGeometry(shape, 24), new THREE.MeshStandardMaterial({ color: 0x24402f, roughness: 0.9, side: THREE.DoubleSide }));
+            bed.rotation.x = Math.PI / 2; bed.scale.z = -1; bed.position.set(px, 0.03, pz); bed.receiveShadow = true; g.add(bed);
+            const waterMat = new THREE.MeshStandardMaterial({ color: 0x3a8f88, roughness: 0.06, metalness: 0.3, transparent: true, opacity: 0.8, emissive: 0x123c3a, emissiveIntensity: 0.3 });
+            registerNightEmissive(waterMat, 0.3, 0.9);
+            const water = tag(new THREE.Mesh(new THREE.ShapeGeometry(shape, 24), waterMat));
+            water.rotation.x = Math.PI / 2; water.scale.z = -1; water.position.set(px, L.waterY, pz); g.add(water);
+            water.material.side = THREE.DoubleSide;
+            L.water = water;
+            // a few pebbles and lily pads on the pool
+            const padMat = new THREE.MeshStandardMaterial({ color: 0x3f7d3a, roughness: 0.6, side: THREE.DoubleSide });
+            [[-2.5, -4], [2.2, -5.5], [-1.5, 5.5], [3, 4.5]].forEach(([dx, dz2]) => { const pad = new THREE.Mesh(new THREE.CircleGeometry(0.42, 14, 0.3, Math.PI * 1.85), padMat); pad.rotation.x = -Math.PI / 2; pad.position.set(px + dx, L.waterY + 0.01, pz + dz2); g.add(pad); });
+            // ---- the falling water: dragon's jet (arc), two small cascades down the rocks, splash mist and ripples
+            const flowTex = createFlowTexture(); L.flowTex = flowTex;
+            const flowMat = new THREE.MeshBasicMaterial({ map: flowTex, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide });
+            L.mouth = new THREE.Vector3(57.0, 5.2, L.z);
+            L.land = new THREE.Vector3(51.8, L.waterY, L.z + 0.2);
+            const arc = [];
+            for (let i = 0; i <= 24; i++) { const t = i / 24; arc.push(new THREE.Vector3(L.mouth.x + (L.land.x - L.mouth.x) * t, L.mouth.y + 0.9 * t - (L.mouth.y + 0.9 - L.land.y) * t * t, L.mouth.z + (L.land.z - L.mouth.z) * t)); }
+            const jetGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(arc), 48, 0.16, 10, false);
+            const jr = jetGeo.attributes.position, jv = new THREE.Vector3();   // widen the stream as it falls
+            for (let i = 0; i < jr.count; i++) { jv.fromBufferAttribute(jr, i); const t = Math.min(1, Math.max(0, (L.mouth.x - jv.x) / (L.mouth.x - L.land.x))); const c = arc[Math.round(t * 24)]; jv.sub(c).multiplyScalar(0.75 + 0.9 * t).add(c); jr.setXYZ(i, jv.x, jv.y, jv.z); }
+            const jet = new THREE.Mesh(jetGeo, flowMat); g.add(jet); L.jet = jet;
+            [[58.6, 3.6, L.z - 5.6, 1.1], [59.2, 3.0, L.z + 8.2, 0.9]].forEach(([cx, top, cz, w]) => {
+                const fall = new THREE.Mesh(new THREE.PlaneGeometry(w, top - L.waterY, 1, 8), flowMat);
+                const fp = fall.geometry.attributes.position;
+                for (let i = 0; i < fp.count; i++) { const yy = fp.getY(i); fp.setZ(i, (0.5 - (yy / (top - L.waterY) + 0.5)) * 0.9); }
+                fall.position.set(cx, (top + L.waterY) / 2, cz); fall.rotation.y = -Math.PI / 2; g.add(fall);
+            });
+            addSmokeEmitter(L.land.x, L.waterY + 0.1, L.land.z, 9, 0.7, 0.7, 0xffffff, 0.32);
+            L.ripples = [0, 1, 2, 3].map(k => { const r = new THREE.Mesh(new THREE.RingGeometry(0.2, 0.28, 32), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })); r.rotation.x = -Math.PI / 2; r.position.set(L.land.x, L.waterY + 0.01, L.land.z); r.userData.phase = k / 4; g.add(r); return r; });
+            // ---- 龍泉 stele: a tall upright rock carved with red characters, facing the courtyard
+            const stele = tag(new THREE.Mesh(rockGeo(0, 1.6, 0, 0.75, 1.75, 0.45, 99, 2), rockMat));
+            stele.position.set(46.6, 0, L.z - 5.2); stele.castShadow = true; g.add(stele);
+            const sc = document.createElement('canvas'); sc.width = 256; sc.height = 640;
+            const sx = sc.getContext('2d');
+            sx.font = '900 200px "LXGW WenKai TC","Noto Serif TC",serif'; sx.textAlign = 'center'; sx.textBaseline = 'middle';
+            sx.fillStyle = 'rgba(80,10,6,0.6)'; sx.fillText('龍', 132, 170); sx.fillText('泉', 132, 420);
+            sx.fillStyle = '#c81e1e'; sx.fillText('龍', 128, 164); sx.fillText('泉', 128, 414);
+            sx.font = '700 34px "LXGW WenKai TC","Noto Serif TC",serif'; sx.fillStyle = '#c81e1e'; sx.fillText('問心堂敬立', 128, 590);
+            const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 2.1), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, roughness: 0.8 }));
+            plate.position.set(46.6 - 0.62, 1.75, L.z - 5.2); plate.rotation.y = -Math.PI / 2; g.add(plate); tag(plate);
+            // ---- 取水台: a stone step at the pool's front edge with a bamboo ladle stand
+            const step = tag(new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.22, 2.2), new THREE.MeshStandardMaterial({ color: 0xa39c90, roughness: 0.9 })));
+            step.position.set(px - prx - 0.4, 0.11, pz - 1.0); step.receiveShadow = true; g.add(step);
+            L.fillAt = new THREE.Vector3(px - prx - 0.55, 0.22, pz - 1.0);
+            // a gourd bottle that appears while filling
+            const gourdMat = new THREE.MeshStandardMaterial({ color: 0xd9a548, roughness: 0.5 });
+            const gourd = new THREE.Group();
+            const gb = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 10), gourdMat); gb.position.y = 0.13; gourd.add(gb);
+            const gt = new THREE.Mesh(new THREE.SphereGeometry(0.085, 14, 10), gourdMat); gt.position.y = 0.3; gourd.add(gt);
+            const gr = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.05, 8), new THREE.MeshStandardMaterial({ color: 0xb91c1c })); gr.position.y = 0.4; gourd.add(gr);
+            const gtie = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.012, 6, 16), new THREE.MeshStandardMaterial({ color: 0xb91c1c })); gtie.rotation.x = Math.PI / 2; gtie.position.y = 0.22; gourd.add(gtie);
+            gourd.position.set(px - prx + 0.25, L.waterY - 0.05, pz - 1.0); gourd.visible = false; g.add(gourd); L.gourd = gourd;
+            // night: a cool light pool on the water and a glow at the dragon's mouth
+            addLightPool(px, pz, 7.5, 0.9, 0x9fd8ff);
+            addNightGlow(g, L.mouth.clone(), 0x9fe0ff, 2.2);
+            // colliders: the rockery and the pool
+            for (let dz = -10; dz <= 22; dz += 2) colliders.push({ x: 63.5, z: L.z + dz, r: 3.4 });
+            for (let dz = -7; dz <= 7; dz += 2) colliders.push({ x: px, z: pz + dz, r: prx * 0.85 });
+            colliders.push({ x: 46.6, z: L.z - 5.2, r: 0.8 });
+            // the dragon (Blender model) is added when visitors come near; until then the rocks stand alone
+            const holder = new THREE.Group(); holder.position.set(59, 0, L.z); g.add(holder);
+            const stand = new THREE.Group(); holder.add(stand);
+            upgradeStatuesFromGLB([{ key: 'longquan', container: holder, figure: stand, offsetY: 0, interact: { ...click },
+                onReady: m => {
+                    const put = (name, pos, rotY, sc2, rotX = 0, rotZ = 0) => { const o = m.getObjectByName(name); if (!o) return; o.position.copy(pos).sub(holder.position); o.rotation.set(rotX, rotY, rotZ); o.scale.setScalar(sc2); };
+                    put('LQ_Head', new THREE.Vector3(L.mouth.x + 1.9, L.mouth.y + 0.35, L.z), -Math.PI / 2, 2.2);
+                    put('LQ_Hump', new THREE.Vector3(62.4, 7.2, L.z - 2.6), 0.12, 2.1);
+                    put('LQ_Tail', new THREE.Vector3(62.8, 7.6, L.z + 13.2), -0.4, 2.2);
+                    put('LQ_Claw', new THREE.Vector3(59.6, 3.0, L.z - 2.0), -Math.PI / 2, 2.3);
+                } }]);
+            const anchor = new THREE.Object3D(); anchor.position.set(59, 12.5, L.z); g.add(anchor);
+            register3DLabel(anchor, 0, '🐉 龍泉', '#5eead4', () => moveCameraPreset('longquan'));
+        }
+        function longquanInteract() {
+            const L = LONGQUAN;
+            if (L.busy) { showToast('🐉 正在裝龍泉水，請稍候……'); return; }
+            if (playerAvatarGroup) {
+                if (state.upstairs) { state.upstairs = false; state.followCam = false; updateStairsButton(); }
+                if (state.towerFloor) { state.towerFloor = 0; state.followCam = false; }
+                playerAvatarGroup.userData.kowtowToken = null;
+                setPlayerPose('stand', true);
+                playerAvatarGroup.position.set(L.fillAt.x - 0.15, 0.22, L.fillAt.z);
+                playerAvatarGroup.rotation.y = Math.PI / 2;
+                setPlayerPose('kneel', true);
+            }
+            L.busy = true; L.t0 = performance.now();
+            L.gourd.visible = true;
+            emitAct('longquan');
+            showToast('🐉 跪在池邊，以葫蘆承接龍口吐出的清泉……');
+            for (let i = 0; i < 4; i++) setTimeout(() => playTempleBellSound(880 + i * 60), 300 + i * 420);
+        }
+        function updateLongquan(t, dt, nowMs) {
+            const L = LONGQUAN;
+            if (!L.group) return;
+            if (L.flowTex) L.flowTex.offset.y -= dt * 1.6;
+            L.ripples.forEach(r => { const k = ((t * 0.45) + r.userData.phase) % 1; r.scale.setScalar(1 + k * 6); r.material.opacity = 0.5 * (1 - k); });
+            if (L.busy) {
+                const e = (nowMs - L.t0) / 1000;
+                // the gourd dips into the water, fills (bobbing), then lifts out
+                const dip = e < 0.6 ? e / 0.6 : e < 2.4 ? 1 : Math.max(0, 1 - (e - 2.4) / 0.6);
+                L.gourd.position.y = L.waterY - 0.05 - dip * 0.12 + Math.sin(e * 8) * 0.01 * (e < 2.4 ? 1 : 0);
+                L.gourd.rotation.z = -dip * 0.5;
+                if (e > 3.2) {
+                    L.busy = false; L.gourd.visible = false;
+                    let n = 1; try { n = (parseInt(localStorage.getItem('temple.longquan') || '0', 10) || 0) + 1; localStorage.setItem('temple.longquan', String(n)); } catch (err) {}
+                    playTempleBellSound(659);
+                    showToast(['🐉 已裝滿一葫蘆龍泉水！龍泉甘露，洗淨塵勞，闔家平安。', '💧 龍口吐珠，泉水清甜：願你身體健康、心想事成。', '🌊 一瓢龍泉，萬事順遂：帶回家淨宅、澆花、供佛皆宜。'][(Math.random() * 3) | 0] + `（這是你的第 ${n} 瓶龍泉水）`);
+                }
+            }
+        }
 
         // =====================================================================
         // 浴佛檯：大雄寶殿前廟埕（大香爐西側）——八角浴佛亭，亭中青銅浴佛盆盛香湯，蓮台上立金身太子像（右手指天、左手指地）
@@ -17487,7 +17692,7 @@
             ['大殿', ['overview', 'festival', 'shrine', 'altar', 'mazu', 'nezha', 'tiger', 'tiangong', 'upper', 'stairs', 'sanguan', 'daxiong', 'sanbao']],
             ['偏殿', ['tudigong', 'light', 'lampwall_gm', 'lampwall_ts', 'side_left', 'side_right', 'side_wing_left', 'side_wing_right', 'tigercave', 'side_dizang']],
             ['後殿', ['rearhall', 'guandi', 'tianshi', 'xuantian', 'yuhuang', 'sanqing']],
-            ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'wishtree', 'puppet', 'guanyinpond', 'grounds']],
+            ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'wishtree', 'puppet', 'longquan', 'guanyinpond', 'grounds']],
             ['活動', ['fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'yufo', 'cat', 'monk', 'fireworks', 'festival']]
         ];
         let camGroupActive = 0;
@@ -17553,6 +17758,7 @@
             presets.fudecenser = { r: 7.5, theta: 0.15, phi: 1.3, tx: FUDE_CENSER_POS.x, ty: 1.4, tz: FUDE_CENSER_POS.z - 1 };
             presets.wishtree = { r: 13, theta: -0.95, phi: 1.12, tx: WISHTREE.x - 2, ty: 2.0, tz: WISHTREE.z + 0.5 };
             if (TIGER_CAVE.cam) presets.tigercave = TIGER_CAVE.cam;
+            presets.longquan = { r: 24, theta: -Math.PI / 2 - 0.25, phi: 1.3, tx: 57, ty: 4.5, tz: LONGQUAN.z + 3 };
             presets.yufo = { r: 6.2, theta: YUFO.rot + 0.45, phi: 1.3, tx: YUFO.x, ty: 1.3, tz: YUFO.z };
             presets.shitou = { r: 6.5, theta: Math.PI / 2 + 0.25, phi: 1.3, tx: SHITOU_TREE.x + 3.4, ty: 1.2, tz: SHITOU_TREE.z };
             presets.puppet = { r: 9, theta: Math.PI + 0.1, phi: 1.4, tx: PUPPET_STAGE.x, ty: 2.0, tz: PUPPET_STAGE.z - 1 };
@@ -17730,6 +17936,7 @@
             else if (type === 'blacktiger') tigerRoar();
             else if (type && type.startsWith('tigercave')) tigerCaveInteract(type);
             else if (type === 'yufo') yufoInteract();
+            else if (type === 'longquan') longquanInteract();
             else if (type === 'xiaoren') openXiaorenModal();
             else if (type && type.startsWith('miaozhu')) miaozhuInteract(type, ud);
             else if (type && type.startsWith('zhaitang')) zhaitangInteract(type);
@@ -18168,6 +18375,7 @@
             updateMiaozhuCat(t);
             updateTempleCat(t, dt);
             updateYufo(t, performance.now());
+            updateLongquan(t, dt, performance.now());
             if (!MONK.mesh && DAXIONG.lotus.length && typeof towerAnim !== 'undefined') buildResidentMonk();
             updateResidentMonk(t, dt);
             renderer.render(scene, camera);
