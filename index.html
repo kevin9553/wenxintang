@@ -104,6 +104,8 @@
         @media (max-width: 639px) { #camPillRow .cam-pill { padding: 0.2rem 0.5rem; font-size: 10.5px; } }
         @media (min-width: 640px) { #camPillRow { max-width: 60vw; } }
         #poseControl { bottom: 14.9rem; left: 1rem; }
+        #lqChip { bottom: 17.2rem; left: 1rem; }
+        @media (min-width: 640px) { #lqChip { bottom: 19.2rem; left: 1.5rem; } }
         @media (min-width: 640px) { #poseControl { bottom: 16.9rem; left: 1.5rem; } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -268,6 +270,9 @@
         <button class="pose-btn px-2 h-6 rounded-full font-bold text-amber-100" data-pose="lotus" onclick="setPlayerPose('lotus')">盤腿</button>
     </div>
 
+    <!-- 7d. 我的龍泉水（裝過才出現；點擊看用途） -->
+    <button id="lqChip" onclick="showLongquanInfo()" class="hidden fixed z-40 palace-pill rounded-full px-2.5 py-1 pointer-events-auto text-[11px] font-bold text-cyan-100 border border-cyan-300/50">💧 龍泉水 × <span id="lqCount">0</span></button>
+
     <!-- 8. BOTTOM-CENTER 11 RITUAL BUTTONS DOCK BAR -->
     <nav class="fixed bottom-2.5 left-1/2 -translate-x-1/2 z-40 w-[98vw] max-w-5xl palace-pill rounded-2xl px-2 sm:px-3 py-2 pointer-events-auto border border-amber-400/45 shadow-2xl">
         <div class="flex sm:grid sm:grid-cols-11 gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5">
@@ -349,6 +354,9 @@
                 </button>
                 <button onclick="selectOfferingItem('soda', '🍭 三太子・彈珠汽水與懷舊棒棒糖')" class="w-full py-2.5 px-3 bg-black/40 hover:bg-amber-900/45 border border-amber-300/40 rounded-xl text-xs text-amber-100 font-bold flex items-center gap-2">
                     <span>🔥</span> <span>中壇元帥三太子・彈珠汽水與棒棒糖</span>
+                </button>
+                <button onclick="selectOfferingItem('lqwater', '💧 龍泉淨水三杯')" class="w-full py-2.5 px-3 bg-black/40 hover:bg-amber-900/45 border border-cyan-300/40 rounded-xl text-xs text-cyan-100 font-bold flex items-center gap-2">
+                    <span>💧</span> <span>龍泉淨水三杯（用掉一瓶自己裝的龍泉水）</span>
                 </button>
                 <button onclick="selectOfferingItem('eggs', '🥚 下壇金虎爺・招財生雞蛋盤')" class="w-full py-2.5 px-3 bg-black/40 hover:bg-amber-900/45 border border-amber-300/40 rounded-xl text-xs text-amber-100 font-bold flex items-center gap-2">
                     <span>🐯</span> <span>下壇金虎爺・專屬招財生雞蛋盤</span>
@@ -11803,7 +11811,24 @@
                 look.gender = look.skirt ? 'f' : 'm';
                 try { localStorage.setItem('temple.myLook', JSON.stringify(look)); } catch (e) {}
             }
-            return look;
+            return Object.assign({}, look, { gourd: lqCount() > 0 });   // a 龍泉 gourd hangs at the hip while you carry spring water
+        }
+        // ---- 我的龍泉水: bottles filled at the 龍泉, kept on this device
+        function lqCount() { try { return Math.max(0, parseInt(localStorage.getItem('temple.longquan') || '0', 10) || 0); } catch (e) { return 0; } }
+        function lqSet(n) {
+            const before = lqCount();
+            try { localStorage.setItem('temple.longquan', String(Math.max(0, n))); } catch (e) {}
+            refreshLqChip();
+            if ((before > 0) !== (n > 0) && typeof rebuildPlayerAvatar === 'function') rebuildPlayerAvatar();
+        }
+        function refreshLqChip() {
+            const n = lqCount(), chip = document.getElementById('lqChip');
+            if (!chip) return;
+            chip.classList.toggle('hidden', n <= 0);
+            document.getElementById('lqCount').textContent = n;
+        }
+        function showLongquanInfo() {
+            showToast(`💧 你有 ${lqCount()} 瓶龍泉水（葫蘆掛在腰間）。可以：🪷 到浴佛檯以龍泉水灌沐太子像；💧 在大殿供桌「供」→ 龍泉淨水三杯。用完再去龍泉池裝。`);
         }
         function netToast(msg) {
             const now = performance.now();
@@ -13197,6 +13222,17 @@
                 strap.position.set(-0.02, 0.78, 0.0); strap.rotation.set(0, Math.PI / 2, 0.75);
                 g.add(bag, fu, strap);
             }
+            if (look && look.gourd) {   // 龍泉水葫蘆 hanging at the right hip on a red cord
+                const gm = new THREE.MeshStandardMaterial({ color: 0xd9a548, roughness: 0.45 });
+                const red = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.6 });
+                const hg = new THREE.Group(); hg.position.set(0.25, 0.47, 0.06); hg.rotation.z = 0.15;
+                const b1 = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 10), gm); b1.position.y = -0.06; hg.add(b1);
+                const b2 = new THREE.Mesh(new THREE.SphereGeometry(0.046, 12, 10), gm); b2.position.y = 0.035; hg.add(b2);
+                const tie = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.007, 6, 12), red); tie.rotation.x = Math.PI / 2; tie.position.y = 0.0; hg.add(tie);
+                const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.09, 5), red); cord.position.y = 0.11; hg.add(cord);
+                const tas = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.07, 6), red); tas.position.set(0.035, -0.02, 0.02); tas.rotation.z = Math.PI; hg.add(tas);
+                g.add(hg);
+            }
             return g;
         }
 
@@ -14290,6 +14326,7 @@
             buildCourtyardLights(goldMat);
             buildYufoArea(goldMat);
             buildLongquan(goldMat);
+            refreshLqChip();
             RESERVE_PLOTS.filter(pl => pl.key !== 'right').forEach(buildReservePlot);   // the right plot now holds the 龍泉 rockery   // the left plot now holds the 地藏殿
             buildFudeCenser(goldMat);
             buildPuppetStage(goldMat);
@@ -15585,9 +15622,9 @@
                 L.gourd.rotation.z = -dip * 0.5;
                 if (e > 3.2) {
                     L.busy = false; L.gourd.visible = false;
-                    let n = 1; try { n = (parseInt(localStorage.getItem('temple.longquan') || '0', 10) || 0) + 1; localStorage.setItem('temple.longquan', String(n)); } catch (err) {}
+                    const n = lqCount() + 1; lqSet(n);
                     playTempleBellSound(659);
-                    showToast(['🐉 已裝滿一葫蘆龍泉水！龍泉甘露，洗淨塵勞，闔家平安。', '💧 龍口吐珠，泉水清甜：願你身體健康、心想事成。', '🌊 一瓢龍泉，萬事順遂：帶回家淨宅、澆花、供佛皆宜。'][(Math.random() * 3) | 0] + `（這是你的第 ${n} 瓶龍泉水）`);
+                    showToast(['🐉 已裝滿一葫蘆龍泉水！龍泉甘露，洗淨塵勞，闔家平安。', '💧 龍口吐珠，泉水清甜：願你身體健康、心想事成。', '🌊 一瓢龍泉，萬事順遂：帶回家淨宅、澆花、供佛皆宜。'][(Math.random() * 3) | 0] + `（這是你的第 ${n} 瓶龍泉水，葫蘆已掛在腰間）`);
                 }
             }
         }
@@ -15796,9 +15833,11 @@
                 playerAvatarGroup.position.set(sp.x, YUFO.F, sp.z);
                 playerAvatarGroup.rotation.y = YUFO.rot + Math.PI;
             }
-            YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
+YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
+            YUFO.withLq = lqCount() > 0;
+            if (YUFO.withLq) lqSet(lqCount() - 1);
             emitAct('yufo');
-            showToast(YUFO.festival ? '🪷 今日農曆四月初八浴佛節！持勺舀香湯，灌沐太子像三次……' : '🪷 持長柄竹勺舀起香湯，自太子像肩上灌沐三次……');
+            if (YUFO.withLq) showToast('💧 取下腰間葫蘆，倒入龍泉水作香湯，持勺灌沐太子像三次……'); else showToast(YUFO.festival ? '🪷 今日農曆四月初八浴佛節！持勺舀香湯，灌沐太子像三次……' : '🪷 持長柄竹勺舀起香湯，自太子像肩上灌沐三次……');
         }
         // one pour = 2.6 s: dip, lift over the shoulder, tip the cup, return
         function updateYufo(t, nowMs) {
@@ -15816,6 +15855,7 @@
                 YUFO.busy = false;
                 L.position.copy(YUFO.rest.p); L.rotation.z = YUFO.rest.rz; L.userData.fill.visible = false; st.material.opacity = 0;
                 playTempleBellSound(784);
+                if (YUFO.withLq) { showToast('🐉🪷 以龍泉甘露灌沐太子：龍天護佑、法雨潤心，願你所求圓滿、福慧雙增！（用掉一瓶龍泉水）'); return; }
                 showToast(['🙏 浴佛功德殊勝行，無邊勝福皆迴向：願沉溺諸有情，速往無量光佛剎。', '🪷 灌沐尊儀，洗滌心垢：願煩惱除盡、福慧增長、身心清淨。', '✨ 我今灌沐諸如來，淨智莊嚴功德聚；五濁眾生令離垢，同證如來淨法身。'][(Math.random() * 3) | 0]);
                 return;
             }
@@ -17583,7 +17623,23 @@
             }
 
             // One tray per slot: re-offering the same item replaces the old tray instead of stacking
-            const slotOffsets = { fruits: -1.8, wine: -0.95, flowers: -4.2, soda: 4.1 };
+            const slotOffsets = { fruits: -1.8, wine: -0.95, flowers: -4.2, soda: 4.1, lqwater: -2.85 };
+            if (type === 'lqwater') {   // three small white cups of clear spring water on a red lacquer tray
+                const old = altarOfferingsGroup.children.find(c => c.userData.offeringType === type);
+                if (old) altarOfferingsGroup.remove(old);
+                const tr = new THREE.Group(); tr.userData.offeringType = type; tr.position.set(slotOffsets.lqwater, 0, 0.18);
+                const board = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.035, 0.24), plateMat); board.position.y = 0.018; tr.add(board);
+                const cupMat = new THREE.MeshStandardMaterial({ color: 0xf8f5ee, roughness: 0.25 });
+                const wMat = new THREE.MeshStandardMaterial({ color: 0x8fd3d6, roughness: 0.05, metalness: 0.2, emissive: 0x1f5a5c, emissiveIntensity: 0.4 });
+                [-0.19, 0, 0.19].forEach(x => {
+                    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.045, 0.09, 16, 1, true), new THREE.MeshStandardMaterial({ color: 0xf8f5ee, roughness: 0.25, side: THREE.DoubleSide })); cup.position.set(x, 0.08, 0); tr.add(cup);
+                    const ft = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.02, 14), cupMat); ft.position.set(x, 0.045, 0); tr.add(ft);
+                    const w = new THREE.Mesh(new THREE.CircleGeometry(0.06, 16), wMat); w.rotation.x = -Math.PI / 2; w.position.set(x, 0.115, 0); tr.add(w);
+                    const band = new THREE.Mesh(new THREE.TorusGeometry(0.063, 0.004, 5, 18), goldRimMat); band.rotation.x = Math.PI / 2; band.position.set(x, 0.1, 0); tr.add(band);
+                });
+                altarOfferingsGroup.add(tr);
+                return;
+            }
             const ox = slotOffsets[type] ?? 1.2;
             // 福德正神的供品擺到左偏殿供桌上
             const hostGroup = type === 'mochi' ? (spawn3DOfferingOnTable.sideAltar || (spawn3DOfferingOnTable.sideAltar = (() => { const sg = new THREE.Group(); sg.position.set(-22.5 + 1.4, SIDE_HALL_FLOOR + 1.01, -5.5 - 1.7); sg.position.x -= 0; templeGroup.add(sg); return sg; })())) : altarOfferingsGroup;
@@ -17612,11 +17668,15 @@
         function openOfferingsModal() { document.getElementById('offeringsModal').classList.remove('hidden'); }
         function closeOfferingsModal() { document.getElementById('offeringsModal').classList.add('hidden'); }
         function selectOfferingItem(type, name) {
+            if (type === 'lqwater') {
+                if (lqCount() <= 0) { showToast('💧 你還沒有龍泉水。先到廟埕右側的龍泉池邊裝一瓶吧！'); return; }
+                lqSet(lqCount() - 1);
+            }
             closeOfferingsModal();
             spawn3DOfferingOnTable(type);
             moveCameraPreset(type === 'eggs' ? 'tiger' : 'altar');
             playTempleBellSound(784);
-            showToast(`🍎 敬獻成功：「${name}」已恭敬擺放於供桌上！`);
+            showToast(type === 'lqwater' ? '💧 已在大殿供桌敬奉龍泉淨水三杯：清淨甘露供諸佛菩薩，願心如止水、福澤長流！（用掉一瓶龍泉水）' : `🍎 敬獻成功：「${name}」已恭敬擺放於供桌上！`);
         }
 
         function resetAvatarPose() {
