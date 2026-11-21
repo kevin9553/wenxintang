@@ -4299,7 +4299,8 @@
             });
             colliders.push({ x, z, r: 0.4 });
             addLightPool(x, z, 4.2, 1.0);
-            return g.localToWorld(new THREE.Vector3(0, 3.32, 0));
+            g.updateMatrix();   // crossbar centre in templeGroup space (the new group's world matrix is not computed yet)
+            return new THREE.Vector3(0, 3.32, 0).applyMatrix4(g.matrix);
         }
         // 串燈: small lanterns hanging along a sagging cord between two posts (one instanced mesh for all of them)
         function buildLanternStrings(spans, lanMat) {
