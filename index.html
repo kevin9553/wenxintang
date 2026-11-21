@@ -15352,6 +15352,108 @@
             });
         }
 
+        // 博山爐：鎏金青銅高足香爐——喇叭座、竹節柄、刻雲紋的爐身、鏤空層疊山峰爐蓋，爐內暗紅香火，頂上細煙裊裊
+        function createBoshanTexture(pierced) {
+            const W = 512, H = 512, c = document.createElement('canvas');
+            c.width = W; c.height = H;
+            const x = c.getContext('2d');
+            const g = x.createLinearGradient(0, 0, 0, H);
+            g.addColorStop(0, '#c2ac6a'); g.addColorStop(0.5, '#9a8448'); g.addColorStop(1, '#6a5a2a');
+            x.fillStyle = g; x.fillRect(0, 0, W, H);
+            // cast cloud-scroll relief: dark recessed outlines with bright raised edges
+            for (let i = 0; i < 46; i++) {
+                const cx = Math.random() * W, cy = Math.random() * H, r = 12 + Math.random() * 22;
+                x.lineWidth = 5; x.strokeStyle = 'rgba(40,26,6,0.65)';
+                x.beginPath(); x.arc(cx, cy, r, 0.3, Math.PI * 1.7); x.stroke();
+                x.beginPath(); x.arc(cx + r * 0.55, cy + r * 0.2, r * 0.45, Math.PI, Math.PI * 2.6); x.stroke();
+                x.lineWidth = 2; x.strokeStyle = 'rgba(255,226,150,0.45)';
+                x.beginPath(); x.arc(cx - 1, cy - 2, r, 0.3, Math.PI * 1.7); x.stroke();
+            }
+            if (!pierced) {
+                // horizontal key-fret bands
+                [0.32, 0.62].forEach(v => { x.fillStyle = 'rgba(40,26,6,0.55)'; x.fillRect(0, H * v, W, 10); x.fillStyle = 'rgba(255,226,150,0.35)'; x.fillRect(0, H * v - 3, W, 3); });
+            }
+            for (let i = 0; i < 2500; i++) { x.fillStyle = Math.random() < 0.5 ? 'rgba(30,20,4,0.18)' : 'rgba(120,150,110,0.08)'; x.fillRect(Math.random() * W, Math.random() * H, 2, 2); }
+            const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4;
+            if (!pierced) return { map: t };
+            // alpha mask: openwork holes between the peaks so the inner glow shows through
+            const a = document.createElement('canvas'); a.width = 256; a.height = 256;
+            const y = a.getContext('2d');
+            y.fillStyle = '#fff'; y.fillRect(0, 0, 256, 256);
+            y.fillStyle = '#000';
+            for (let row = 0; row < 4; row++) for (let k = 0; k < 9; k++) {
+                const cx = (k + (row % 2) * 0.5) / 9 * 256, cy = 40 + row * 48;
+                y.beginPath(); y.ellipse(cx, cy, 7 - row, 11 - row * 1.5, 0.4, 0, Math.PI * 2); y.fill();
+            }
+            const am = new THREE.CanvasTexture(a); am.wrapS = THREE.RepeatWrapping;
+            return { map: t, alphaMap: am };
+        }
+        function buildBoshanCenser(x, y, z) {
+            const g = new THREE.Group();
+            g.position.set(x, y, z);
+            const env = typeof getStatueEnvMap === 'function' ? getStatueEnvMap() : null;
+            const mk = (tex, extra = {}) => { const m = new THREE.MeshStandardMaterial({ color: 0xb4b49a, metalness: 0.78, roughness: 0.4, map: tex.map, bumpMap: tex.map, bumpScale: 0.006, ...extra }); if (env) { m.envMap = env; m.envMapIntensity = 0.9; } return m; };
+            const bodyMat = mk(createBoshanTexture(false));
+            const lidTex = createBoshanTexture(true);
+            const lidMat = mk(lidTex, { alphaMap: lidTex.alphaMap, alphaTest: 0.5, side: THREE.DoubleSide });
+            const V = (r, h) => new THREE.Vector2(r, h);
+            // flared foot, knotted stem and the cup
+            const body = new THREE.LatheGeometry([V(0, 0), V(0.105, 0), V(0.108, 0.012), V(0.098, 0.022), V(0.075, 0.04), V(0.05, 0.06), V(0.034, 0.085),
+                V(0.031, 0.11), V(0.048, 0.12), V(0.048, 0.132), V(0.031, 0.142), V(0.032, 0.165), V(0.06, 0.185), V(0.1, 0.205), V(0.122, 0.235),
+                V(0.13, 0.27), V(0.128, 0.29), V(0.136, 0.296), V(0.134, 0.305), V(0, 0.305)], 40);
+            const bm = new THREE.Mesh(body, bodyMat); bm.castShadow = true; g.add(bm);
+            // four little loop handles on the cup rim
+            for (let k = 0; k < 4; k++) {
+                const a = k * Math.PI / 2 + Math.PI / 4;
+                const lug = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.005, 6, 12), bodyMat);
+                lug.position.set(Math.sin(a) * 0.137, 0.282, Math.cos(a) * 0.137); lug.rotation.y = a;
+                g.add(lug);
+            }
+            // mountain lid: a lathe dome pushed out into a ring of overlapping peaks
+            const lidProf = [];
+            for (let i = 0; i <= 14; i++) { const v = i / 14; lidProf.push(V(0.128 * Math.pow(1 - v, 0.75) + 0.001, 0.305 + v * 0.27)); }
+            const lid = new THREE.LatheGeometry(lidProf, 48);
+            const pos = lid.attributes.position, pv = new THREE.Vector3();
+            for (let i = 0; i < pos.count; i++) {
+                pv.fromBufferAttribute(pos, i);
+                const r = Math.hypot(pv.x, pv.z); if (r < 1e-4) continue;
+                const th = Math.atan2(pv.x, pv.z), h = (pv.y - 0.305) / 0.27;
+                const peaks = Math.max(0, Math.sin(th * 5 + h * 4)) * 0.28 + Math.max(0, Math.sin(th * 8 - h * 6 + 1.3)) * 0.18;
+                const k = 1 + peaks * Math.sin(Math.PI * Math.min(1, h * 1.15));
+                pv.x *= k; pv.z *= k; pv.y += peaks * 0.03 * h;
+                pos.setXYZ(i, pv.x, pv.y, pv.z);
+            }
+            lid.computeVertexNormals();
+            const lm = new THREE.Mesh(lid, lidMat); lm.castShadow = true; g.add(lm);
+            // inner core glowing with smouldering incense, seen through the openwork
+            const core = new THREE.Mesh(new THREE.LatheGeometry(lidProf.map(p => V(p.x * 0.72, p.y - 0.004)), 20),
+                new THREE.MeshStandardMaterial({ color: 0x1a0e04, emissive: 0xff5a1a, emissiveIntensity: 0.35, roughness: 0.9 }));
+            g.add(core);
+            // tiers of craggy mountain peaks (the 博山 = sacred mountain of the immortals)
+            const peakGeo = new THREE.LatheGeometry([[0, 0], [1, 0], [0.95, 0.25], [0.7, 0.55], [0.4, 0.8], [0.12, 0.97], [0, 1]].map(([r, h]) => new THREE.Vector2(r, h - 0.5)), 6);
+            const pp = peakGeo.attributes.position;
+            for (let i = 0; i < pp.count; i++) { const yy = pp.getY(i); if (yy > -0.49 && yy < 0.49) { const j = 0.8 + Math.random() * 0.35; pp.setX(i, pp.getX(i) * j); pp.setZ(i, pp.getZ(i) * j); } }
+            peakGeo.computeVertexNormals();
+            [[7, 0.325, 0.108, 0.055, 0.095, 0.45], [6, 0.4, 0.08, 0.05, 0.09, 0.32], [4, 0.47, 0.05, 0.044, 0.085, 0.2], [2, 0.53, 0.022, 0.036, 0.075, 0.1]].forEach(([n, py, pr, w, h, tilt], tier) => {
+                for (let k = 0; k < n; k++) {
+                    const a = (k + tier * 0.37) / n * Math.PI * 2;
+                    const pk = new THREE.Mesh(peakGeo, bodyMat);
+                    const hh = h * (0.8 + Math.random() * 0.4);
+                    pk.scale.set(w, hh, w * 0.85);
+                    pk.position.set(Math.sin(a) * pr, py + hh * 0.4, Math.cos(a) * pr);
+                    pk.rotation.set(Math.cos(a) * tilt, a + Math.random(), -Math.sin(a) * tilt);
+                    pk.castShadow = true;
+                    g.add(pk);
+                }
+            });
+            // tallest summit peak with a tiny knob
+            const top = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.09, 6), bodyMat); top.position.y = 0.61; g.add(top);
+            const knob = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), bodyMat); knob.position.y = 0.66; g.add(knob);
+            templeGroup.add(g);
+            addSmokeEmitter(x, y + 0.66, z, 6, 0.32, 1.1, 0xf1f5f9, 0.2);
+            return g;
+        }
+
         // 六十甲子籤筒：紅漆金箍竹節筒、金字「六十甲子靈籤」、八角漆座、六十支紅頭竹籤（抽中時一支升出筒口）
         function createCylinderTexture() {
             const W = 1024, H = 512, c = document.createElement('canvas');
@@ -16258,6 +16360,9 @@
             register3DLabel(tigerGroup, 1.52, '🐯 下壇金虎爺', '#f59e0b', () => openWealthFurnaceModal());
 
             // Fortune Stick Cylinder & Red Bobei Blocks on Altar
+            // 博山爐：供桌上的鎏金青銅香爐（原竹節籤筒的位置）
+            buildBoshanCenser(-2.6, 1.9, -2.95);
+
             // 落地六角籤詩櫃，竹籤直接插在櫃頂籤口：搖出竹籤後，櫃身轉到該籤號並開出抽屜
             cylinderGroup = buildFortuneCylinder(goldMat);
             cylinderGroup.position.set(-3.7, 0.445, -1.3);   // 落地籤詩櫃：立在供桌前地面
