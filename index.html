@@ -2253,13 +2253,7 @@
             altarTop.position.set(cx, FLOOR + 0.62, -1.7);
             g.add(altar, altarTop);
             const T = FLOOR + 0.645;
-            const censer = new THREE.Mesh(new THREE.SphereGeometry(0.18, 20, 14), new THREE.MeshStandardMaterial({ color: 0x4a3b2c, metalness: 0.55, roughness: 0.38 }));
-            censer.scale.set(1.15, 0.7, 1.15);
-            censer.position.set(cx, T + 0.11, -1.7);
-            const censerRim = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.025, 10, 24), goldMat);
-            censerRim.rotation.x = Math.PI / 2;
-            censerRim.position.set(cx, T + 0.21, -1.7);
-            g.add(censer, censerRim);
+            placeTripodCenser(g, cx, T, -1.7, 0.18, 0.21);
             [-0.06, 0, 0.06].forEach(ix => {
                 const st = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.4, 6), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
                 st.position.set(cx + ix, T + 0.38, -1.7);
@@ -5070,9 +5064,8 @@
                 clickableMeshes.push(altar);
                 const altarTop = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.06, 1.0), goldMat);
                 altarTop.position.set(0, F + 0.98, shrineZ + 1.7);
-                const censer = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.16, 0.24, 18), M.bronze);
-                censer.position.set(0, F + 1.13, shrineZ + 1.7);
-                g.add(altar, altarTop, censer);
+                g.add(altar, altarTop);
+                placeTripodCenser(g, 0, F + 1.01, shrineZ + 1.7, 0.17, 0.24);
                 [-0.05, 0, 0.05].forEach(ix => {
                     const st = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.36, 6), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
                     st.position.set(ix, F + 1.42, shrineZ + 1.7);
@@ -5106,9 +5099,7 @@
                 if (!h.host) g.add(notice);
                 else {
                     // The relocated statue sits on this platform; give its altar a censer with incense
-                    const censer = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.16, 0.24, 18), propMats().bronze);
-                    censer.position.set(0, F + 1.13, shrineZ + 1.7);
-                    g.add(censer);
+                    placeTripodCenser(g, 0, F + 1.01, shrineZ + 1.7, 0.17, 0.24);
                     [-0.05, 0, 0.05].forEach(ix => {
                         const st = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.36, 6), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
                         st.position.set(ix, F + 1.42, shrineZ + 1.7);
@@ -6688,9 +6679,7 @@
             clickableMeshes.push(tbl);
             box(7.1, 0.05, 0.56, goldMat, REAR.x, y + 0.87, back + 2.15);
             const bronze = propMats().bronze;
-            const censer = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.17, 0.26, 20), bronze);
-            censer.position.set(REAR.x, y + 1.02, back + 2.15);
-            g.add(censer);
+            placeTripodCenser(g, REAR.x, y + 0.895, back + 2.15, 0.19, 0.27);
             [-0.05, 0, 0.05].forEach(ix => {
                 const st = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.38, 6), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
                 st.position.set(REAR.x + ix, y + 1.32, back + 2.15);
@@ -6863,9 +6852,7 @@
                 registerMinorLabel(anchor, 0, e.name, () => moveCameraPreset('guandi'));
                 // a small censer, candles and fruit for each 恩主 on the side altars
                 const cz = az, top = y + 0.85;
-                const censer = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.1, 0.16, 16), propMats().bronze);
-                censer.position.set(REAR.x + e.x, top + 0.08, cz);
-                g.add(censer);
+                placeTripodCenser(g, REAR.x + e.x, top, cz, 0.11, 0.16);
                 [-0.03, 0.03].forEach(ix => {
                     const st = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.28, 6), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
                     st.position.set(REAR.x + e.x + ix, top + 0.28, cz);
@@ -7338,9 +7325,7 @@
             altar.userData = { ...interact };
             clickableMeshes.push(altar);
             box(3.1, 0.05, 0.76, goldMat, REAR.x, y + 0.92, az);
-            const censer = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.16, 0.24, 18), propMats().bronze);
-            censer.position.set(REAR.x, y + 1.06, az);
-            g.add(censer);
+            placeTripodCenser(g, REAR.x, y + 0.945, az, 0.17, 0.24);
             [-0.05, 0, 0.05].forEach(ix => {
                 const st = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.36, 6), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
                 st.position.set(REAR.x + ix, y + 1.35, az);
@@ -7966,8 +7951,7 @@
             const ct = toWorld(base, 0, 0.6, front - 0.2);
             TIGER_CAVE.cam = { r: 4.6, theta: TIGER_CAVE.face + Math.PI + 0.45, phi: 1.22, tx: ct.x, ty: 0.6, tz: ct.z };
         }
-        // small bronze tripod censer for 黑虎將軍: lathe-turned bulging body, rim lip and bands, upright ears,
-        // three lion-paw legs, a raised 「虎」 medallion, ash bed and three lit incense sticks, on a red lacquer stand
+        // 黑虎將軍香爐: the shared 精緻青銅三足爐 with a 「虎」 medallion, three lit incense sticks, on a red lacquer stand
         function buildTigerCenser() {
             const c = new THREE.Group();
             const bronze = new THREE.MeshStandardMaterial({ color: 0xa8803a, metalness: 0.75, roughness: 0.3 });
@@ -7978,46 +7962,12 @@
             // red lacquer stand with a gold edge
             put(new THREE.CylinderGeometry(0.15, 0.16, 0.035, 24), lacquer, 0, 0.0175, 0);
             put(new THREE.TorusGeometry(0.152, 0.006, 6, 32), gold, 0, 0.035, 0).rotation.x = Math.PI / 2;
-            // three legs with lion-paw feet, standing on the stand
-            const H0 = 0.035, legH = 0.045;
-            for (let k = 0; k < 3; k++) {
-                const a = k / 3 * Math.PI * 2 + Math.PI / 2, r = 0.075;
-                const leg = put(new THREE.CylinderGeometry(0.012, 0.016, legH, 8), bronze, Math.cos(a) * r, H0 + legH / 2 + 0.008, Math.sin(a) * r);
-                leg.rotation.z = Math.cos(a) * 0.15; leg.rotation.x = -Math.sin(a) * 0.15;
-                const paw = put(new THREE.SphereGeometry(0.018, 10, 8), bronze, Math.cos(a) * (r + 0.006), H0 + 0.008, Math.sin(a) * (r + 0.006));
-                paw.scale.set(1.2, 0.6, 1.2);
-                [-1, 0, 1].forEach(t => put(new THREE.SphereGeometry(0.006, 6, 5), bronze, Math.cos(a) * (r + 0.02) + Math.cos(a + Math.PI / 2) * t * 0.009, H0 + 0.007, Math.sin(a) * (r + 0.02) + Math.sin(a + Math.PI / 2) * t * 0.009));
-            }
-            // body: a bulging bowl turned on a lathe (inside wall included)
-            const y0 = H0 + legH + 0.005;
-            const prof = [[0.0, 0], [0.05, 0.0], [0.085, 0.012], [0.108, 0.04], [0.112, 0.07], [0.104, 0.095], [0.094, 0.108], [0.1, 0.116], [0.104, 0.122], [0.098, 0.124], [0.088, 0.118], [0.085, 0.09], [0.0, 0.088]];
-            const body = put(new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 40), bronze, 0, y0, 0);
-            // decorative bands: a gold rope at the shoulder and a dark band of raised studs on the belly
-            put(new THREE.TorusGeometry(0.104, 0.004, 6, 40), gold, 0, y0 + 0.095, 0).rotation.x = Math.PI / 2;
-            put(new THREE.TorusGeometry(0.111, 0.003, 6, 40), bronzeDark, 0, y0 + 0.055, 0).rotation.x = Math.PI / 2;
-            for (let k = 0; k < 18; k++) {
-                const a = k / 18 * Math.PI * 2;
-                if (Math.abs(Math.atan2(Math.sin(a - Math.PI / 2), Math.cos(a - Math.PI / 2))) < 0.45) continue;   // leave room for the medallion
-                put(new THREE.SphereGeometry(0.005, 6, 5), gold, Math.cos(a) * 0.111, y0 + 0.072, Math.sin(a) * 0.111);
-            }
-            // raised medallion with 「虎」 facing the worshipper (+z)
-            const mc = document.createElement('canvas'); mc.width = mc.height = 128;
-            const mx = mc.getContext('2d');
-            mx.fillStyle = '#5a1010'; mx.beginPath(); mx.arc(64, 64, 62, 0, Math.PI * 2); mx.fill();
-            mx.strokeStyle = '#e8b840'; mx.lineWidth = 7; mx.beginPath(); mx.arc(64, 64, 55, 0, Math.PI * 2); mx.stroke();
-            mx.fillStyle = '#f5cf5a'; mx.font = "bold 78px 'LXGW WenKai TC','Noto Serif TC',serif"; mx.textAlign = 'center'; mx.textBaseline = 'middle'; mx.fillText('虎', 64, 68);
-            put(new THREE.CylinderGeometry(0.031, 0.031, 0.008, 24), gold, 0, y0 + 0.062, 0.107).rotation.x = Math.PI / 2;
-            const med = put(new THREE.CircleGeometry(0.029, 28), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(mc), metalness: 0.4, roughness: 0.4 }), 0, y0 + 0.062, 0.1115);
-            med.castShadow = false;
-            // two upright loop ears on the rim
-            [-1, 1].forEach(sx => {
-                const ear = put(new THREE.TorusGeometry(0.025, 0.006, 6, 16, Math.PI), bronze, sx * 0.1, y0 + 0.124, 0);
-                ear.rotation.y = Math.PI / 2;
-                put(new THREE.BoxGeometry(0.014, 0.012, 0.06), bronze, sx * 0.1, y0 + 0.123, 0);
-            });
+            // 精緻青銅三足爐 standing on the stand, 「虎」 medallion facing the worshipper
+            const H0 = 0.035;
+            const tri = buildBronzeTripodCenser(0.1, 0.17, { mark: '虎' });
+            tri.position.y = H0; c.add(tri);
+            const y0 = H0 + 0.055;
             // ash bed and three lit incense sticks
-            const ash = put(new THREE.CircleGeometry(0.086, 28), new THREE.MeshStandardMaterial({ color: 0x9a948a, roughness: 1 }), 0, y0 + 0.1, 0);
-            ash.rotation.x = -Math.PI / 2;
             for (let k = 0; k < 6; k++) { const st = put(new THREE.CylinderGeometry(0.0025, 0.0025, 0.03, 4), new THREE.MeshStandardMaterial({ color: 0x7a1d1d }), (Math.random() - 0.5) * 0.1, y0 + 0.11, (Math.random() - 0.5) * 0.08); st.rotation.set((Math.random() - 0.5) * 0.6, 0, (Math.random() - 0.5) * 0.6); }
             const glow = new THREE.MeshBasicMaterial({ color: 0xff6a1a });
             [-0.022, 0, 0.022].forEach((ix, k) => {
@@ -8683,12 +8633,8 @@
             const cen = new THREE.Group(); cen.position.set(cxL, F, cz); g.add(cen);
             add(new THREE.BoxGeometry(0.6, 0.55, 0.6), red, 0, 0.275, 0, cen);
             add(new THREE.BoxGeometry(0.66, 0.04, 0.66), goldMat, 0, 0.57, 0, cen);
-            const bowl = add(new THREE.CylinderGeometry(0.22, 0.17, 0.2, 22), M.bronze, 0, 0.73, 0, cen);
-            const rim = add(new THREE.TorusGeometry(0.22, 0.02, 8, 24), goldMat, 0, 0.83, 0, cen); rim.rotation.x = Math.PI / 2;
-            // two upright ears on the left and right as seen by the worshipper (the shrine is along -x), not front/back
-            [-1, 1].forEach(e => { const ear = add(new THREE.TorusGeometry(0.05, 0.012, 6, 12), goldMat, 0, 0.8, e * 0.235, cen); ear.rotation.y = Math.PI / 2; });
-            // three short legs (三足) under the bowl
-            [0, 1, 2].forEach(k => { const a = k / 3 * Math.PI * 2 + Math.PI; add(new THREE.CylinderGeometry(0.025, 0.018, 0.08, 8), M.bronze, Math.cos(a) * 0.13, 0.6, Math.sin(a) * 0.13, cen); });
+            // 精緻青銅三足爐; its front faces the worshipper standing on the +x side
+            placeTripodCenser(cen, 0, 0.59, 0, 0.2, 0.24, null, { rotY: Math.PI / 2, mark: '福' });
             const inc = new THREE.Group(); inc.position.set(0, 0.83, 0); cen.add(inc);
             [-0.04, 0, 0.04].forEach(ix => { const st = add(new THREE.CylinderGeometry(0.008, 0.008, 0.3, 6), new THREE.MeshStandardMaterial({ color: 0xdc2626 }), ix, 0.14, 0, inc); st.castShadow = false; });
             tagAll(cen, { interactType: 'censer_miaozhu', label: '🔥 廟祝香爐（點擊點香、插香）' });
@@ -9859,9 +9805,7 @@
                 egg.scale.y = 1.3; egg.position.set(ex, 0.56, 0.42);
                 sh.add(egg);
             });
-            const censer = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.11, 0.16, 16), M.bronze);
-            censer.position.set(0, 0.58, 0.45);
-            sh.add(censer);
+            placeTripodCenser(sh, 0, 0.5, 0.45, 0.12, 0.17, null, { mark: '虎' });
             addSmokeEmitter(...localToWorld(XIAOREN_POS, 0, 0, -1.7).toArray().map((v, i) => i === 1 ? 0.95 : v), 4, 0.35, 0.9, 0xf1f5f9, 0.12);
             const shw = localToWorld(XIAOREN_POS, 0, 0, -2.35);
             colliders.push({ x: shw.x, z: shw.z, r: 1.25 });
@@ -15354,6 +15298,92 @@
             });
         }
 
+        // 精緻青銅三足香爐（各殿內爐）：鼓腹爐身、雲雷紋腹帶、金繩紋口沿、獸首銜環、正面圓牌、立耳、三隻獸足，爐內香灰
+        // origin at the bottom of the feet; rt = rim radius, h = height to the rim
+        const TRIPOD_MATS = {};
+        function tripodMats() {
+            if (TRIPOD_MATS.bronze) return TRIPOD_MATS;
+            const tex = createBronzeTexture();
+            TRIPOD_MATS.bronze = new THREE.MeshStandardMaterial({ map: tex, bumpMap: tex, bumpScale: 0.02, color: 0xffd08a, metalness: 0.6, roughness: 0.36, emissive: 0x2a1a08, emissiveIntensity: 0.4 });
+            TRIPOD_MATS.dark = new THREE.MeshStandardMaterial({ color: 0x3e3020, metalness: 0.65, roughness: 0.5 });
+            TRIPOD_MATS.gold = new THREE.MeshStandardMaterial({ color: 0xd9a520, metalness: 0.85, roughness: 0.24 });
+            TRIPOD_MATS.ash = new THREE.MeshStandardMaterial({ color: 0x9a948a, roughness: 1 });
+            // 雲雷紋 band: square thunder spirals in gold on dark bronze
+            const c = document.createElement('canvas'); c.width = 512; c.height = 64;
+            const x = c.getContext('2d');
+            x.fillStyle = '#5a4424'; x.fillRect(0, 0, 512, 64);
+            x.strokeStyle = '#d6a84a'; x.lineWidth = 4;
+            for (let i = 0; i < 16; i++) {
+                const ox = i * 32 + 4, oy = 8, flip = i % 2;
+                x.beginPath();
+                const pts = [[0, 0], [24, 0], [24, 48], [4, 48], [4, 10], [18, 10], [18, 38], [10, 38], [10, 20]];
+                pts.forEach(([px, py], k) => { const X = ox + px, Y = oy + (flip ? 48 - py : py); k ? x.lineTo(X, Y) : x.moveTo(X, Y); });
+                x.stroke();
+            }
+            x.fillStyle = '#d6a84a'; x.fillRect(0, 0, 512, 3); x.fillRect(0, 61, 512, 3);
+            const bt = new THREE.CanvasTexture(c); bt.wrapS = THREE.RepeatWrapping; bt.repeat.set(1, 1);
+            TRIPOD_MATS.band = new THREE.MeshStandardMaterial({ map: bt, metalness: 0.6, roughness: 0.35, side: THREE.DoubleSide });
+            return TRIPOD_MATS;
+        }
+        function buildBronzeTripodCenser(rt, h, opt = {}) {
+            const M = tripodMats();
+            const c = new THREE.Group();
+            const put = (geo, mat, px, py, pz) => { const m = new THREE.Mesh(geo, mat); m.position.set(px, py, pz); m.castShadow = true; m.receiveShadow = true; c.add(m); return m; };
+            const legH = 0.3 * h, yb = 0.24 * h, bh = h - yb;
+            // three beast legs: tapered shank with a knee knob and a broad paw, splayed slightly outward
+            for (let k = 0; k < 3; k++) {
+                const a = k / 3 * Math.PI * 2 + Math.PI / 2, r = 0.62 * rt;
+                const leg = put(new THREE.CylinderGeometry(0.12 * rt, 0.08 * rt, legH, 8), M.bronze, Math.cos(a) * r, legH / 2 + 0.02 * h, Math.sin(a) * r);
+                leg.rotation.z = Math.cos(a) * 0.16; leg.rotation.x = -Math.sin(a) * 0.16;
+                put(new THREE.SphereGeometry(0.15 * rt, 10, 8), M.bronze, Math.cos(a) * r * 0.98, legH * 0.82, Math.sin(a) * r * 0.98).scale.set(1, 0.8, 1);
+                const paw = put(new THREE.SphereGeometry(0.15 * rt, 10, 8), M.bronze, Math.cos(a) * (r + 0.07 * rt), 0.04 * h, Math.sin(a) * (r + 0.07 * rt));
+                paw.scale.set(1.25, 0.55, 1.25);
+            }
+            // bulging body turned on a lathe, flared lip, inner wall down to the ash bed
+            const P = (rr, yy) => new THREE.Vector2(rr * rt, yb + yy * bh);
+            const body = new THREE.LatheGeometry([P(0, 0), P(0.55, 0), P(0.88, 0.1), P(1.06, 0.36), P(1.07, 0.55), P(0.97, 0.78), P(0.93, 0.86), P(1.0, 0.93), P(1.1, 1.0),
+                P(1.08, 1.02), P(0.95, 0.99), P(0.9, 0.9), P(0, 0.88)], 44);
+            put(body, M.bronze, 0, 0, 0);
+            // 雲雷紋 belly band, gold rope at the neck and the lip
+            put(new THREE.CylinderGeometry(1.075 * rt, 1.07 * rt, 0.2 * bh, 44, 1, true), M.band, 0, yb + 0.47 * bh, 0);
+            put(new THREE.TorusGeometry(0.94 * rt, 0.03 * rt, 6, 44), M.gold, 0, yb + 0.86 * bh, 0).rotation.x = Math.PI / 2;
+            put(new THREE.TorusGeometry(1.1 * rt, 0.035 * rt, 6, 44), M.gold, 0, h + 0.005 * h, 0).rotation.x = Math.PI / 2;
+            // 獸首銜環 on the left and right of the belly
+            [-1, 1].forEach(sx => {
+                put(new THREE.SphereGeometry(0.13 * rt, 10, 8), M.gold, sx * 1.07 * rt, yb + 0.62 * bh, 0).scale.set(0.6, 1, 1);
+                const ring = put(new THREE.TorusGeometry(0.16 * rt, 0.03 * rt, 6, 16), M.gold, sx * 1.11 * rt, yb + 0.46 * bh, 0);
+                ring.rotation.y = Math.PI / 2;
+            });
+            // upright loop ears standing on the lip (left/right as the worshipper sees it)
+            [-1, 1].forEach(sx => {
+                const ear = put(new THREE.TorusGeometry(0.26 * rt, 0.07 * rt, 6, 14, Math.PI), M.bronze, sx * 0.95 * rt, h + 0.01 * h, 0);
+                ear.rotation.y = Math.PI / 2;
+                put(new THREE.BoxGeometry(0.12 * rt, 0.08 * rt, 0.64 * rt), M.bronze, sx * 0.95 * rt, h, 0);
+            });
+            // round medallion on the front (+z) with a raised character
+            const mc = document.createElement('canvas'); mc.width = mc.height = 128;
+            const mx = mc.getContext('2d');
+            mx.fillStyle = '#5a1010'; mx.beginPath(); mx.arc(64, 64, 62, 0, Math.PI * 2); mx.fill();
+            mx.strokeStyle = '#e8b840'; mx.lineWidth = 7; mx.beginPath(); mx.arc(64, 64, 55, 0, Math.PI * 2); mx.stroke();
+            mx.fillStyle = '#f5cf5a'; mx.font = "bold 74px 'LXGW WenKai TC','Noto Serif TC',serif"; mx.textAlign = 'center'; mx.textBaseline = 'middle'; mx.fillText(opt.mark || '香', 64, 68);
+            put(new THREE.CylinderGeometry(0.3 * rt, 0.3 * rt, 0.06 * rt, 24), M.gold, 0, yb + 0.47 * bh, 1.06 * rt).rotation.x = Math.PI / 2;
+            const med = put(new THREE.CircleGeometry(0.27 * rt, 28), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(mc), metalness: 0.4, roughness: 0.4 }), 0, yb + 0.47 * bh, 1.095 * rt);
+            med.castShadow = false;
+            // ash bed
+            const ash = put(new THREE.CircleGeometry(0.9 * rt, 28), M.ash, 0, yb + 0.9 * bh, 0);
+            ash.rotation.x = -Math.PI / 2; ash.castShadow = false;
+            return c;
+        }
+        // drop-in replacement for an old cylinder/sphere censer: bottom at yb, rim at yb + h
+        function placeTripodCenser(parent, x, yb, z, rt, h, userData, opt) {
+            const c = buildBronzeTripodCenser(rt, h, opt);
+            c.position.set(x, yb, z);
+            if (opt && opt.rotY) c.rotation.y = opt.rotY;
+            parent.add(c);
+            if (userData) c.traverse(o => { if (o.isMesh) { o.userData = { ...userData }; clickableMeshes.push(o); } });
+            return c;
+        }
+
         // 博山爐：鎏金青銅高足香爐——喇叭座、竹節柄、刻雲紋的爐身、鏤空層疊山峰爐蓋，爐內暗紅香火，頂上細煙裊裊
         function createBoshanTexture(pierced) {
             const W = 512, H = 512, c = document.createElement('canvas');
@@ -15767,28 +15797,18 @@
             goldTrim.position.set(-1.5, 1.82, -3.6);
             templeGroup.add(goldTrim);
 
-            const mainCenser = new THREE.Mesh(new THREE.SphereGeometry(0.48, 22, 18), bronzeMat);
-            mainCenser.scale.set(1.18, 0.76, 1.18);
-            mainCenser.position.set(-1.5, 2.15, -3.05);
-            mainCenser.castShadow = true;
-            mainCenser.userData = { interactType: 'maincenser', label: '🔥 大殿主神香爐（點擊插香參拜）' };
-            clickableMeshes.push(mainCenser);
-            templeGroup.add(mainCenser);
-
-            const mainCenserRim = new THREE.Mesh(new THREE.TorusGeometry(0.46, 0.05, 12, 24), goldMat);
-            mainCenserRim.rotation.x = Math.PI / 2;
-            mainCenserRim.position.set(-1.5, 2.42, -3.05);
-            templeGroup.add(mainCenserRim);
+            // 大殿主神香爐：精緻青銅三足爐，置於供桌前緣與濟公神座之間（不嵌進神座）
+            placeTripodCenser(templeGroup, -1.5, 1.895, -2.93, 0.29, 0.42, { interactType: 'maincenser', label: '🔥 大殿主神香爐（點擊插香參拜）' }, { mark: '濟' });
 
             mainHallIncenseGroup = new THREE.Group();
-            mainHallIncenseGroup.position.set(-1.5, 2.42, -3.05);
+            mainHallIncenseGroup.position.set(-1.5, 2.3, -2.93);
             for (let i = -1; i <= 1; i++) {
                 const st = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.45, 8), new THREE.MeshStandardMaterial({ color: 0xdc2626 }));
                 st.position.set(i * 0.08, 0.2, 0);
                 mainHallIncenseGroup.add(st);
             }
             templeGroup.add(mainHallIncenseGroup);
-            addSmokeEmitter(-1.5, 2.7, -3.05, 6, 0.45, 1.1, 0xf1f5f9, 0.1);
+            addSmokeEmitter(-1.5, 2.6, -2.93, 6, 0.45, 1.1, 0xf1f5f9, 0.1);
 
             [-1, 1].forEach(s => buildCandleStand(templeGroup, -1.5 + s * 5.6, 1.895, -3.25, 1.6, goldMat));
             altarOfferingsGroup = new THREE.Group();
