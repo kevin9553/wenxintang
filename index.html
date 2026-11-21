@@ -12135,7 +12135,7 @@
         function netAddLantern(l) {
             if (!NET.db || !NET.myId) return false;
             const doc = myNetDoc();
-            doc.lanterns.unshift({ name: String(l.name).slice(0, 20), tag: String(l.tag).slice(0, 20), wish: String(l.wish).slice(0, 60), ts: Date.now() });
+            doc.lanterns.unshift({ name: String(l.name).slice(0, 20), tag: String(l.tag).slice(0, 20), wish: String(l.wish).slice(0, 60), ts: l.ts || Date.now() });
             doc.lanterns = doc.lanterns.slice(0, 12);
             const c = doc.counts; c.lantern = (typeof c.lantern === 'number' ? c.lantern : 0) + 1;
             // show it right away in the shared list
@@ -12966,13 +12966,14 @@
                 ? { interactType: 'lampwall_gm', label: '🏮 光明燈牆（點擊點燈祈福）' }
                 : { interactType: 'lampwall_ts', label: '🐲 太歲燈（點擊安太歲・點太歲燈）' };
             [frames, face, board].forEach(m => { m.userData = { ...click }; clickableMeshes.push(m); });
-            const W = { mesh: frames, face, n, slots, lit: new Set(), mine: new Set(), hallX, hallZ };
+            const W = { mesh: frames, face, n, slots, lit: new Set(), mine: new Set(), hallX, hallZ, g, side };
             LAMP_WALLS[key] = W;
             // pre-lit lamps from other pilgrims, plus this viewer's own lamps remembered on this device
             const rnd = seededRandom(key === 'guangming' ? 515 : 616);
             for (let i = 0; i < n; i++) if (rnd() < (key === 'guangming' ? 0.62 : 0.5)) W.lit.add(i);
             try { (JSON.parse(localStorage.getItem('temple.lamps.' + key) || '[]') || []).forEach(i => { if (i >= 0 && i < n) { W.lit.add(i); W.mine.add(i); } }); } catch (e) {}
             refreshLampWall(key);
+            refreshLampNames(key);
         }
 
         function refreshLampWall(key) {
@@ -12984,20 +12985,115 @@
         }
 
         // light one more lamp (the viewer's own), with a little sparkle; returns its 燈號
-        function lightWallLamp(key) {
+        function lightWallLamp(key, named) {
             const W = LAMP_WALLS[key];
             if (!W) return 0;
-            const free = [];
-            for (let i = 0; i < W.n; i++) if (!W.lit.has(i)) free.push(i);
-            const i = free.length ? free[(Math.random() * free.length) | 0] : (Math.random() * W.n) | 0;
-            W.lit.add(i); W.mine.add(i);
-            try { localStorage.setItem('temple.lamps.' + key, JSON.stringify([...W.mine].slice(-40))); } catch (e) {}
-            refreshLampWall(key);
+            let i;
+            if (named) {
+                // a lamp with a name: remember it, then find the slot its name was written on
+                const list = loadLampNames(key); list.push({ name: String(named.name).slice(0, 12), ts: named.ts });
+                saveLampNames(key, list);
+                refreshLampNames(key);
+                const hit = lampNameEntries(key).find(x => x.ts === named.ts && x.name === String(named.name).slice(0, 12));
+                i = hit ? hit.slot : 0;
+            } else {
+                const free = [];
+                for (let k = 0; k < W.n; k++) if (!W.lit.has(k)) free.push(k);
+                i = free.length ? free[(Math.random() * free.length) | 0] : (Math.random() * W.n) | 0;
+                W.lit.add(i); W.mine.add(i);
+                try { localStorage.setItem('temple.lamps.' + key, JSON.stringify([...W.mine].slice(-40))); } catch (e) {}
+                refreshLampWall(key);
+            }
+            W.lastSlot = i;
             const s = W.slots[i];
             const wp = new THREE.Vector3(W.hallX + s.x - Math.sign(s.x) * 0.15, s.y, W.hallZ + s.z);
             for (let k = 0; k < 18; k++) spawnSpark(wp, new THREE.Vector3((Math.random() - 0.5) * 0.8, 0.6 + Math.random(), (Math.random() - 0.5) * 0.8), [1, 0.85, 0.4], 0.8, 0.94);
             anim.towerGlowUntil = performance.now() + 3000;
             return (s.r * 100 + s.c + 1);
+        }
+
+        // ---- 燈上寫名字：每盞有名字的燈貼一張直書名條（紅字金底），全部畫在一張圖集上、一次繪製
+        // 光明燈：大家點的燈（共享資料）＋自己這台裝置點的；太歲燈：自己這台裝置點的
+        function loadLampNames(key) { try { const v = JSON.parse(localStorage.getItem('temple.lampNames.' + key) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+        function saveLampNames(key, list) { try { localStorage.setItem('temple.lampNames.' + key, JSON.stringify(list.slice(-40))); } catch (e) {} }
+        function lampSlotFor(W, entry, taken) {
+            let h = 2166136261;
+            const k = String(entry.name) + '|' + entry.ts;
+            for (let i = 0; i < k.length; i++) { h ^= k.charCodeAt(i); h = Math.imul(h, 16777619); }
+            let i = (h >>> 0) % W.n;
+            for (let t = 0; t < W.n && taken.has(i); t++) i = (i + 1) % W.n;
+            return i;
+        }
+        // which lamps carry a name: [{ slot, name, mine }]
+        function lampNameEntries(key) {
+            const W = LAMP_WALLS[key];
+            if (!W) return [];
+            const mineList = loadLampNames(key);
+            let all = [];
+            if (key === 'guangming' && typeof sharedLanterns === 'function' && NET.db) {
+                all = sharedLanterns(false).map(l => ({ name: l.name, ts: l.ts, mine: !!l.mine }));
+                const have = new Set(all.map(e => e.ts + '|' + e.name));
+                mineList.forEach(m => { if (!have.has(m.ts + '|' + m.name)) all.push({ ...m, mine: true }); });
+            } else all = mineList.map(m => ({ ...m, mine: true }));
+            all.sort((a, b) => a.ts - b.ts);
+            const taken = new Set(), out = [];
+            all.slice(-Math.min(W.n, 120)).forEach(e => { const slot = lampSlotFor(W, e, taken); taken.add(slot); out.push({ slot, name: String(e.name), ts: e.ts, mine: e.mine }); });
+            return out;
+        }
+        function refreshLampNames(key) {
+            const W = LAMP_WALLS[key];
+            if (!W || !W.g) return;
+            const list = lampNameEntries(key);
+            const sig = list.map(e => e.slot + ':' + e.name + (e.mine ? '*' : '')).join(',');
+            if (sig === W.nameSig) return;
+            W.nameSig = sig;
+            if (W.nameMesh) { W.g.remove(W.nameMesh); W.nameMesh.geometry.dispose(); W.nameMesh.material.map.dispose(); W.nameMesh.material.dispose(); W.nameMesh = null; }
+            // named lamps are lit; the viewer's own glow brighter
+            list.forEach(e => { W.lit.add(e.slot); if (e.mine) W.mine.add(e.slot); });
+            refreshLampWall(key);
+            if (!list.length) return;
+            const CW = 48, CH = 112, perRow = 21, rowsN = Math.ceil(list.length / perRow);
+            const cv = document.createElement('canvas'); cv.width = CW * perRow; cv.height = CH * rowsN;
+            const x = cv.getContext('2d');
+            const pos = [], uv = [], idx = [];
+            const side = W.side;
+            list.forEach((e, k) => {
+                const cx = (k % perRow) * CW, cy = Math.floor(k / perRow) * CH;
+                // gold strip, red border, the name written top-to-bottom
+                x.fillStyle = e.mine ? '#fff1c2' : '#f6dc8f'; x.fillRect(cx + 2, cy + 2, CW - 4, CH - 4);
+                x.strokeStyle = '#b91c1c'; x.lineWidth = 3; x.strokeRect(cx + 4, cy + 4, CW - 8, CH - 8);
+                const chars = [...String(e.name).replace(/\s+/g, '')].slice(0, 4);
+                const fs = chars.length <= 2 ? 30 : chars.length === 3 ? 26 : 21;
+                x.fillStyle = '#9b1111'; x.font = `bold ${fs}px "LXGW WenKai TC","Noto Serif TC",serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
+                const step = fs * 1.02, top = cy + CH / 2 - step * (chars.length - 1) / 2;
+                chars.forEach((ch, j) => x.fillText(ch, cx + CW / 2, top + j * step));
+                // a quad in front of the lamp face: 0.12 wide (along the wall) x 0.28 tall
+                const s = W.slots[e.slot], px = s.x - side * 0.055, hw = 0.062, hh = 0.142;
+                const u0 = cx / cv.width, u1 = (cx + CW) / cv.width, v1 = 1 - cy / cv.height, v0 = 1 - (cy + CH) / cv.height;
+                const b = pos.length / 3;
+                // viewer faces the wall: their right-hand side runs along +z for the +x wall, -z for the -x wall
+                pos.push(px, s.y - hh, s.z - side * hw, px, s.y - hh, s.z + side * hw, px, s.y + hh, s.z + side * hw, px, s.y + hh, s.z - side * hw);
+                uv.push(u0, v0, u1, v0, u1, v1, u0, v1);
+                idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
+            });
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+            geo.setIndex(idx);
+            const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
+            const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide, toneMapped: false }));
+            mesh.userData = { interactType: key === 'guangming' ? 'lampwall_gm' : 'lampwall_ts', label: key === 'guangming' ? '🏮 光明燈牆（點擊點燈祈福）' : '🐲 太歲燈（點擊安太歲・點太歲燈）' };
+            clickableMeshes.push(mesh);
+            W.g.add(mesh);
+            W.nameMesh = mesh;
+        }
+        // after lighting: fly the camera to the lamp so the viewer sees their name on it
+        function showMyLamp(key, slot) {
+            const W = LAMP_WALLS[key];
+            if (!W) return;
+            const s = W.slots[slot], side = W.side;
+            camControl.desiredTarget.set(W.hallX + s.x, s.y, W.hallZ + s.z);
+            Object.assign(camControl.desiredSpherical, { radius: 1.6, theta: side > 0 ? -Math.PI / 2 : Math.PI / 2, phi: Math.PI / 2 - 0.08 });
         }
 
         // ---- 安太歲 modal
@@ -13015,13 +13111,14 @@
             const ly = document.getElementById('tsEarly').checked ? y - 1 : y;
             const zi = ((ly - 4) % 12 + 12) % 12;
             const ts = TAISUI_2026[zi];
-            const no = lightWallLamp('taisui');
+            const no = lightWallLamp('taisui', { name: document.getElementById('tsName').value.trim() || '善信', ts: Date.now() });
             emitAct('lantern'); netCount('lantern');
             playTempleBellSound(587); setTimeout(() => playTempleBellSound(784), 240);
             const r = document.getElementById('tsResult');
             r.innerHTML = `<div class="text-center"><div class="text-[11px] text-amber-300/80">屬${ZODIAC[zi]}・2026 丙午年</div>
                 <div class="text-lg font-black text-amber-200 my-1">${ts ? escapeHTML(ts) : '未犯太歲'}</div>
-                <div class="text-sm text-stone-100">已為「${escapeHTML(name)}」點亮太歲燈（第 ${no} 號）。</div>
+                <div class="text-sm text-stone-100">已為「${escapeHTML(name)}」點亮太歲燈（第 ${no} 號），名字寫在燈上。</div>
+                <button onclick="closeTaisuiModal(); showMyLamp('taisui', LAMP_WALLS.taisui.lastSlot)" class="mt-2 px-3 py-1 rounded-full text-xs btn-warm-gold">🔍 看我的燈</button>
                 <div class="text-xs text-emerald-200 mt-1">${ts ? '祈求太歲星君庇佑，今年逢凶化吉、出入平安。' : '雖未犯太歲，點燈祈福亦可保一年平安順遂。'}</div></div>`;
             r.classList.remove('hidden');
             showToast(`🐲 已為「${name}」安太歲、點亮太歲燈，祈求丙午年平安順遂！`);
@@ -17536,6 +17633,7 @@
         // 點光明燈・心香牆
         // ---------------------------------------------------------------------
         function renderBlessingWall() {
+            if (typeof refreshLampNames === 'function') refreshLampNames('guangming');   // names on the lamp wall follow the shared list
             const grid = document.getElementById('blessingWallGrid');
             if (!grid) return;
             const shared = (typeof NET !== 'undefined' && NET.db) ? sharedLanterns() : null;
@@ -17561,8 +17659,9 @@
             const wish = wishEl.value.trim();
             if (!wish) { showToast('🏮 請寫下祈福心願，再點燈祈福。'); wishEl.focus(); return; }
             state.blessingLanterns.unshift({ id: `l${Date.now()}`, name, tag: tagEl.value, wish, time: '剛剛' });
-            netAddLantern({ name, tag: tagEl.value, wish });
-            lightWallLamp('guangming');
+            const lts = Date.now();
+            netAddLantern({ name, tag: tagEl.value, wish, ts: lts });
+            const no = lightWallLamp('guangming', { name, ts: lts });
             emitAct('lantern');
             nameEl.value = ''; wishEl.value = '';
             renderBlessingWall();
@@ -17570,7 +17669,9 @@
             if (playerAvatarGroup) spawnSkyLantern(playerAvatarGroup.position.clone().add(new THREE.Vector3(0, 2.9, 0.3)));
             playTempleBellSound(660);
             setTimeout(() => playTempleBellSound(880), 220);
-            showToast(`🏮 已為「${name}」點亮${tagEl.value}，燈塔金光普照！`);
+            showToast(`🏮 已為「${name}」點亮${tagEl.value}（第 ${no} 號），名字已寫在斗姥殿光明燈牆的燈上！`);
+            // take the viewer to their lamp so they can see the name on it
+            setTimeout(() => { toggleBlessingWallModal(false); showMyLamp('guangming', LAMP_WALLS.guangming && LAMP_WALLS.guangming.lastSlot); }, 900);
         }
 
         // ---------------------------------------------------------------------
