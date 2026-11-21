@@ -3553,6 +3553,8 @@
 
                 }
             })));
+            // 博山爐：三寶佛前供桌上各一座（在中央香爐與蓮花燈後方）
+            SANBAO.forEach(b => buildBoshanCenser(X + b.x, F + 0.645, Z - 1.95, 1.2));
             buildDaxiongWorship(hg, goldMat);
             // Walls, dais and altar are solid for walking
             for (let x = -W / 2 + 0.5; x <= W / 2 - 0.5; x += 1.0) colliders.push({ x: X + x, z: Z + back + 0.25, r: 0.5 });
@@ -15388,9 +15390,10 @@
             const am = new THREE.CanvasTexture(a); am.wrapS = THREE.RepeatWrapping;
             return { map: t, alphaMap: am };
         }
-        function buildBoshanCenser(x, y, z) {
+        function buildBoshanCenser(x, y, z, scale = 1) {
             const g = new THREE.Group();
             g.position.set(x, y, z);
+            g.scale.setScalar(scale);
             const env = typeof getStatueEnvMap === 'function' ? getStatueEnvMap() : null;
             const mk = (tex, extra = {}) => { const m = new THREE.MeshStandardMaterial({ color: 0xb4b49a, metalness: 0.78, roughness: 0.4, map: tex.map, bumpMap: tex.map, bumpScale: 0.006, ...extra }); if (env) { m.envMap = env; m.envMapIntensity = 0.9; } return m; };
             const bodyMat = mk(createBoshanTexture(false));
@@ -15450,7 +15453,7 @@
             const top = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.09, 6), bodyMat); top.position.y = 0.61; g.add(top);
             const knob = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), bodyMat); knob.position.y = 0.66; g.add(knob);
             templeGroup.add(g);
-            addSmokeEmitter(x, y + 0.66, z, 6, 0.32, 1.1, 0xf1f5f9, 0.2);
+            addSmokeEmitter(x, y + 0.66 * scale, z, 6, 0.32 * scale, 1.1, 0xf1f5f9, 0.2);
             return g;
         }
 
