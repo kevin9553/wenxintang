@@ -185,6 +185,7 @@
             <button onclick="moveCameraPreset('xiaoren')" id="camBtn-xiaoren" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">👡 打小人</button>
             <button onclick="moveCameraPreset('miaozhu')" id="camBtn-miaozhu" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏠 廟祝的窩</button>
             <button onclick="moveCameraPreset('zhaitang')" id="camBtn-zhaitang" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🍚 齋堂</button>
+            <button onclick="moveCameraPreset('yufo')" id="camBtn-yufo" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🪷 浴佛檯</button>
             <button onclick="focusTempleCat()" id="camBtn-cat" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🐈 廟貓在哪</button>
             <button onclick="openMonkInfo()" id="camBtn-monk" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🙏 法師早晚課</button>
             <button onclick="moveCameraPreset('fireworks')" id="camBtn-fireworks" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🎆 煙火區</button>
@@ -12013,7 +12014,7 @@
         const NET_ACT_TEXT = {
             bell: '敲響了祈福鐘 🔔', drum: '擊響了鼓樓大鼓 🥁', fireworks: '施放了煙火 🎆', firecracker: '點燃了鞭炮 🧨',
             incense: '插香參拜 🙏', bow: '合掌參拜 🙏', kowtow: '行三跪九叩大禮 🙇', meditate: '盤腿打坐 🪷', chant: '念經持咒 📖',
-            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
+            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
         };
         function onNetAct(msg) {
             if (!msg || msg.sameTab || msg.kind !== 'viewer') return;
@@ -14286,6 +14287,7 @@
             buildDaxiongHall(goldMat, greenTrimMat);
             buildCourtyardProps();
             buildCourtyardLights(goldMat);
+            buildYufoArea(goldMat);
             RESERVE_PLOTS.forEach(buildReservePlot);   // the left plot now holds the 地藏殿
             buildFudeCenser(goldMat);
             buildPuppetStage(goldMat);
@@ -15190,7 +15192,7 @@
         }
 
         const STATUE_ENLARGE = 1.25;
-        const STATUE_NO_ENLARGE = new Set(['baiwu', 'heiwu', 'jianjun', 'yinjun', 'guanyin']);
+        const STATUE_NO_ENLARGE = new Set(['baiwu', 'heiwu', 'jianjun', 'yinjun', 'guanyin', 'taizi']);
         function upgradeStatuesFromGLB(specs) {
             if (typeof THREE.GLTFLoader !== 'function') return;
             const loader = new THREE.GLTFLoader();
@@ -15382,6 +15384,261 @@
             parent.add(c);
             if (userData) c.traverse(o => { if (o.isMesh) { o.userData = { ...userData }; clickableMeshes.push(o); } });
             return c;
+        }
+
+
+        // =====================================================================
+        // 浴佛檯：大雄寶殿前廟埕（大香爐西側）——八角浴佛亭，亭中青銅浴佛盆盛香湯，蓮台上立金身太子像（右手指天、左手指地）
+        // 點擊：信眾立於盆前，以長柄竹勺舀香湯，自太子像肩上灌沐三次；農曆四月初八浴佛節另有花雨
+        // =====================================================================
+        const YUFO = { x: 33.5, z: -11, rot: 0, F: 0.12, rimY: 1.05, waterY: 1.0, busy: false, t0: 0, festival: false };
+        function lunarMonthDay(d = new Date()) {
+            try {
+                const parts = new Intl.DateTimeFormat('zh-TW-u-ca-chinese', { month: 'numeric', day: 'numeric' }).formatToParts(d);
+                const m = parseInt((parts.find(p => p.type === 'month') || {}).value, 10), dd = parseInt((parts.find(p => p.type === 'day') || {}).value, 10);
+                return { m, d: dd };
+            } catch (e) { return { m: 0, d: 0 }; }
+        }
+        function buildYufoArea(goldMat) {
+            const g = new THREE.Group();
+            g.position.set(YUFO.x, 0, YUFO.z); g.rotation.y = YUFO.rot;
+            templeGroup.add(g);
+            YUFO.group = g;
+            const M = propMats();
+            const click = { interactType: 'yufo', label: '🪷 浴佛檯（點擊以香湯灌沐太子像）' };
+            const tag = m => { m.userData = { ...click }; clickableMeshes.push(m); return m; };
+            const add = (geo, mat, x, y, z, parent = g) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
+            const red = new THREE.MeshStandardMaterial({ color: 0x9b1c16, roughness: 0.42 });
+            const green = new THREE.MeshStandardMaterial({ color: 0x1f6b45, roughness: 0.38, metalness: 0.1 });
+            const gold = new THREE.MeshStandardMaterial({ color: 0xe8b84a, metalness: 0.9, roughness: 0.24 });
+            const env = typeof getStatueEnvMap === 'function' ? getStatueEnvMap() : null;
+            if (env) { gold.envMap = env; gold.envMapIntensity = 1.0; }
+            const F = YUFO.F;
+            // octagonal stone platform with a carved edge
+            const oct = (r, h, mat, y) => { const m = add(new THREE.CylinderGeometry(r, r * 1.02, h, 8), mat, 0, y, 0); m.rotation.y = Math.PI / 8; return m; };
+            tag(oct(2.55, F, M.stone, F / 2));
+            oct(2.6, 0.03, M.darkStone, 0.015);
+            // eight red columns with gold capitals, a red lintel ring and a green glazed roof with upturned eaves
+            const colR = 2.05, colH = 2.75;
+            for (let k = 0; k < 8; k++) {
+                const a = k / 8 * Math.PI * 2;
+                const cx = Math.sin(a) * colR, cz = Math.cos(a) * colR;
+                add(new THREE.CylinderGeometry(0.17, 0.19, 0.14, 10), M.stone, cx, F + 0.07, cz);
+                tag(add(new THREE.CylinderGeometry(0.085, 0.095, colH, 12), red, cx, F + colH / 2, cz));
+                add(new THREE.CylinderGeometry(0.12, 0.1, 0.1, 10), gold, cx, F + colH - 0.02, cz);
+            }
+            const lintel = add(new THREE.CylinderGeometry(2.2, 2.2, 0.22, 8, 1, true), new THREE.MeshStandardMaterial({ color: 0x9b1c16, roughness: 0.45, side: THREE.DoubleSide }), 0, F + colH + 0.08, 0);
+            lintel.rotation.y = Math.PI / 8;
+            const lintelTrim = add(new THREE.CylinderGeometry(2.23, 2.23, 0.05, 8, 1, true), new THREE.MeshStandardMaterial({ color: 0x1f6b45, roughness: 0.4, side: THREE.DoubleSide }), 0, F + colH + 0.21, 0);
+            lintelTrim.rotation.y = Math.PI / 8;
+            const roofY = F + colH + 0.22;
+            const roofProf = [[0, 1.55], [0.16, 1.48], [0.55, 1.18], [1.25, 0.72], [2.05, 0.3], [2.7, 0.08], [3.05, 0.0], [3.15, 0.1], [3.05, -0.02], [2.6, -0.04], [0.0, -0.04]];
+            const roof = add(new THREE.LatheGeometry(roofProf.map(([r, y]) => new THREE.Vector2(r, y)), 8), green, 0, roofY, 0);
+            roof.rotation.y = Math.PI / 8;
+            // gold ridge lines running down the eight hips, curling up at the eave tips
+            for (let k = 0; k < 8; k++) {
+                const a = k / 8 * Math.PI * 2;
+                const pts = roofProf.slice(1, 8).map(([r, y]) => new THREE.Vector3(Math.sin(a) * r * 1.02, roofY + y + 0.04, Math.cos(a) * r * 1.02));
+                add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 20, 0.035, 5, false), gold, 0, 0, 0);
+            }
+            // gourd finial
+            add(new THREE.SphereGeometry(0.16, 14, 10), gold, 0, roofY + 1.66, 0);
+            add(new THREE.SphereGeometry(0.11, 14, 10), gold, 0, roofY + 1.88, 0);
+            add(new THREE.ConeGeometry(0.035, 0.2, 8), gold, 0, roofY + 2.05, 0);
+            // red ceiling under the roof
+            const ceil = add(new THREE.CircleGeometry(2.2, 8), new THREE.MeshStandardMaterial({ color: 0x7a1814, roughness: 0.6, side: THREE.DoubleSide }), 0, roofY - 0.03, 0);
+            ceil.rotation.x = Math.PI / 2; ceil.rotation.z = Math.PI / 8;
+            // plaque 「浴佛池」 hung on the front lintel
+            const plq = add(new THREE.BoxGeometry(1.05, 0.36, 0.06), new THREE.MeshStandardMaterial({ map: createSignboardTexture('浴 佛 池', 300, 100, '#2a0806', '#facc15', '#fef08a', false, 58), roughness: 0.4 }), 0, F + colH - 0.12, 2.05);
+            tag(plq);
+
+            // 浴佛盆: turned stone pedestal, a wide bronze basin with a lotus-petal rim, scented water inside
+            const tm = tripodMats();
+            const ped = add(new THREE.LatheGeometry([[0, 0], [0.55, 0], [0.56, 0.06], [0.42, 0.12], [0.26, 0.2], [0.22, 0.45], [0.3, 0.58], [0.42, 0.64], [0, 0.66]].map(([r, y]) => new THREE.Vector2(r, y)), 28), M.stone, 0, F, 0);
+            tag(ped);
+            const bY = F + 0.66;
+            const basin = add(new THREE.LatheGeometry([[0, 0], [0.4, 0], [0.62, 0.06], [0.76, 0.17], [0.82, 0.27], [0.85, 0.28], [0.84, 0.3], [0.78, 0.28], [0.7, 0.2], [0.5, 0.1], [0, 0.08]].map(([r, y]) => new THREE.Vector2(r, y)), 40), tm.bronze, 0, bY, 0);
+            tag(basin);
+            YUFO.rimY = bY + 0.29; YUFO.waterY = bY + 0.22;
+            add(new THREE.CylinderGeometry(0.79, 0.69, 0.12, 40, 1, true), tm.band, 0, bY + 0.15, 0);
+            add(new THREE.TorusGeometry(0.845, 0.022, 6, 48), tm.gold, 0, bY + 0.3, 0).rotation.x = Math.PI / 2;
+            const waterMat = new THREE.MeshStandardMaterial({ color: 0x9ccfd6, roughness: 0.08, metalness: 0.2, transparent: true, opacity: 0.78, emissive: 0x264a50, emissiveIntensity: 0.25 });
+            const water = add(new THREE.CircleGeometry(0.76, 40), waterMat, 0, YUFO.waterY, 0);
+            water.rotation.x = -Math.PI / 2; water.castShadow = false; tag(water);
+            YUFO.water = water;
+            // floating flower petals and two small lotus blossoms on the scented water
+            const petalMat = new THREE.MeshStandardMaterial({ color: 0xf8b4c8, roughness: 0.5, side: THREE.DoubleSide });
+            for (let i = 0; i < 26; i++) {
+                const a = Math.random() * Math.PI * 2, r = 0.3 + Math.random() * 0.42;
+                const pt = add(new THREE.CircleGeometry(0.025, 6), petalMat, Math.sin(a) * r, YUFO.waterY + 0.004, Math.cos(a) * r);
+                pt.rotation.x = -Math.PI / 2; pt.rotation.z = Math.random() * 6; pt.scale.set(1, 1.6, 1); pt.castShadow = false;
+            }
+            const lotusBloom = (x, z, s) => {
+                const lg = new THREE.Group(); lg.position.set(x, YUFO.waterY, z); lg.scale.setScalar(s); g.add(lg);
+                for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; const p = add(new THREE.SphereGeometry(0.06, 8, 6), petalMat, Math.sin(a) * 0.05, 0.03, Math.cos(a) * 0.05, lg); p.scale.set(0.45, 0.9, 0.3); p.rotation.set(Math.cos(a) * 0.6, a, 0); }
+                add(new THREE.CircleGeometry(0.13, 12), new THREE.MeshStandardMaterial({ color: 0x3f7d3a, roughness: 0.6, side: THREE.DoubleSide }), 0, -0.002, 0, lg).rotation.x = -Math.PI / 2;
+            };
+            lotusBloom(-0.5, 0.25, 1); lotusBloom(0.45, -0.35, 0.85);
+
+            // 太子像: on a small gold lotus throne in the middle of the basin
+            const throneY = YUFO.waterY;
+            add(new THREE.CylinderGeometry(0.2, 0.26, 0.1, 20), gold, 0, throneY + 0.05, 0);
+            for (let k = 0; k < 12; k++) {
+                const a = k / 12 * Math.PI * 2;
+                const p = add(new THREE.SphereGeometry(0.09, 8, 6), gold, Math.sin(a) * 0.24, throneY + 0.13, Math.cos(a) * 0.24);
+                p.scale.set(0.5, 0.9, 0.3); p.rotation.set(Math.cos(a) * 0.5, a, 0);
+            }
+            const S = YUFO.statue = new THREE.Group(); S.position.set(0, throneY + 0.16, 0); S.scale.setScalar(1.7); g.add(S);
+            const sm = (geo, x, y, z) => tag(add(geo, gold, x, y, z, S));
+            // legs and a wrapped skirt, bare chubby torso, round head with snail-shell curls and an ushnisha
+            [-1, 1].forEach(sx => sm(new THREE.CylinderGeometry(0.03, 0.026, 0.17, 10), sx * 0.035, 0.085, 0));
+            const skirt = sm(new THREE.CylinderGeometry(0.075, 0.095, 0.12, 16), 0, 0.2, 0);
+            sm(new THREE.TorusGeometry(0.077, 0.01, 6, 20), 0, 0.26, 0).rotation.x = Math.PI / 2;
+            const torso = sm(new THREE.SphereGeometry(0.085, 16, 12), 0, 0.33, 0); torso.scale.set(1, 1.15, 0.85);
+            const head = sm(new THREE.SphereGeometry(0.075, 18, 14), 0, 0.49, 0);
+            for (let i = 0; i < 40; i++) {
+                const u = Math.random() * Math.PI * 2, v = Math.random() * 0.9;
+                sm(new THREE.SphereGeometry(0.012, 6, 5), Math.cos(u) * Math.sin(v) * 0.074, 0.49 + Math.cos(v) * 0.074, Math.sin(u) * Math.sin(v) * 0.074 - 0.005);
+            }
+            sm(new THREE.SphereGeometry(0.035, 12, 10), 0, 0.575, -0.005);
+            // gentle face: downcast eyes, brows, a small nose and a smile, with a red urna dot
+            const dk = new THREE.MeshStandardMaterial({ color: 0x5a3a10, metalness: 0.5, roughness: 0.5 });
+            [-1, 1].forEach(sx => {
+                const eye = add(new THREE.TorusGeometry(0.012, 0.0035, 5, 10, Math.PI), dk, sx * 0.026, 0.492, 0.068, S); eye.rotation.z = Math.PI;
+                const brow = add(new THREE.TorusGeometry(0.018, 0.003, 5, 10, Math.PI), dk, sx * 0.026, 0.508, 0.066, S); brow.scale.y = 0.5;
+            });
+            sm(new THREE.SphereGeometry(0.009, 8, 6), 0, 0.478, 0.074);
+            const mouth = add(new THREE.TorusGeometry(0.011, 0.003, 5, 10, Math.PI), new THREE.MeshStandardMaterial({ color: 0x8a2a1a, roughness: 0.5 }), 0, 0.462, 0.068, S); mouth.rotation.z = Math.PI;
+            add(new THREE.SphereGeometry(0.005, 6, 5), new THREE.MeshStandardMaterial({ color: 0xc81e1e }), 0, 0.515, 0.072, S);
+            [-1, 1].forEach(sx => sm(new THREE.SphereGeometry(0.016, 8, 6), sx * 0.075, 0.48, 0).scale.set(0.5, 1.6, 0.8));
+            // right arm raised, index finger pointing to heaven; left arm lowered pointing to earth (天上天下，唯我獨尊)
+            const arm = (sx, up) => {
+                const sh = new THREE.Group(); sh.position.set(sx * 0.085, 0.38, 0); S.add(sh);
+                const upper = sm(new THREE.CylinderGeometry(0.022, 0.02, 0.13, 8), 0, 0, 0); sh.add(upper);
+                upper.position.set(0, up ? 0.065 : -0.065, 0);
+                const hand = sm(new THREE.SphereGeometry(0.022, 8, 6), 0, up ? 0.14 : -0.14, 0); sh.add(hand);
+                const finger = sm(new THREE.CylinderGeometry(0.006, 0.006, 0.045, 6), 0, up ? 0.18 : -0.18, 0); sh.add(finger);
+                sh.rotation.z = up ? -sx * 0.18 : sx * 0.35;
+            };
+            arm(-1, true); arm(1, false);
+            // a soft halo glow behind the statue's head
+            const halo = add(new THREE.RingGeometry(0.1, 0.13, 32), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.55, side: THREE.DoubleSide }), 0, 0.5, -0.06, S);
+            halo.castShadow = false;
+            // swap the stand-in for the Blender-sculpted 太子像 (loaded when visitors come near)
+            const holder = new THREE.Group(); holder.position.copy(S.position); g.add(holder);
+            upgradeStatuesFromGLB([{ key: 'taizi', container: holder, figure: S, offsetY: 0, interact: { ...click },
+                textures: { TZ_Face: () => createStatueFaceTexture({ skin: '#e0b04a', browColor: '#8a5a18', longBrow: false, eyes: 'smile', mouth: 'serene', urna: true, blush: 0.42 }) } }]);
+
+            // long-handled bamboo ladles: one rests on the rim (this one moves), a second leans on the pedestal
+            const bamboo = new THREE.MeshStandardMaterial({ color: 0xc8a160, roughness: 0.6 });
+            const makeLadle = () => {
+                const L = new THREE.Group();
+                const h = add(new THREE.CylinderGeometry(0.012, 0.012, 0.72, 8), bamboo, 0.36, 0, 0, L); h.rotation.z = Math.PI / 2;
+                [0.2, 0.45].forEach(nx => add(new THREE.TorusGeometry(0.013, 0.004, 5, 10), bamboo, nx, 0, 0, L).rotation.y = Math.PI / 2);
+                const cup = add(new THREE.CylinderGeometry(0.055, 0.045, 0.07, 14, 1, true), new THREE.MeshStandardMaterial({ color: 0xc8a160, roughness: 0.6, side: THREE.DoubleSide }), 0.74, 0.02, 0, L);
+                add(new THREE.CircleGeometry(0.045, 14), bamboo, 0.74, -0.014, 0, L).rotation.x = -Math.PI / 2;
+                const fill = add(new THREE.CircleGeometry(0.05, 14), waterMat, 0.74, 0.04, 0, L); fill.rotation.x = -Math.PI / 2; fill.visible = false;
+                L.userData.cup = cup; L.userData.fill = fill;
+                L.traverse(o => { if (o.isMesh) { o.userData = { ...click }; clickableMeshes.push(o); } });
+                return L;
+            };
+            const ladle = YUFO.ladle = makeLadle();
+            g.add(ladle);
+            YUFO.rest = { p: new THREE.Vector3(0.38, YUFO.rimY + 0.02, 1.05), rz: -0.08 };
+            ladle.rotation.y = Math.PI / 2;
+            ladle.position.copy(YUFO.rest.p); ladle.rotation.z = YUFO.rest.rz;
+            const ladle2 = makeLadle(); g.add(ladle2);
+            ladle2.position.set(-0.45, F + 0.05, 0.62); ladle2.rotation.set(0, Math.PI * 0.75, 1.05);
+
+            // water stream and ripple rings (shown while pouring)
+            const streamMat = new THREE.MeshBasicMaterial({ color: 0xcfeef2, transparent: true, opacity: 0, depthWrite: false });
+            YUFO.stream = add(new THREE.CylinderGeometry(0.012, 0.02, 1, 8, 1, true), streamMat, 0, 0, 0);
+            YUFO.stream.castShadow = false;
+            YUFO.ripples = [0, 1, 2].map(() => { const r = add(new THREE.RingGeometry(0.05, 0.07, 28), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }), 0, YUFO.waterY + 0.006, 0); r.rotation.x = -Math.PI / 2; r.castShadow = false; return r; });
+
+            // two lotus lamps at the front corners of the platform
+            const lampMat = new THREE.MeshStandardMaterial({ color: 0xffd1dc, emissive: 0xff8fab, emissiveIntensity: 0.5, roughness: 0.5 });
+            registerNightEmissive(lampMat, 0.5, 1.6);
+            [-1, 1].forEach(sx => {
+                add(new THREE.CylinderGeometry(0.06, 0.1, 0.5, 10), M.stone, sx * 1.4, F + 0.25, 1.75);
+                const lamp = add(new THREE.SphereGeometry(0.12, 14, 10), lampMat, sx * 1.4, F + 0.6, 1.75); lamp.scale.y = 0.8;
+                addNightGlow(g, new THREE.Vector3(sx * 1.4, F + 0.62, 1.75), 0xff9ab8, 1.2);
+            });
+            addLightPool(YUFO.x, YUFO.z, 4.0, 0.9);
+            colliders.push({ x: YUFO.x, z: YUFO.z, r: 1.05 });
+
+            // festival flower rain on 農曆四月初八
+            const ld = lunarMonthDay();
+            YUFO.festival = ld.m === 4 && ld.d === 8;
+            if (YUFO.festival) {
+                const n = 60, pos = new Float32Array(n * 3);
+                for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - 0.5) * 4; pos[i * 3 + 1] = Math.random() * 3.5; pos[i * 3 + 2] = (Math.random() - 0.5) * 4; }
+                const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+                YUFO.petals = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xf9a8d4, size: 0.07, transparent: true, opacity: 0.9 }));
+                g.add(YUFO.petals);
+            }
+            const anchor = new THREE.Object3D(); anchor.position.set(0, roofY + 2.4, 0); g.add(anchor);
+            register3DLabel(anchor, 0, YUFO.festival ? '🪷 浴佛檯（今日浴佛節）' : '🪷 浴佛檯', '#f9a8d4', () => moveCameraPreset('yufo'));
+        }
+        function yufoInteract() {
+            if (YUFO.busy) { showToast('🪷 正在灌沐太子像，請稍候……'); return; }
+            if (playerAvatarGroup) {
+                if (state.upstairs) { state.upstairs = false; state.followCam = false; updateStairsButton(); }
+                if (state.towerFloor) { state.towerFloor = 0; state.followCam = false; }
+                playerAvatarGroup.userData.kowtowToken = null;
+                setPlayerPose('stand', true);
+                const sp = localToWorld(YUFO, 0, YUFO.F, 1.55);
+                playerAvatarGroup.position.set(sp.x, YUFO.F, sp.z);
+                playerAvatarGroup.rotation.y = YUFO.rot + Math.PI;
+            }
+            YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
+            emitAct('yufo');
+            showToast(YUFO.festival ? '🪷 今日農曆四月初八浴佛節！持勺舀香湯，灌沐太子像三次……' : '🪷 持長柄竹勺舀起香湯，自太子像肩上灌沐三次……');
+        }
+        // one pour = 2.6 s: dip, lift over the shoulder, tip the cup, return
+        function updateYufo(t, nowMs) {
+            if (!YUFO.group) return;
+            if (YUFO.petals) {
+                const a = YUFO.petals.geometry.attributes.position;
+                for (let i = 0; i < a.count; i++) { let y = a.getY(i) - 0.006; if (y < 0.1) y = 3.5; a.setY(i, y); a.setX(i, a.getX(i) + Math.sin(t + i) * 0.002); }
+                a.needsUpdate = true;
+            }
+            const L = YUFO.ladle, st = YUFO.stream;
+            YUFO.ripples.forEach(r => { if (r.userData.t !== undefined) { const e = (nowMs - r.userData.t) / 1000; const k = Math.min(1, e / 1.2); r.scale.setScalar(1 + k * 5); r.material.opacity = 0.6 * (1 - k); if (k >= 1) delete r.userData.t; } });
+            if (!YUFO.busy) { st.material.opacity = 0; return; }
+            const e = (nowMs - YUFO.t0) / 1000, cyc = 2.6, n = Math.floor(e / cyc), u = (e % cyc) / cyc;
+            if (n >= 3) {
+                YUFO.busy = false;
+                L.position.copy(YUFO.rest.p); L.rotation.z = YUFO.rest.rz; L.userData.fill.visible = false; st.material.opacity = 0;
+                playTempleBellSound(784);
+                showToast(['🙏 浴佛功德殊勝行，無邊勝福皆迴向：願沉溺諸有情，速往無量光佛剎。', '🪷 灌沐尊儀，洗滌心垢：願煩惱除盡、福慧增長、身心清淨。', '✨ 我今灌沐諸如來，淨智莊嚴功德聚；五濁眾生令離垢，同證如來淨法身。'][(Math.random() * 3) | 0]);
+                return;
+            }
+            const sy = YUFO.statue.position.y;
+            const R = YUFO.rest.p;
+            const keys = [
+                [0.0, R.x, R.y, R.z, YUFO.rest.rz],
+                [0.2, 0.22, YUFO.waterY + 0.02, 0.86, -0.45],     // dip the cup into the water
+                [0.4, 0.18, sy + 1.0, 0.82, 0.12],                 // lift above the statue
+                [0.55, 0.1, sy + 1.25, 0.78, -0.55],               // tip: water flows onto the shoulders
+                [0.78, 0.1, sy + 1.25, 0.78, -0.62],
+                [1.0, R.x, R.y, R.z, YUFO.rest.rz]
+            ];
+            let i = 0; while (i < keys.length - 2 && u > keys[i + 1][0]) i++;
+            const a = keys[i], b = keys[i + 1], f0 = (u - a[0]) / (b[0] - a[0]), f = f0 * f0 * (3 - 2 * f0);
+            L.position.set(a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, a[3] + (b[3] - a[3]) * f);
+            L.rotation.z = a[4] + (b[4] - a[4]) * f;
+            L.userData.fill.visible = u > 0.2 && u < 0.62;
+            const pouring = u > 0.55 && u < 0.8;
+            if (pouring) {
+                if (YUFO.lastPour !== n) { YUFO.lastPour = n; playTempleBellSound(659 - n * 60); }
+                const cp = new THREE.Vector3(); L.userData.cup.getWorldPosition(cp); YUFO.group.worldToLocal(cp);
+                const top = cp.y - 0.03, bot = YUFO.waterY;
+                st.position.set(cp.x, (top + bot) / 2, cp.z); st.scale.set(1, top - bot, 1);
+                st.material.opacity = 0.6 * Math.min(1, (u - 0.55) * 12, (0.8 - u) * 12);
+                const rp = YUFO.ripples[(Math.floor(e * 3)) % 3];
+                if (rp.userData.t === undefined) { rp.userData.t = nowMs; rp.position.x = cp.x; rp.position.z = cp.z; }
+            } else st.material.opacity = 0;
         }
 
         // 博山爐：鎏金青銅高足香爐——喇叭座、竹節柄、刻雲紋的爐身、鏤空層疊山峰爐蓋，爐內暗紅香火，頂上細煙裊裊
@@ -17231,7 +17488,7 @@
             ['偏殿', ['tudigong', 'light', 'lampwall_gm', 'lampwall_ts', 'side_left', 'side_right', 'side_wing_left', 'side_wing_right', 'tigercave', 'side_dizang']],
             ['後殿', ['rearhall', 'guandi', 'tianshi', 'xuantian', 'yuhuang', 'sanqing']],
             ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'wishtree', 'puppet', 'guanyinpond', 'grounds']],
-            ['活動', ['fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'cat', 'monk', 'fireworks', 'festival']]
+            ['活動', ['fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'yufo', 'cat', 'monk', 'fireworks', 'festival']]
         ];
         let camGroupActive = 0;
         function showCamGroup(i) {
@@ -17296,6 +17553,7 @@
             presets.fudecenser = { r: 7.5, theta: 0.15, phi: 1.3, tx: FUDE_CENSER_POS.x, ty: 1.4, tz: FUDE_CENSER_POS.z - 1 };
             presets.wishtree = { r: 13, theta: -0.95, phi: 1.12, tx: WISHTREE.x - 2, ty: 2.0, tz: WISHTREE.z + 0.5 };
             if (TIGER_CAVE.cam) presets.tigercave = TIGER_CAVE.cam;
+            presets.yufo = { r: 6.2, theta: YUFO.rot + 0.45, phi: 1.3, tx: YUFO.x, ty: 1.3, tz: YUFO.z };
             presets.shitou = { r: 6.5, theta: Math.PI / 2 + 0.25, phi: 1.3, tx: SHITOU_TREE.x + 3.4, ty: 1.2, tz: SHITOU_TREE.z };
             presets.puppet = { r: 9, theta: Math.PI + 0.1, phi: 1.4, tx: PUPPET_STAGE.x, ty: 2.0, tz: PUPPET_STAGE.z - 1 };
             Object.values(REAR_DEITIES).forEach(d => { const F = rearFloor(+Object.keys(REAR_DEITIES).find(k => REAR_DEITIES[k] === d)); presets[d.preset] = { r: 5.4, theta: 0, phi: 1.45, tx: REAR.x, ty: F.y + 2.2, tz: F.back + 1.5 }; });
@@ -17471,6 +17729,7 @@
             else if (type === 'jubaopen') triggerJubaopen();
             else if (type === 'blacktiger') tigerRoar();
             else if (type && type.startsWith('tigercave')) tigerCaveInteract(type);
+            else if (type === 'yufo') yufoInteract();
             else if (type === 'xiaoren') openXiaorenModal();
             else if (type && type.startsWith('miaozhu')) miaozhuInteract(type, ud);
             else if (type && type.startsWith('zhaitang')) zhaitangInteract(type);
@@ -17908,6 +18167,7 @@
             updateDragonEyes(t);
             updateMiaozhuCat(t);
             updateTempleCat(t, dt);
+            updateYufo(t, performance.now());
             if (!MONK.mesh && DAXIONG.lotus.length && typeof towerAnim !== 'undefined') buildResidentMonk();
             updateResidentMonk(t, dt);
             renderer.render(scene, camera);
