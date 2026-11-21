@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@700&text=%E9%85%92%E8%82%89%E7%A9%BF%E8%85%B8%E9%81%8E%E6%BF%9F%E9%A1%9B&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@700&text=%E9%85%92%E8%82%89%E7%A9%BF%E8%85%B8%E9%81%8E%E6%BF%9F%E9%A1%9B%E5%A5%89%E6%95%95%E4%BB%A4%E5%B9%B3%E5%AE%89%E5%A4%A7%E5%90%89%E7%BD%A1%E5%95%8F%E5%BF%83%E5%A0%82%E5%8D%B0%E4%BF%A1%E5%A3%AB%E4%BD%A9%E5%85%AC%E6%B4%BB%E4%BD%9B%E6%94%B6%E9%A9%9A%E7%A5%9E%E6%B6%88%E7%81%BD%E7%A6%8F%E5%BE%B7%E6%AD%A3%E5%9C%9F%E5%9C%B0%E6%8B%9B%E8%B2%A1%E7%B4%8D%E4%B8%AD%E5%A3%87%E5%85%83%E5%B8%A5%E4%B8%89%E5%A4%AA%E5%AD%90%E8%A1%8C%E8%BB%8A%E5%87%BA%E5%85%A5%E4%BA%94%E7%87%9F%E5%B0%87%E8%BB%8D%E9%8E%AE%E5%AE%85%E8%AD%B7%E8%BA%AB%E5%B9%B4%E6%9C%88%E6%97%A5%E7%88%90%E5%8A%A0%E6%8C%81&display=swap" rel="stylesheet">
     <style>
         * {
             box-sizing: border-box;
@@ -17857,61 +17857,84 @@
             showToast('📥 賜福籤卡已下載，願師父保佑順心如意！');
         }
 
-        function downloadDigitalTalismanCard() {
-            const holder = document.getElementById('talismanHolderName')?.value.trim()
-                || document.getElementById('devoteeName')?.value.trim() || '善信大德';
+        // 平安符：黃紙直條、黑墨符文（奉・敕令・符腳）、紅色方印，右寫「平安大吉」，下壓「罡」字與火焰鉤
+        const TALISMAN_FONT = '"LXGW WenKai TC","Noto Serif TC",serif';
+        function brushStroke(ctx, pts, w0, w1, color = '#141414') {
+            // tapered brush line through the points: width eases from w0 to w1, with a soft ink edge
+            ctx.save(); ctx.fillStyle = color;
+            let len = 0; for (let i = 1; i < pts.length; i++) len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+            const n = Math.max(20, Math.ceil(len / 1.5)), P = t => { const k = t * (pts.length - 1), i = Math.min(pts.length - 2, Math.floor(k)), u = k - i;
+                const a = pts[Math.max(0, i - 1)], b = pts[i], c = pts[i + 1], d = pts[Math.min(pts.length - 1, i + 2)];
+                const cr = (p0, p1, p2, p3) => 0.5 * ((2 * p1) + (-p0 + p2) * u + (2 * p0 - 5 * p1 + 4 * p2 - p3) * u * u + (-p0 + 3 * p1 - 3 * p2 + p3) * u * u * u);
+                return [cr(a[0], b[0], c[0], d[0]), cr(a[1], b[1], c[1], d[1])]; };
+            for (let k = 0; k <= n; k++) {
+                const t = k / n, [x, y] = P(t), w = w0 + (w1 - w0) * t;
+                ctx.beginPath(); ctx.ellipse(x, y, w / 2, w / 2 * 0.85, 0.5, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.restore();
+        }
+        function drawTalismanSeal(ctx, cx, cy, size) {
+            ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.03);
+            const r = '#d8261c';
+            ctx.globalAlpha = 0.88;
+            ctx.strokeStyle = r; ctx.lineWidth = size * 0.07; ctx.strokeRect(-size / 2, -size / 2, size, size);
+            ctx.lineWidth = size * 0.025; ctx.strokeRect(-size * 0.41, -size * 0.41, size * 0.82, size * 0.82);
+            ctx.fillStyle = r; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.font = `900 ${size * 0.3}px ${TALISMAN_FONT}`;
+            [['問', -1, -1], ['心', -1, 1], ['堂', 1, -1], ['印', 1, 1]].forEach(([ch, cxs, cys]) => ctx.fillText(ch, -cxs * size * 0.19, cys * size * 0.19));   // read right column first
+            // worn edges of a hand-pressed seal
+            ctx.globalCompositeOperation = 'destination-out';
+            for (let i = 0; i < 70; i++) { ctx.beginPath(); ctx.arc((Math.random() - 0.5) * size, (Math.random() - 0.5) * size, Math.random() * size * 0.025, 0, 7); ctx.fill(); }
+            ctx.restore();
+        }
+        async function downloadDigitalTalismanCard() {
+            const holder = (document.getElementById('talismanHolderName')?.value.trim()
+                || document.getElementById('devoteeName')?.value.trim() || '善信大德').slice(0, 8);
             const type = document.getElementById('talismanTypeSelect')?.value || '濟公活佛・收驚安神消災符';
             const [deity, charm] = type.split('・');
-            const cvs = document.getElementById('fortuneCardCanvas');
+            try { await document.fonts.load(`900 80px ${TALISMAN_FONT}`, '奉敕令平安大吉罡問心堂印'); } catch (e) {}
+            const cvs = document.createElement('canvas'); cvs.width = 440; cvs.height = 1320;
             const ctx = cvs.getContext('2d');
-            const W = cvs.width, H = cvs.height;
-            const font = (w, s) => `${w} ${s}px "Noto Serif TC", serif`;
-            const red = '#b91c1c';
-
-            const bg = ctx.createLinearGradient(0, 0, 0, H);
-            bg.addColorStop(0, '#fde047'); bg.addColorStop(1, '#facc15');
-            ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-            ctx.strokeStyle = red; ctx.lineWidth = 16; ctx.strokeRect(24, 24, W - 48, H - 48);
-            ctx.lineWidth = 4; ctx.strokeRect(50, 50, W - 100, H - 100);
-
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = red;
-            ctx.font = font(900, 40);
-            ctx.fillText('問心堂', W / 2, 108);
-            ctx.font = font(900, 96);
-            ctx.fillText('敕令', W / 2, 220);
-
-            // Stylised talisman strokes around the central vertical title
-            ctx.strokeStyle = red; ctx.lineWidth = 6; ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(W / 2 - 150, 300); ctx.quadraticCurveTo(W / 2, 270, W / 2 + 150, 300);
-            ctx.moveTo(W / 2 - 120, 330); ctx.lineTo(W / 2 + 120, 330);
-            ctx.stroke();
-
-            // Fit the charm name between the strokes and the seal, however long it is
-            const charmText = charm || type;
-            const n = [...charmText].length;
-            const step = Math.min(76, 290 / Math.max(1, n - 1));
-            ctx.font = font(900, Math.min(64, Math.floor(step * 0.86)));
-            drawVerticalText(ctx, charmText, W / 2, 395, step);
-
-            ctx.font = font(700, 30);
-            drawVerticalText(ctx, deity || '', 140, 420, 40);
-            drawVerticalText(ctx, '保佑平安', W - 140, 420, 40);
-
-            // Seal
-            ctx.save();
-            ctx.translate(W / 2, H - 260);
-            ctx.strokeStyle = red; ctx.lineWidth = 6;
-            ctx.strokeRect(-70, -70, 140, 140);
-            ctx.font = font(900, 44); ctx.fillStyle = red;
-            ctx.fillText('問心', 0, -24); ctx.fillText('之印', 0, 30);
-            ctx.restore();
-
-            ctx.font = font(700, 30); ctx.fillStyle = '#7f1d1d';
-            ctx.fillText(`佩帶善信：${holder}`, W / 2, H - 140);
-            ctx.font = font(600, 22);
-            ctx.fillText(`${todayString()}　過爐加持`, W / 2, H - 96);
-
+            const W = cvs.width, H = cvs.height, ink = '#141414', cx = W / 2;
+            // yellow paper with a faint fibre texture
+            ctx.fillStyle = '#fbe23c'; ctx.fillRect(0, 0, W, H);
+            for (let i = 0; i < 900; i++) { ctx.fillStyle = `rgba(${Math.random() < 0.5 ? '255,250,190' : '200,160,20'},${Math.random() * 0.12})`; ctx.fillRect(Math.random() * W, Math.random() * H, 1 + Math.random() * 6, 1); }
+            // the red temple seal is pressed first; the ink is written over it
+            drawTalismanSeal(ctx, cx, 640, 190);
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            // three hooks (三清) over 奉
+            [-46, 0, 46].forEach((dx, i) => brushStroke(ctx, [[cx + dx - 10, 46 + (i === 1 ? -6 : 0)], [cx + dx + 4, 60], [cx + dx - 6, 78]], 12, 5, ink));
+            ctx.fillStyle = ink;
+            ctx.font = `900 96px ${TALISMAN_FONT}`; ctx.fillText('奉', cx, 150);
+            ctx.font = `900 86px ${TALISMAN_FONT}`; ctx.fillText('敕', cx, 262);
+            // 令 merged into the gate-shaped body (符身): a roof stroke and two long legs that curl out at the foot
+            brushStroke(ctx, [[cx - 150, 340], [cx - 60, 318], [cx + 60, 318], [cx + 150, 340]], 20, 12, ink);
+            brushStroke(ctx, [[cx - 128, 338], [cx - 132, 520], [cx - 126, 760], [cx - 120, 980], [cx - 150, 1040]], 18, 10, ink);
+            brushStroke(ctx, [[cx + 128, 338], [cx + 130, 560], [cx + 124, 800], [cx + 118, 980], [cx + 160, 1030]], 18, 10, ink);
+            brushStroke(ctx, [[cx - 95, 375], [cx - 30, 362], [cx + 40, 362], [cx + 95, 378]], 13, 9, ink);
+            ctx.font = `900 74px ${TALISMAN_FONT}`; ctx.fillText('令', cx, 425);
+            // the charm's name down the middle
+            const name = [...(charm || '平安符').replace(/符$/, '')].slice(0, 6);
+            const step = Math.min(70, 330 / Math.max(1, name.length));
+            ctx.font = `900 ${Math.floor(step * 0.9)}px ${TALISMAN_FONT}`;
+            name.forEach((ch, i) => ctx.fillText(ch, cx - 8, 520 + i * step));
+            // 平安大吉 small on the right, the deity on the left
+            ctx.font = `700 40px ${TALISMAN_FONT}`;
+            ['平', '安', '大', '吉'].forEach((ch, i) => ctx.fillText(ch, cx + 70, 740 + i * 46));
+            ctx.font = `700 30px ${TALISMAN_FONT}`;
+            [...(deity || '')].slice(0, 6).forEach((ch, i) => ctx.fillText(ch, cx - 84, 760 + i * 36));
+            // 罡 with flame hooks at the foot
+            ctx.font = `900 64px ${TALISMAN_FONT}`; ctx.fillText('罡', cx, 1000);
+            [-1, 1].forEach(s => {
+                brushStroke(ctx, [[cx + s * 70, 1060], [cx + s * 96, 1080], [cx + s * 88, 1110], [cx + s * 70, 1100]], 9, 4, ink);
+                brushStroke(ctx, [[cx + s * 150, 1040], [cx + s * 176, 1066], [cx + s * 168, 1096]], 9, 4, ink);
+            });
+            // holder's name at the foot, in small script
+            ctx.font = `700 26px ${TALISMAN_FONT}`; ctx.fillStyle = '#5a1a10';
+            const who = [...('信士' + holder + '佩')];
+            who.forEach((ch, i) => ctx.fillText(ch, W - 46, 820 + i * 30 - Math.max(0, who.length - 12) * 15));
+            ctx.font = `600 20px ${TALISMAN_FONT}`;
+            ctx.fillText(todayString() + '　過爐加持', cx, H - 34);
             saveCanvasAsPNG(cvs, `問心堂_${charm || '平安符'}_${holder}.png`);
             playTempleBellSound(784);
             showToast(`📥 「${type}」已過爐加持並下載，隨身攜帶保平安！`);
