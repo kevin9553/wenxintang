@@ -360,7 +360,7 @@
         <div class="xinxiang-modal max-w-xl w-full p-5 relative max-h-[88vh] overflow-y-auto">
             <button onclick="closeDivinationModal()" class="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-bold">✕</button>
             <h3 class="text-lg font-bold text-amber-300 tracking-wider mb-1">🎋 濟公活佛・六十甲子擲筊求籤</h3>
-            <p class="text-xs text-stone-300 mb-3">誠心向濟公師父稟告姓名與祈求事由，轉動籤櫃並擲出聖筊領受靈籤。</p>
+            <p class="text-xs text-stone-300 mb-3">誠心向濟公師父稟告姓名與祈求事由，搖動籤筒並擲出聖筊領受靈籤。</p>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
                 <div>
@@ -384,7 +384,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                     <div>
                         <div id="bobeiPanelStickTitle" class="text-sm font-bold text-amber-300">尚未抽籤</div>
-                        <div id="bobeiOutcomeText" class="text-xs text-stone-200 mt-0.5">步驟 1：請先點擊「轉動籤櫃抽籤」，再點擊「擲筊請示」</div>
+                        <div id="bobeiOutcomeText" class="text-xs text-stone-200 mt-0.5">步驟 1：請先點擊「搖動籤筒抽籤」，再點擊「擲筊請示」</div>
                     </div>
                     <span class="px-2.5 py-1 bg-amber-500/20 border border-amber-400/40 rounded-lg text-xs text-amber-200 font-bold">
                         聖筊：<span id="shengStreakNum">0</span> / 1
@@ -392,7 +392,7 @@
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <button onclick="trigger3DCylinderDraw()" class="flex-1 py-2 px-3 btn-warm-gold text-xs flex items-center justify-center gap-1.5">
-                        🎋 1. 轉動籤櫃抽籤
+                        🎋 1. 搖動籤筒抽籤
                     </button>
                     <button onclick="trigger3DBobeiToss()" class="flex-1 py-2 px-3 bg-red-800 hover:bg-red-700 text-amber-100 border border-amber-400/50 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5">
                         🌙 2. 擲出紅木筊杯
@@ -13670,7 +13670,7 @@
         let ambientLight, sunDirLight, hemiLight;
         let playerAvatarGroup, playerIncenseGroup, shoujingMasterGroup;
         let outdoorCenserMesh, outdoorIncenseGroup, mainHallIncenseGroup;
-        let cylinderGroup, leftBlockGroup, rightBlockGroup;
+        let cylinderGroup, stickCylinderGroup, leftBlockGroup, rightBlockGroup;
         let jinluGroup, jinluFireMesh, jinluInnerFlameMesh;
         let leftLightTowerGroup, rightLightTowerGroup;
         let cuteTigerHeadGroup, cuteTigerTailGroup;
@@ -13706,9 +13706,10 @@
         let skyDome, skyDayTex, skyNightTex, moonMesh, templeRoofGroup;
         let puffTexture = null;
 
-        // Short-lived animation states (籤櫃轉動、筊杯翻轉、燈塔閃耀)
+        // Short-lived animation states (籤筒搖動、筊杯翻轉、燈塔閃耀)
         const anim = {
             cylinderShakeUntil: 0,
+            drawerAt: 0,
             blockToss: null,         // { start, result }
             towerGlowUntil: 0,
             jinluBoostUntil: 0
@@ -15350,6 +15351,112 @@
             });
         }
 
+        // 六十甲子籤筒：紅漆金箍竹節筒、金字「六十甲子靈籤」、八角漆座、六十支紅頭竹籤（抽中時一支升出筒口）
+        function createCylinderTexture() {
+            const W = 1024, H = 512, c = document.createElement('canvas');
+            c.width = W; c.height = H;
+            const x = c.getContext('2d');
+            const g = x.createLinearGradient(0, 0, W, 0);
+            for (let i = 0; i <= 8; i++) g.addColorStop(i / 8, i % 2 ? '#7a1610' : '#9b2318');
+            x.fillStyle = g; x.fillRect(0, 0, W, H);
+            // gilt bands top & bottom with a key-fret border
+            [[0, 48], [H - 48, 48]].forEach(([y, h]) => {
+                x.fillStyle = '#d9a520'; x.fillRect(0, y, W, h);
+                x.strokeStyle = '#7a4a10'; x.lineWidth = 4;
+                for (let k = 0; k < W; k += 32) { x.strokeRect(k + 6, y + 10, 20, h - 20); x.beginPath(); x.moveTo(k + 16, y + 10); x.lineTo(k + 16, y + h / 2); x.stroke(); }
+            });
+            // auspicious clouds
+            x.strokeStyle = 'rgba(232,190,90,0.55)'; x.lineWidth = 5;
+            for (let i = 0; i < 10; i++) {
+                const cx = (i * 113) % W, cy = 130 + (i % 3) * 120;
+                [0, 22, 44].forEach(dx => { x.beginPath(); x.arc(cx + dx, cy, 16, Math.PI, Math.PI * 2.2); x.stroke(); });
+            }
+            // vertical gold title on two opposite faces, each in a framed cartouche
+            // the lathe's front (+z) is at u = 0, so draw at the seam (both edges) and on the back
+            [0, W * 0.5, W].forEach(cx => {
+                x.fillStyle = '#2a0806'; x.fillRect(cx - 52, 74, 104, H - 148);
+                x.strokeStyle = '#facc15'; x.lineWidth = 5; x.strokeRect(cx - 52, 74, 104, H - 148);
+                x.fillStyle = '#fde68a'; x.font = '900 52px "Noto Serif TC", serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+                '六十甲子靈籤'.split('').forEach((ch, i) => x.fillText(ch, cx, 112 + i * 57));
+            });
+            // lacquer gloss streak and wear
+            for (let i = 0; i < 900; i++) { x.fillStyle = `rgba(20,5,3,${Math.random() * 0.12})`; x.fillRect(Math.random() * W, Math.random() * H, 2, 2); }
+            const t = new THREE.CanvasTexture(c);
+            t.anisotropy = 8;
+            return t;
+        }
+
+        function buildStickCylinder(goldMat, bare = false) {
+            const g = new THREE.Group();
+            const click = { interactType: 'divination', label: '🎋 六十甲子籤筒（點擊搖筒求籤）' };
+            const tag = m => { m.userData = { ...click }; clickableMeshes.push(m); return m; };
+            const lacquer = new THREE.MeshStandardMaterial({ color: 0x1c0b06, roughness: 0.3 });
+            const gold = new THREE.MeshStandardMaterial({ color: 0xd9a520, metalness: 0.7, roughness: 0.28 });
+
+            if (!bare) {
+            // Octagonal lacquered stand with gilt rims
+            const stand = tag(new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.3, 0.07, 8), lacquer));
+            stand.position.y = 0.035;
+            const standRim = new THREE.Mesh(new THREE.CylinderGeometry(0.275, 0.275, 0.015, 8), gold);
+            standRim.position.y = 0.072;
+            g.add(stand, standRim);
+
+            // Tube: slightly waisted lathe body wearing the painted texture
+            const H = 0.56, R = 0.16;
+            const prof = [];
+            for (let i = 0; i <= 16; i++) { const v = i / 16; prof.push(new THREE.Vector2(R * (1 - 0.06 * Math.sin(v * Math.PI)), 0.08 + v * H)); }
+            const body = tag(new THREE.Mesh(new THREE.LatheGeometry(prof, 48), new THREE.MeshPhysicalMaterial({ map: createCylinderTexture(), roughness: 0.32, clearcoat: 0.7, clearcoatRoughness: 0.2 })));
+            g.add(body);
+            // Bamboo-node rings, top lip and dark mouth
+            [0.08, 0.64].forEach((y, i) => {
+                const ring = new THREE.Mesh(new THREE.TorusGeometry(R * 1.02 + 0.004, i === 1 ? 0.016 : 0.009, 8, 48), gold);
+                ring.rotation.x = Math.PI / 2;
+                ring.position.y = y;
+                g.add(ring);
+            });
+            const mouth = new THREE.Mesh(new THREE.CircleGeometry(R * 0.98, 32), new THREE.MeshBasicMaterial({ color: 0x120604 }));
+            mouth.rotation.x = -Math.PI / 2;
+            mouth.position.y = 0.62;
+            g.add(mouth);
+
+            }
+
+            // 60 bamboo sticks with red-lacquered heads, fanning slightly outward
+            const N = 59;
+            const stickGeo = new THREE.BoxGeometry(0.016, 0.5, 0.005);
+            const tipGeo = new THREE.BoxGeometry(0.017, 0.07, 0.006);
+            const sticks = new THREE.InstancedMesh(stickGeo, new THREE.MeshStandardMaterial({ color: 0x9c7a46, roughness: 0.7 }), N);
+            const tips = new THREE.InstancedMesh(tipGeo, new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.4 }), N);
+            const d = new THREE.Object3D(), up = new THREE.Vector3();
+            for (let i = 0; i < N; i++) {
+                const ring = i < 8 ? 0.03 : (i < 26 ? 0.075 : 0.12);
+                const a = i * 2.39996 + (i % 3) * 0.2;
+                const r = ring * (0.8 + Math.random() * 0.25);
+                const top = 0.78 + Math.random() * 0.14;
+                const tilt = 0.06 + r * 0.8;
+                d.position.set(Math.cos(a) * r, top - 0.25, Math.sin(a) * r);
+                d.rotation.set(Math.sin(a) * tilt, a, -Math.cos(a) * tilt * 0.4);
+                d.updateMatrix();
+                sticks.setMatrixAt(i, d.matrix);
+                up.set(0, 0.215, 0).applyEuler(d.rotation);
+                d.position.add(up);
+                d.updateMatrix();
+                tips.setMatrixAt(i, d.matrix);
+            }
+            g.add(sticks, tips);
+
+            // The drawn stick: rises out of the mouth after the shake
+            const pop = new THREE.Group();
+            const ps = new THREE.Mesh(stickGeo, sticks.material);
+            const pt = new THREE.Mesh(tipGeo, tips.material);
+            pt.position.y = 0.215;
+            pop.add(ps, pt);
+            pop.position.set(0.02, 0.6, 0.0);
+            g.add(pop);
+            g.userData.pop = pop;
+            return g;
+        }
+
         // 六十甲子靈籤櫃：落地式六角旋轉籤詩櫃（紫檀紅漆、正面金字「國泰民安」、其餘五面各十二格抽屜共六十格、圓盤立柱底座）
         const QIAN_CN = n => { const d = '〇一二三四五六七八九'; if (n <= 10) return n === 10 ? '十' : d[n]; const t = Math.floor(n / 10), u = n % 10; return (t > 1 ? d[t] : '') + '十' + (u ? d[u] : ''); };
         const CAB = { R: 0.36, H: 1.05, Y0: 0.8, ROWS: 6, COLS: 2, PER: 12 };
@@ -15410,7 +15517,7 @@
 
         function buildFortuneCylinder(goldMat) {
             const g = new THREE.Group();
-            const click = { interactType: 'divination', label: '🎋 六十甲子靈籤櫃（點擊轉動求籤）' };
+            const click = { interactType: 'divination', label: '🎋 六十甲子籤筒・籤詩櫃（點擊搖籤求籤）' };
             const tag = m => { m.userData = { ...click }; m.castShadow = true; m.receiveShadow = true; clickableMeshes.push(m); return m; };
             const wood = new THREE.MeshPhysicalMaterial({ color: 0x2a0704, roughness: 0.32, clearcoat: 0.5, clearcoatRoughness: 0.25 });
             const woodDark = new THREE.MeshPhysicalMaterial({ color: 0x240604, roughness: 0.35, clearcoat: 0.5, clearcoatRoughness: 0.3 });
@@ -15479,7 +15586,15 @@
             hex(R * 1.05, 0.03, Y0 - 0.015, wood);
             const fin = tag(new THREE.Mesh(new THREE.LatheGeometry([[0, 0], [0.09, 0], [0.09, 0.02], [0.05, 0.035], [0.035, 0.06], [0.055, 0.1], [0.04, 0.135], [0, 0.145]].map(([r, y]) => new THREE.Vector2(r, y)), 24), wood));
             fin.position.y = Y0 + H + 0.087;
-            body.add(fin);
+            fin.visible = false;
+            // 籤口: a dark round opening in the top with a gilt rim, the bamboo sticks stand in it
+            const mouth = new THREE.Mesh(new THREE.CircleGeometry(0.17, 32), new THREE.MeshBasicMaterial({ color: 0x0c0302 }));
+            mouth.rotation.x = -Math.PI / 2;
+            mouth.position.y = Y0 + H + 0.0885;
+            const lip = new THREE.Mesh(new THREE.TorusGeometry(0.175, 0.012, 8, 40), brass);
+            lip.rotation.x = Math.PI / 2;
+            lip.position.y = Y0 + H + 0.09;
+            g.add(tag(mouth), lip);
 
             // The drawn drawer: a real box that slides out of its slot with the slip number
             const dc = document.createElement('canvas'); dc.width = 160; dc.height = 160;
@@ -16142,9 +16257,15 @@
             register3DLabel(tigerGroup, 1.52, '🐯 下壇金虎爺', '#f59e0b', () => openWealthFurnaceModal());
 
             // Fortune Stick Cylinder & Red Bobei Blocks on Altar
+            // 落地六角籤詩櫃，竹籤直接插在櫃頂籤口：搖出竹籤後，櫃身轉到該籤號並開出抽屜
             cylinderGroup = buildFortuneCylinder(goldMat);
             cylinderGroup.position.set(-3.7, 0.445, -2.2);   // 落地籤詩櫃：立在供桌前地面
             templeGroup.add(cylinderGroup);
+                        // 竹籤直接插在籤詩櫃頂的籤口裡（不另放籤筒）
+            stickCylinderGroup = buildStickCylinder(goldMat, true);
+            stickCylinderGroup.scale.setScalar(0.9);
+            stickCylinderGroup.position.set(0, CAB.Y0 + CAB.H + 0.087 - 0.5 * 0.9, 0);
+            cylinderGroup.add(stickCylinderGroup);
 
             leftBlockGroup = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.065, 10, 18, Math.PI), crimsonMat);
             leftBlockGroup.rotation.x = Math.PI / 2;
@@ -17454,20 +17575,39 @@
                 nzRightWheel.rotation.z = -t * 5.0;
             }
 
-            // 籤詩櫃 spin, then the drawn drawer slides out, lingers and closes
+            // 竹籤筒 shake; the drawn bamboo stick rises out of the mouth
+            if (stickCylinderGroup) {
+                if (nowMs < anim.cylinderShakeUntil) {
+                    stickCylinderGroup.rotation.z = Math.sin(t * 38) * 0.12;
+                    stickCylinderGroup.rotation.x = Math.cos(t * 31) * 0.06;
+                } else {
+                    stickCylinderGroup.rotation.z *= 0.8;
+                    stickCylinderGroup.rotation.x *= 0.8;
+                }
+                const pop = stickCylinderGroup.userData.pop;
+                if (pop) {
+                    const e = anim.stickPopAt ? (nowMs - anim.stickPopAt) / 1000 : -1;
+                    const rise = e < 0 ? 0 : e < 0.7 ? e / 0.7 : e < 7.5 ? 1 : Math.max(0, 1 - (e - 7.5) / 0.8);
+                    const k = rise * rise * (3 - 2 * rise);
+                    pop.position.y = 0.6 + k * 0.6;
+                    pop.rotation.z = k * 0.12;
+                    if (e > 8.4) anim.stickPopAt = 0;
+                }
+            }
+            // 籤詩櫃 spins to the drawn number, then that drawer slides out, lingers and closes
             if (cylinderGroup && cylinderGroup.userData.cabinet) {
                 const cab = cylinderGroup.userData.cabinet;
-                if (cab.spinStart) {
+                if (cab.spinStart && nowMs >= cab.spinStart) {
                     const u = Math.min(1, (nowMs - cab.spinStart) / 1100);
                     cab.body.rotation.y = cab.spinFrom + (cab.spinTo - cab.spinFrom) * (1 - Math.pow(1 - u, 3));
                     if (u >= 1) cab.spinStart = 0;
                 }
-                const e = anim.stickPopAt ? (nowMs - anim.stickPopAt) / 1000 : -1;
+                const e = anim.drawerAt ? (nowMs - anim.drawerAt) / 1000 : -1;
                 const out = e < 0 ? 0 : e < 0.6 ? e / 0.6 : e < 6 ? 1 : Math.max(0, 1 - (e - 6) / 0.7);
                 const k = out * out * (3 - 2 * out);
                 cab.drawer.visible = cab.slot.visible = e >= 0;
                 cab.drawer.position.z = CAB.AP + 0.004 + k * 0.16;
-                if (e > 6.8) { anim.stickPopAt = 0; cab.drawer.visible = cab.slot.visible = false; }
+                if (e > 6.8) { anim.drawerAt = 0; cab.drawer.visible = cab.slot.visible = false; }
             }
 
             // Moon-block toss: arc up, spin, then land showing the result
@@ -18051,29 +18191,33 @@
             state.shengStreak = 0;
             document.getElementById('shengStreakNum').textContent = '0';
             document.getElementById('btnOpenScrollQuick').classList.add('hidden');
-            document.getElementById('bobeiPanelStickTitle').textContent = '🎋 籤櫃轉動中……';
+            document.getElementById('bobeiPanelStickTitle').textContent = '🎋 籤筒搖動中……';
             document.getElementById('bobeiOutcomeText').textContent = '請默念姓名、住址與所求之事。';
             anim.cylinderShakeUntil = performance.now() + 1100;
             anim.stickPopAt = 0;
+            anim.drawerAt = 0;
             const pick = JIAZI_STICKS[Math.floor(Math.random() * JIAZI_STICKS.length)];
-            if (cylinderGroup && cylinderGroup.userData.cabinet) cylinderGroup.userData.cabinet.aim(pick.id, performance.now());
             for (let i = 0; i < 5; i++) setTimeout(playWoodenFishSound, i * 200);
 
             setTimeout(() => {
                 state.isShakingCylinder = false;
                 state.drawnStick = pick;
-                anim.stickPopAt = performance.now();
+                const now = performance.now();
+                anim.stickPopAt = now;
+                // the stick is out: the 籤詩櫃 turns to that number and opens its drawer
+                if (cylinderGroup && cylinderGroup.userData.cabinet) cylinderGroup.userData.cabinet.aim(pick.id, now + 700);
+                anim.drawerAt = now + 1850;
                 const s = state.drawnStick;
                 document.getElementById('bobeiPanelStickTitle').textContent = `已抽出：第 ${s.id} 籤（${s.ganzhi}）`;
                 document.getElementById('bobeiOutcomeText').textContent = '步驟 2：請擲筊請示師父，是否為此支籤。';
-                showToast(`🎋 籤櫃轉出第 ${s.id} 籤！請擲筊請示師父。`);
+                showToast(`🎋 籤筒搖出第 ${s.id} 籤！籤詩櫃開出第 ${s.id} 號抽屜，請擲筊請示師父。`);
             }, 1150);
         }
 
         function trigger3DBobeiToss() {
             if (state.isShakingCylinder || anim.blockToss) return;
             if (!state.drawnStick) {
-                showToast('🎋 請先轉動籤櫃抽籤，再擲筊請示。');
+                showToast('🎋 請先搖動籤筒抽籤，再擲筊請示。');
                 trigger3DCylinderDraw();
                 return;
             }
@@ -18099,7 +18243,7 @@
                 } else {
                     state.shengStreak = 0;
                     state.drawnStick = null;
-                    outcome.innerHTML = '<span class="text-rose-300 font-bold">🌑【陰筊】此籤非所求，請重新轉動籤櫃抽籤。</span>';
+                    outcome.innerHTML = '<span class="text-rose-300 font-bold">🌑【陰筊】此籤非所求，請重新搖動籤筒抽籤。</span>';
                     document.getElementById('bobeiPanelStickTitle').textContent = '尚未抽籤';
                     playTempleBellSound(392);
                 }
@@ -18276,13 +18420,13 @@
 
         function jigongReply(msg) {
             const rules = [
-                [/工作|事業|升遷|老闆|職場|面試|轉職/, '「徒兒，做事如搖扇，不急不躁才有風。眼前的關卡是磨你的刀，盡心做好份內事，貴人自然看得見。想求明示，可去供桌前轉籤櫃問老衲。」'],
+                [/工作|事業|升遷|老闆|職場|面試|轉職/, '「徒兒，做事如搖扇，不急不躁才有風。眼前的關卡是磨你的刀，盡心做好份內事，貴人自然看得見。想求明示，可去供桌搖籤筒問老衲。」'],
                 [/錢|財|投資|股票|債|補財庫/, '「錢財如流水，要有庫才留得住。可到寶塔金爐補補財庫，再去摸摸虎爺換錢水。但記得——勤儉是本，貪心是漏，老衲的葫蘆可裝酒，裝不了貪念喔！」'],
                 [/感情|姻緣|分手|另一半|喜歡|結婚|戀/, '「緣分天定，惜緣在人。對人真心，對己寬心，該來的跑不掉，該走的也別強留。點一盞光明燈，讓心亮起來，自然吸引對的人。」'],
                 [/睡|失眠|害怕|驚|焦慮|壓力|心煩|累/, '「唉呀，徒兒受驚了。先深呼吸三次，到右側找收驚師姐為你收驚安神，再去蓮花蒲團坐一坐。心若安了，夜裡自然好眠。若身體不適，也要記得看醫生喔！」'],
                 [/考試|學業|讀書|成績|升學/, '「讀書如釀酒，時間到了才香。每天紮實讀一點，考前莫熬夜，老衲保你頭腦清明。可求一張平安符隨身帶著，安定心神。」'],
                 [/健康|生病|身體|醫院|開刀/, '「身體是修行的本錢！老衲雖瘋瘋癲癲，也知道要好好吃飯、早早睡覺。有病就醫，心存善念，老衲與眾神為你加持祈福。」'],
-                [/籤|解籤/, '「要解籤嗎？先到供桌轉籤櫃、擲出聖筊，領了籤詩後按「請師父深入解籤」，老衲細細說給你聽。」'],
+                [/籤|解籤/, '「要解籤嗎？先到供桌搖籤筒、擲出聖筊，領了籤詩後按「請師父深入解籤」，老衲細細說給你聽。」'],
                 [/謝|感恩|感謝/, '「呵呵，不用謝！心存善念、多行好事，就是對老衲最好的供養啦～」']
             ];
             for (const [re, reply] of rules) if (re.test(msg)) return reply;
