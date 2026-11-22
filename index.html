@@ -15645,17 +15645,40 @@
                 }
             });
             addSmokeEmitter(L.land.x, L.waterY + 0.1, L.land.z, 9, 0.7, 0.7, 0xffffff, 0.32);
-            // ---- 龍泉 stele: a tall upright rock carved with red characters, facing the courtyard
-            const stele = tag(new THREE.Mesh(rockGeo(0, 1.6, 0, 0.75, 1.75, 0.45, 99, 2), rockMat));
-            stele.position.set(46.6, 0, L.z - 5.2); stele.castShadow = true; g.add(stele);
-            const sc = document.createElement('canvas'); sc.width = 256; sc.height = 640;
+            // ---- 龍泉 stele: a smooth standing stone on a low rock base; its front (facing the courtyard, -x) is cut flat
+            // and the characters are carved into it, filled with red
+            const SX = 46.6, SZ = L.z - 5.2;
+            const sg = new THREE.SphereGeometry(1, 28, 20);
+            const sp = sg.attributes.position, sv = new THREE.Vector3();
+            for (let i = 0; i < sp.count; i++) {
+                sv.fromBufferAttribute(sp, i);
+                const n = 1 + 0.035 * Math.sin(sv.y * 7 + sv.z * 5) + 0.025 * Math.sin(sv.z * 11 - sv.y * 3);
+                let x = sv.x * 0.36 * n, y = sv.y * 1.55, z = sv.z * 0.72 * n;
+                if (y < 0) y *= 0.7;                       // fuller, heavier bottom
+                z *= 1 - 0.18 * Math.max(0, sv.y);        // tapering to a rounded top
+                x = Math.max(x, -0.22);                    // the flat polished face
+                sp.setXYZ(i, x, y, z);
+            }
+            sg.computeVertexNormals();
+            const steleMat = new THREE.MeshStandardMaterial({ map: rockTex, color: 0xcfc6b6, roughness: 0.78 });
+            const stele = tag(new THREE.Mesh(sg, steleMat));
+            stele.position.set(SX, 1.6, SZ); stele.castShadow = true; stele.receiveShadow = true; g.add(stele);
+            const sbase = tag(new THREE.Mesh(rockGeo(SX + 0.05, 0.16, SZ, 0.95, 0.24, 1.05, 77, 2), rockDark));
+            sbase.receiveShadow = true; g.add(sbase);
+            const sc = document.createElement('canvas'); sc.width = 256; sc.height = 768;
             const sx = sc.getContext('2d');
-            sx.font = '900 200px "LXGW WenKai TC","Noto Serif TC",serif'; sx.textAlign = 'center'; sx.textBaseline = 'middle';
-            sx.fillStyle = 'rgba(80,10,6,0.6)'; sx.fillText('龍', 132, 170); sx.fillText('泉', 132, 420);
-            sx.fillStyle = '#c81e1e'; sx.fillText('龍', 128, 164); sx.fillText('泉', 128, 414);
-            sx.font = '700 34px "LXGW WenKai TC","Noto Serif TC",serif'; sx.fillStyle = '#c81e1e'; sx.fillText('問心堂敬立', 128, 590);
-            const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 2.1), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, roughness: 0.8 }));
-            plate.position.set(46.6 - 0.62, 1.75, L.z - 5.2); plate.rotation.y = -Math.PI / 2; g.add(plate); tag(plate);
+            sx.textAlign = 'center'; sx.textBaseline = 'middle';
+            sx.font = '900 190px "LXGW WenKai TC","Noto Serif TC",serif';
+            // carved: a dark inner shadow offset up-left, then the red fill
+            [['龍', 230], ['泉', 470]].forEach(([ch, y]) => {
+                sx.fillStyle = 'rgba(40,20,10,0.55)'; sx.fillText(ch, 124, y - 4);
+                sx.fillStyle = '#a3121a'; sx.fillText(ch, 128, y);
+            });
+            sx.font = '700 30px "LXGW WenKai TC","Noto Serif TC",serif';
+            sx.fillStyle = 'rgba(40,20,10,0.5)'; sx.fillText('問心堂敬立', 127, 659);
+            sx.fillStyle = '#a3121a'; sx.fillText('問心堂敬立', 128, 660);
+            const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.78, 2.35), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, roughness: 0.8, depthWrite: false }));
+            plate.position.set(SX - 0.225, 1.62, SZ); plate.rotation.y = -Math.PI / 2; g.add(plate); tag(plate);
             // ---- 取水台: a stone step at the pool's front edge with a bamboo ladle stand
             const step = tag(new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.22, 2.2), new THREE.MeshStandardMaterial({ color: 0xa39c90, roughness: 0.9 })));
             step.position.set(px - prx - 0.4, 0.11, pz - 1.0); step.receiveShadow = true; g.add(step);
@@ -15680,7 +15703,7 @@
             }
             for (let dz = -6; dz <= 13; dz += 1.4) colliders.push({ x: 58.4, z: L.z + dz, r: 1.3 });
             for (let dz = -7; dz <= 7; dz += 2) colliders.push({ x: px, z: pz + dz, r: prx * 0.85 });
-            colliders.push({ x: 46.6, z: L.z - 5.2, r: 0.8 });
+            colliders.push({ x: 46.6, z: L.z - 5.2, r: 0.9 });
             // the dragon (Blender model) is added when visitors come near; until then the rocks stand alone
             const holder = new THREE.Group(); holder.position.set(59, 0, L.z); g.add(holder);
             const stand = new THREE.Group(); holder.add(stand);
