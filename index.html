@@ -15247,9 +15247,12 @@
             if (custom) return custom.catch(err => { console.warn('custom statue unavailable; using original', key, err); return fetchOriginalStatue(key); });
             return fetchOriginalStatue(key);
         }
+        // Q 版神像：這些神尊改用可愛的 Q 版模型（models/<key>_q.glb）
+        const STATUE_Q = new Set(['taizi']);
         function fetchOriginalStatue(key) {
+            const file = STATUE_Q.has(key) ? key + '_q' : key;
             // b64 mode: hosts that only serve text get models/<key>.txt holding the same .glb as base64
-            if (!statueLoader.buffers[key]) statueLoader.buffers[key] = fetch(statueLoader.base + key + (statueLoader.b64 ? '.txt' : '.glb')).then(r => {
+            if (!statueLoader.buffers[key]) statueLoader.buffers[key] = fetch(statueLoader.base + file + (statueLoader.b64 ? '.txt' : '.glb')).then(r => {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return statueLoader.b64 ? r.text().then(t => decodeBase64ToArrayBuffer(t.trim())) : r.arrayBuffer();
             });
@@ -15333,7 +15336,7 @@
                             tex.anisotropy = maxAniso;
                             m.map = tex;
                             // Embroidery, armour scales and robe patches get raised relief from the same pattern
-                            if (/Robe|Armor|Accent|Badge/.test(m.name)) { m.bumpMap = tex; m.bumpScale = /^(SK|YS|AM)_/.test(m.name) ? 0.03 : 0.35; }
+                            if (/Robe|Armor|Accent|Badge/.test(m.name)) { m.bumpMap = tex; m.bumpScale = /^(SK|YS|AM)_/.test(m.name) ? 0.03 : (/^JG_/.test(m.name) && STATUE_Q.has('jigong') ? 0.05 : 0.35); }
                             m.color.set(0xffffff);
                         }
                         let f = m;
@@ -15894,6 +15897,7 @@
             halo.castShadow = false;
             // swap the stand-in for the Blender-sculpted 太子像 (loaded when visitors come near)
             const holder = new THREE.Group(); holder.position.copy(S.position); g.add(holder);
+            if (STATUE_Q.has('taizi')) holder.scale.setScalar(1.25);   // the Q version is shorter; keep it as tall as the original
             upgradeStatuesFromGLB([{ key: 'taizi', container: holder, figure: S, offsetY: 0, interact: { ...click },
                 textures: { TZ_Face: () => createStatueFaceTexture({ skin: '#e0b04a', browColor: '#8a5a18', longBrow: false, eyes: 'smile', mouth: 'serene', urna: true, blush: 0.42 }) } }]);
 
@@ -16849,7 +16853,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
                     key: 'jigong', container: jgGroup, figure: jg.group, offsetY: PED + SEAT,
                     interact: { interactType: 'statue', label: '🪭 南無大慈大悲濟公活佛（點擊開啟求籤或問事）' },
                     textures: {
-                        JG_Face: () => createStatueFaceTexture({ skin: '#d09e78', browArch: 12, browWidth: 8, eyes: 'smile', mouth: 'grin', stubble: true, blush: 0.28 }),
+                        JG_Face: () => STATUE_Q.has('jigong') ? createStatueFaceTexture({ skin: '#e2b089', browArch: 14, browWidth: 9, eyes: 'smile', mouth: 'grin', blush: 0.5 }) : createStatueFaceTexture({ skin: '#d09e78', browArch: 12, browWidth: 8, eyes: 'smile', mouth: 'grin', stubble: true, blush: 0.28 }),
                         JG_Robe: () => { const t = createPatchedRobeTexture(); t.repeat.set(3, 2); return t; },
                         JG_Badge: () => createSignboardTexture('佛', 128, 128, '#b91c1c', '#facc15', '#fef08a', false, 80)
                     },
