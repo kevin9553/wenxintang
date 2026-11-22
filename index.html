@@ -271,7 +271,10 @@
     </div>
 
     <!-- 7d. 我的龍泉水（裝過才出現；點擊看用途） -->
-    <button id="lqChip" onclick="showLongquanInfo()" class="hidden fixed z-40 palace-pill rounded-full px-2.5 py-1 pointer-events-auto text-[11px] font-bold text-cyan-100 border border-cyan-300/50">💧 龍泉水 × <span id="lqCount">0</span></button>
+    <div id="lqChip" class="hidden fixed z-40 flex items-center gap-1 pointer-events-auto text-[11px] font-bold">
+        <button onclick="showLongquanInfo()" class="palace-pill rounded-full px-2.5 py-1 text-cyan-100 border border-cyan-300/50">💧 龍泉水 × <span id="lqCount">0</span></button>
+        <button onclick="drinkLongquan()" class="palace-pill rounded-full px-2.5 py-1 text-cyan-100 border border-cyan-300/50">🥤 喝一口</button>
+    </div>
 
     <!-- 8. BOTTOM-CENTER 11 RITUAL BUTTONS DOCK BAR -->
     <nav class="fixed bottom-2.5 left-1/2 -translate-x-1/2 z-40 w-[98vw] max-w-5xl palace-pill rounded-2xl px-2 sm:px-3 py-2 pointer-events-auto border border-amber-400/45 shadow-2xl">
@@ -3941,7 +3944,8 @@
             const swing = moving ? Math.sin(phase) * 0.55 : 0;
             ud.legs[0].rotation.x += (swing - ud.legs[0].rotation.x) * 0.35;
             ud.legs[1].rotation.x += (-swing - ud.legs[1].rotation.x) * 0.35;
-            if (moving) {
+            if (ud.drinking) { /* arm held by the drink animation */ }
+            else if (moving) {
                 ud.leftArm.rotation.x = -swing * 0.7;
                 if (!ud.incenseBundle.visible) ud.rightArm.rotation.x = swing * 0.7;
                 ud.headGroup.rotation.x = 0;
@@ -11819,7 +11823,9 @@
             const before = lqCount();
             try { localStorage.setItem('temple.longquan', String(Math.max(0, n))); } catch (e) {}
             refreshLqChip();
-            if ((before > 0) !== (n > 0) && typeof rebuildPlayerAvatar === 'function') rebuildPlayerAvatar();
+            if ((before > 0) !== (n > 0) && typeof rebuildPlayerAvatar === 'function') {
+                if (LQ_DRINK.t0) LQ_DRINK.rebuildAfter = true; else rebuildPlayerAvatar();
+            }
         }
         function refreshLqChip() {
             const n = lqCount(), chip = document.getElementById('lqChip');
@@ -11828,7 +11834,53 @@
             document.getElementById('lqCount').textContent = n;
         }
         function showLongquanInfo() {
-            showToast(`💧 你有 ${lqCount()} 瓶龍泉水（葫蘆掛在腰間）。可以：🪷 到浴佛檯以龍泉水灌沐太子像；💧 在大殿供桌「供」→ 龍泉淨水三杯。用完再去龍泉池裝。`);
+            showToast(`💧 你有 ${lqCount()} 瓶龍泉水（葫蘆掛在腰間）。可以：🥤 自己喝一口；🪷 到浴佛檯以龍泉水灌沐太子像；💧 在大殿供桌「供」→ 龍泉淨水三杯。用完再去龍泉池裝。`);
+        }
+        // 喝龍泉水: take the gourd off the hip, raise it to the mouth, tip it back for three sips, hang it back; uses one bottle
+        const LQ_DRINK = { t0: 0, gourd: null };
+        function drinkLongquan() {
+            if (!playerAvatarGroup || LQ_DRINK.t0) return;
+            if (lqCount() <= 0) { showToast('💧 葫蘆空了，先到龍泉池邊再裝一瓶吧！'); return; }
+            if (state.incenseLit) { showToast('🙏 手上正拿著香，先把香插好再喝水吧。'); return; }
+            const ud = playerAvatarGroup.userData;
+            if (ud.pose && ud.pose !== 'stand' && ud.pose !== 'kneel' && ud.pose !== 'lotus') return;
+            ud.drinking = true;
+            if (ud.hipGourd) ud.hipGourd.visible = false;
+            // a gourd held in the right hand (child of the arm, at the hand)
+            const gm = new THREE.MeshStandardMaterial({ color: 0xd9a548, roughness: 0.45 });
+            const red = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.6 });
+            const hg = new THREE.Group();
+            const b1 = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 10), gm); b1.position.y = -0.07; hg.add(b1);
+            const b2 = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 10), gm); b2.position.y = 0.03; hg.add(b2);
+            const tie = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.007, 6, 12), red); tie.rotation.x = Math.PI / 2; hg.add(tie);
+            const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 0.05, 8), gm); neck.position.y = 0.09; hg.add(neck);
+            hg.position.set(0, -0.44, 0.05);
+            ud.rightArm.add(hg);
+            LQ_DRINK.gourd = hg; LQ_DRINK.ud = ud; LQ_DRINK.t0 = performance.now();
+            lqSet(lqCount() - 1);
+            emitAct('lqdrink');
+            showToast('🥤 取下腰間葫蘆，仰頭喝一口龍泉水……');
+        }
+        function updateLongquanDrink(nowMs) {
+            if (!LQ_DRINK.t0) return;
+            const ud = LQ_DRINK.ud, e = (nowMs - LQ_DRINK.t0) / 1000;
+            const ease = k => k * k * (3 - 2 * k);
+            // 0–0.7 lift, 0.7–2.4 drink (three sips, head tilted back), 2.4–3.1 lower
+            const up = e < 0.7 ? ease(e / 0.7) : e < 2.4 ? 1 : Math.max(0, 1 - ease((e - 2.4) / 0.7));
+            const sip = e > 0.7 && e < 2.4 ? Math.max(0, Math.sin((e - 0.7) / 1.7 * Math.PI * 3)) : 0;
+            ud.rightArm.rotation.set(-2.35 * up - 0.12 * sip, 0, 0.12 - 0.55 * up);
+            if (LQ_DRINK.gourd) LQ_DRINK.gourd.rotation.set(0.9 * up + 0.35 * sip, 0, 0);
+            ud.headGroup.rotation.x = -0.32 * up - 0.08 * sip;
+            if (e > 0.75 && !LQ_DRINK.gulp) { LQ_DRINK.gulp = 1; for (let i = 0; i < 3; i++) setTimeout(() => playTempleBellSound(1046 - i * 90), i * 560); }
+            if (e > 3.1) {
+                ud.rightArm.rotation.set(0, 0, 0.12); ud.headGroup.rotation.x = 0;
+                if (LQ_DRINK.gourd && LQ_DRINK.gourd.parent) LQ_DRINK.gourd.parent.remove(LQ_DRINK.gourd);
+                ud.drinking = false;
+                if (ud.hipGourd) ud.hipGourd.visible = true;
+                LQ_DRINK.t0 = 0; LQ_DRINK.gourd = null; LQ_DRINK.gulp = 0;
+                if (LQ_DRINK.rebuildAfter) { LQ_DRINK.rebuildAfter = false; rebuildPlayerAvatar(); }
+                showToast(['💧 龍泉入喉，清涼甘甜：神清氣爽、百病不侵！', '🐉 喝下一口龍泉水：龍氣護身，今日諸事順遂。', '✨ 甘泉潤心：煩惱隨水去，好運跟著來。', '🌿 一口清泉解塵勞：身心安定，福氣滿滿。'][(Math.random() * 4) | 0] + (lqCount() > 0 ? `（還剩 ${lqCount()} 瓶）` : '（葫蘆喝空了，可再到龍泉池裝水）'));
+            }
         }
         function netToast(msg) {
             const now = performance.now();
@@ -12040,7 +12092,7 @@
         const NET_ACT_TEXT = {
             bell: '敲響了祈福鐘 🔔', drum: '擊響了鼓樓大鼓 🥁', fireworks: '施放了煙火 🎆', firecracker: '點燃了鞭炮 🧨',
             incense: '插香參拜 🙏', bow: '合掌參拜 🙏', kowtow: '行三跪九叩大禮 🙇', meditate: '盤腿打坐 🪷', chant: '念經持咒 📖',
-            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
+            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', lqdrink: '喝了一口龍泉水 🥤', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
         };
         function onNetAct(msg) {
             if (!msg || msg.sameTab || msg.kind !== 'viewer') return;
@@ -13225,7 +13277,7 @@
             if (look && look.gourd) {   // 龍泉水葫蘆 hanging at the right hip on a red cord
                 const gm = new THREE.MeshStandardMaterial({ color: 0xd9a548, roughness: 0.45 });
                 const red = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.6 });
-                const hg = new THREE.Group(); hg.position.set(0.25, 0.47, 0.06); hg.rotation.z = 0.15;
+                const hg = new THREE.Group(); hg.position.set(0.25, 0.47, 0.06); hg.rotation.z = 0.15; g.userData.hipGourd = hg;
                 const b1 = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 10), gm); b1.position.y = -0.06; hg.add(b1);
                 const b2 = new THREE.Mesh(new THREE.SphereGeometry(0.046, 12, 10), gm); b2.position.y = 0.035; hg.add(b2);
                 const tie = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.007, 6, 12), red); tie.rotation.x = Math.PI / 2; tie.position.y = 0.0; hg.add(tie);
@@ -18436,6 +18488,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             updateTempleCat(t, dt);
             updateYufo(t, performance.now());
             updateLongquan(t, dt, performance.now());
+            updateLongquanDrink(performance.now());
             if (!MONK.mesh && DAXIONG.lotus.length && typeof towerAnim !== 'undefined') buildResidentMonk();
             updateResidentMonk(t, dt);
             renderer.render(scene, camera);
