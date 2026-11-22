@@ -15530,6 +15530,38 @@
             const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping;
             return t;
         }
+        // dragon scales: staggered rows of rounded scales, each with a dark rim and a light sheen (u = around the body, v = along it)
+        function createDragonScaleTexture() {
+            const W = 512, H = 384, c = document.createElement('canvas'); c.width = W; c.height = H;
+            const x = c.getContext('2d');
+            x.fillStyle = '#1d5e4a'; x.fillRect(0, 0, W, H);
+            const cols = 16, rows = 6, cw = W / cols, rh = H / rows;
+            for (let r = -1; r <= rows; r++) for (let k = -1; k <= cols; k++) {
+                const cx = (k + (r % 2 ? 0.5 : 0)) * cw + cw / 2, cy = r * rh;
+                const g = x.createRadialGradient(cx, cy + rh * 0.25, 2, cx, cy + rh * 0.4, rh * 0.95);
+                g.addColorStop(0, '#5fc79a'); g.addColorStop(0.55, '#2e8a68'); g.addColorStop(1, '#174a3a');
+                x.fillStyle = g;
+                x.beginPath(); x.moveTo(cx - cw * 0.56, cy); x.quadraticCurveTo(cx - cw * 0.6, cy + rh * 1.05, cx, cy + rh * 1.12); x.quadraticCurveTo(cx + cw * 0.6, cy + rh * 1.05, cx + cw * 0.56, cy); x.closePath(); x.fill();
+                x.strokeStyle = 'rgba(10,30,22,0.8)'; x.lineWidth = 2.5; x.stroke();
+                x.strokeStyle = 'rgba(230,200,110,0.45)'; x.lineWidth = 1.2;
+                x.beginPath(); x.moveTo(cx - cw * 0.42, cy + rh * 0.55); x.quadraticCurveTo(cx, cy + rh * 0.98, cx + cw * 0.42, cy + rh * 0.55); x.stroke();
+            }
+            const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping;
+            return t;
+        }
+        function createDragonBellyTexture() {
+            const W = 256, H = 384, c = document.createElement('canvas'); c.width = W; c.height = H;
+            const x = c.getContext('2d');
+            const rh = H / 6;
+            for (let r = 0; r < 6; r++) {
+                const g = x.createLinearGradient(0, r * rh, 0, (r + 1) * rh);
+                g.addColorStop(0, '#f4d27a'); g.addColorStop(0.75, '#d9a63e'); g.addColorStop(1, '#8a5f1a');
+                x.fillStyle = g; x.fillRect(0, r * rh, W, rh);
+                x.fillStyle = 'rgba(90,55,10,0.8)'; x.fillRect(0, (r + 1) * rh - 4, W, 4);
+            }
+            const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping;
+            return t;
+        }
         function buildLongquan(goldMat) {
             const L = LONGQUAN;
             const g = new THREE.Group(); templeGroup.add(g); L.group = g;
@@ -15653,12 +15685,11 @@
             const holder = new THREE.Group(); holder.position.set(59, 0, L.z); g.add(holder);
             const stand = new THREE.Group(); holder.add(stand);
             upgradeStatuesFromGLB([{ key: 'longquan', container: holder, figure: stand, offsetY: 0, interact: { ...click },
+                textures: { LQ_Scale: createDragonScaleTexture, LQ_Belly: createDragonBellyTexture },
                 onReady: m => {
-                    const put = (name, pos, rotY, sc2, rotX = 0, rotZ = 0) => { const o = m.getObjectByName(name); if (!o) return; o.position.copy(pos).sub(holder.position); o.rotation.set(rotX, rotY, rotZ); o.scale.setScalar(sc2); };
-                    put('LQ_Head', new THREE.Vector3(L.mouth.x + 1.9, L.mouth.y + 0.35, L.z), -Math.PI / 2, 2.2);
-                    put('LQ_Hump', new THREE.Vector3(62.4, 7.2, L.z - 2.6), 0.12, 2.1);
-                    put('LQ_Tail', new THREE.Vector3(62.8, 7.6, L.z + 13.2), -0.4, 2.2);
-                    put('LQ_Claw', new THREE.Vector3(59.6, 3.0, L.z - 2.0), -Math.PI / 2, 2.3);
+                    // the body is modelled in place (one continuous dragon weaving over the rocks); only the head is posed here
+                    const o = m.getObjectByName('LQ_Head');
+                    if (o) { o.position.set(L.mouth.x + 1.9, L.mouth.y + 0.35, L.z).sub(holder.position); o.rotation.set(0, -Math.PI / 2, 0); o.scale.setScalar(2.2); }
                 } }]);
             const anchor = new THREE.Object3D(); anchor.position.set(59, 12.5, L.z); g.add(anchor);
             register3DLabel(anchor, 0, '🐉 龍泉', '#5eead4', () => moveCameraPreset('longquan'));
