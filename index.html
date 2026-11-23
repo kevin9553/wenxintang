@@ -188,6 +188,7 @@
             <button onclick="moveCameraPreset('fortune')" id="camBtn-fortune" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🔮 算命館</button>
             <button onclick="moveCameraPreset('xiaoren')" id="camBtn-xiaoren" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">👡 打小人</button>
             <button onclick="moveCameraPreset('miaozhu')" id="camBtn-miaozhu" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏠 廟祝的窩</button>
+            <button onclick="openShengdanModal()" id="camBtn-shengdan" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🍑 神明聖誕</button>
             <button onclick="goMyHome()" id="camBtn-myhome" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏠 我的家</button>
             <button onclick="moveCameraPreset('zhaitang')" id="camBtn-zhaitang" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🍚 齋堂</button>
             <button onclick="moveCameraPreset('yufo')" id="camBtn-yufo" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🪷 浴佛檯</button>
@@ -595,6 +596,17 @@
                     <div id="wishAll" class="text-[11px] max-h-44 overflow-y-auto pr-1"></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- 神明聖誕 -->
+    <div id="shengdanModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3">
+        <div class="xinxiang-modal max-w-md w-full p-5 relative">
+            <button onclick="document.getElementById('shengdanModal').classList.add('hidden')" class="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-bold">✕</button>
+            <h3 class="text-lg font-bold text-amber-300 tracking-wider mb-1">🍑 神明聖誕</h3>
+            <p class="text-xs text-stone-300 mb-1">依農曆日期，聖誕當天會在該神尊殿前擺上壽桃塔，點壽桃即可祝壽。</p>
+            <div id="shengdanToday" class="text-[11px] text-amber-200 mb-2"></div>
+            <div id="shengdanList" class="overflow-y-auto pr-1" style="max-height:55vh"></div>
         </div>
     </div>
 
@@ -12116,7 +12128,7 @@
         const NET_ACT_TEXT = {
             bell: '敲響了祈福鐘 🔔', drum: '擊響了鼓樓大鼓 🥁', fireworks: '施放了煙火 🎆', firecracker: '點燃了鞭炮 🧨',
             incense: '插香參拜 🙏', bow: '合掌參拜 🙏', kowtow: '行三跪九叩大禮 🙇', meditate: '盤腿打坐 🪷', chant: '念經持咒 📖',
-            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', lqdrink: '喝了一口龍泉水 🥤', vhome: '在問心村蓋好了自己的家 🏡', vdecor: '把自己的家布置得更漂亮了 🪴', vmsg: '在鄰居的信箱留了言 📮', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
+            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', lqdrink: '喝了一口龍泉水 🥤', vhome: '在問心村蓋好了自己的家 🏡', vdecor: '把自己的家布置得更漂亮了 🪴', vmsg: '在鄰居的信箱留了言 📮', shengdan: '獻上壽桃為神明祝壽 🍑', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
         };
         function onNetAct(msg) {
             if (!msg || msg.sameTab || msg.kind !== 'viewer') return;
@@ -14409,6 +14421,7 @@
             buildYufoArea(goldMat);
             buildLongquan(goldMat);
             buildVillage(goldMat);
+            try { buildShengdan(); } catch (err) { console.warn('shengdan', err); }
             refreshLqChip();
             RESERVE_PLOTS.filter(pl => pl.key !== 'right').forEach(buildReservePlot);   // the right plot now holds the 龍泉 rockery   // the left plot now holds the 地藏殿
             buildFudeCenser(goldMat);
@@ -16572,6 +16585,193 @@
         }
 
         // =====================================================================
+        // 神明聖誕：依農曆日期，在聖誕當天於該神尊供桌前擺上壽桃塔（紅漆托盤、金邊、壽字牌），
+        // 跑馬燈與進場提示同步公告；「活動 → 🍑 神明聖誕」可查看全年聖誕日與倒數。
+        // =====================================================================
+        const SHENGDAN = [
+            { m: 1, d: 1, name: '彌勒佛', hall: '彌勒殿', at: { key: 'mile' } },
+            { m: 1, d: 9, name: '玉皇上帝（天公）', hall: '後殿頂樓', at: { key: 'yuhuang', i: 3 } },
+            { m: 1, d: 15, name: '上元天官大帝', hall: '三官殿', at: { key: 'yuhuang', i: 0 } },
+            { m: 2, d: 2, name: '福德正神（土地公）', hall: '福德殿', at: { key: 'tudigong' } },
+            { m: 2, d: 2, name: '濟公活佛', hall: '大殿', at: { key: 'jigong', side: 0.95 } },
+            { m: 2, d: 15, name: '太上道祖（道德天尊）', hall: '三清殿', at: { key: 'daode' } },
+            { m: 2, d: 15, name: '岳武穆王', hall: '五恩主殿', at: { key: 'yuefei' } },
+            { m: 2, d: 19, name: '觀世音菩薩', hall: '觀音蓮池', at: { key: 'guanyin', dist: 7.4, side: 2.4 } },
+            { m: 3, d: 3, name: '玄天上帝', hall: '玄天上帝殿', at: { key: 'xuantian' } },
+            { m: 3, d: 15, name: '武財神趙公明', hall: '財神殿', at: { key: 'zhaogongming' } },
+            { m: 3, d: 23, name: '天上聖母（媽祖）', hall: '大殿', at: { key: 'mazu' } },
+            { m: 4, d: 8, name: '釋迦牟尼佛', hall: '大雄寶殿', at: { key: 'shakya' } },
+            { m: 4, d: 14, name: '孚佑帝君（呂洞賓）', hall: '五恩主殿', at: { key: 'lvdongbin' } },
+            { m: 5, d: 18, name: '張天師', hall: '天師殿', at: { key: 'tianshi' } },
+            { m: 6, d: 6, name: '下壇虎爺', hall: '大殿', at: { interact: 'tiger', side: 0.9 } },
+            { m: 6, d: 19, name: '觀世音菩薩（成道日）', hall: '觀音蓮池', at: { key: 'guanyin', dist: 7.4, side: 2.4 } },
+            { m: 6, d: 24, name: '關聖帝君', hall: '五恩主殿', at: { key: 'guandi' } },
+            { m: 7, d: 15, name: '中元地官大帝', hall: '三官殿', at: { key: 'yuhuang', i: 1 } },
+            { m: 7, d: 30, name: '地藏王菩薩', hall: '地藏殿', at: { key: 'dizang' } },
+            { m: 8, d: 3, name: '司命真君（灶君）', hall: '五恩主殿', at: { key: 'siming' } },
+            { m: 8, d: 15, name: '月下老人', hall: '許願樹・月老石', at: { interact: 'yuelaoshi', side: 0.9 } },
+            { m: 9, d: 1, name: '文財神比干', hall: '財神殿', at: { key: 'bigan' } },
+            { m: 9, d: 9, name: '中壇元帥（三太子）', hall: '大殿', at: { key: 'nezha' } },
+            { m: 9, d: 9, name: '斗姥元君', hall: '斗姥殿', at: { key: 'doumu' } },
+            { m: 9, d: 19, name: '觀世音菩薩（出家日）', hall: '觀音蓮池', at: { key: 'guanyin', dist: 7.4, side: 2.4 } },
+            { m: 9, d: 30, name: '藥師佛', hall: '大雄寶殿', at: { key: 'yaoshi' } },
+            { m: 10, d: 15, name: '下元水官大帝', hall: '三官殿', at: { key: 'yuhuang', i: 2 } },
+            { m: 11, d: 17, name: '阿彌陀佛', hall: '大雄寶殿', at: { key: 'amitabha' } }
+        ];
+        const SD = { today: [], override: null };
+        function lunarText(m, d) {
+            const M = ['', '正', '二', '三', '四', '五', '六', '七', '八', '九', '十', '冬', '臘'][m] + '月';
+            const n = '一二三四五六七八九十';
+            const D = d <= 10 ? '初' + n[d - 1] : d < 20 ? '十' + n[d - 11] : d === 20 ? '二十' : d < 30 ? '廿' + n[d - 21] : '三十';
+            return M + D;
+        }
+        // days from today until the next (non-leap) lunar m/d, 0 = today; a 30th falls on the 29th in a short month
+        function lunarCalendar() {   // the next 400 days' lunar dates, computed once per day
+            const t = new Date(); t.setHours(12, 0, 0, 0);
+            if (SD.cal && SD.calDay === t.getTime()) return SD.cal;
+            SD.calDay = t.getTime();
+            SD.cal = [];
+            for (let i = 0; i <= 400; i++) SD.cal.push(lunarMonthDay(new Date(t.getTime() + i * 86400000)));
+            return SD.cal;
+        }
+        function daysUntilLunar(m, d) {
+            const C = lunarCalendar();
+            for (let i = 0; i < 400; i++) {
+                const l = C[i];
+                if (l.leap || l.m !== m) continue;
+                if (l.d === d) return i;
+                if (d === 30 && l.d === 29 && (C[i + 1].m !== m || C[i + 1].leap)) return i;
+            }
+            return -1;
+        }
+        function shengdanToday() {
+            const ov = SD.override;
+            if (ov) return SHENGDAN.filter(e => e.m === ov.m && e.d === ov.d);
+            return SHENGDAN.filter(e => daysUntilLunar(e.m, e.d) === 0);
+        }
+        // where a deity sits: its statue container (or the 虎爺 / 月老 group) and the way it faces
+        function shengdanAnchor(at) {
+            let obj = null;
+            if (at.key && CUSTOM_STATUE.specs[at.key]) obj = (CUSTOM_STATUE.specs[at.key][at.i || 0] || {}).container;
+            else if (at.interact) { const m = clickableMeshes.find(o => o.userData && o.userData.interactType === at.interact); obj = m ? m.parent : null; }
+            if (!obj) return null;
+            obj.updateWorldMatrix(true, false);
+            const pos = new THREE.Vector3(), q = new THREE.Quaternion();
+            obj.getWorldPosition(pos); obj.getWorldQuaternion(q);
+            const f = new THREE.Vector3(0, 0, 1).applyQuaternion(q); f.y = 0; f.normalize();
+            return { obj, pos, f };
+        }
+        function shengdanPeachMats() {
+            if (shengdanPeachMats.m) return shengdanPeachMats.m;
+            const shou = document.createElement('canvas'); shou.width = 128; shou.height = 192;
+            const x = shou.getContext('2d');
+            x.fillStyle = '#b91c1c'; x.fillRect(0, 0, 128, 192);
+            x.strokeStyle = '#facc15'; x.lineWidth = 6; x.strokeRect(6, 6, 116, 180);
+            x.fillStyle = '#fde047'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '900 92px "LXGW WenKai TC","Noto Serif TC",serif'; x.fillText('壽', 64, 100);
+            const peach = new THREE.LatheGeometry([[0, 0], [0.06, 0.006], [0.095, 0.04], [0.1, 0.08], [0.085, 0.12], [0.055, 0.15], [0.02, 0.175], [0, 0.185]].map(([r, y]) => new THREE.Vector2(r, y)), 16);
+            const pp = peach.attributes.position, col = new Float32Array(pp.count * 3), c = new THREE.Color(), tip = new THREE.Color(0xf05a78);
+            for (let i = 0; i < pp.count; i++) { const y = pp.getY(i) / 0.185; c.setHex(0xfff1e6).lerp(tip, Math.pow(Math.max(0, (y - 0.45) / 0.55), 1.4)); col.set([c.r, c.g, c.b], i * 3); }
+            peach.setAttribute('color', new THREE.BufferAttribute(col, 3));
+            peach.computeVertexNormals();
+            const leafGeo = new THREE.CircleGeometry(0.05, 6); leafGeo.scale(1, 1.9, 1);
+            return (shengdanPeachMats.m = {
+                peachGeo: peach, leafGeo,
+                peach: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55 }),
+                leaf: new THREE.MeshStandardMaterial({ color: 0x3f8a3a, roughness: 0.6, side: THREE.DoubleSide }),
+                tray: new THREE.MeshStandardMaterial({ color: 0x9b1c16, roughness: 0.35 }),
+                gold: new THREE.MeshStandardMaterial({ color: 0xd9a520, metalness: 0.7, roughness: 0.3 }),
+                card: new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(shou), roughness: 0.6 })
+            });
+        }
+        // a 壽桃塔: three tiers of peach buns (7 + 3 + 1) on a red tray, with a 壽 card behind
+        function buildPeachTower(scale) {
+            const K = shengdanPeachMats(), g = new THREE.Group();
+            const tray = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.27, 0.06, 24), K.tray); tray.position.y = 0.03; g.add(tray);
+            const rim = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.015, 6, 28), K.gold); rim.rotation.x = Math.PI / 2; rim.position.y = 0.06; g.add(rim);
+            const put = (x, y, z, s) => {
+                const p = new THREE.Mesh(K.peachGeo, K.peach); p.position.set(x, y, z); p.scale.setScalar(s); p.rotation.y = Math.random() * 6; p.castShadow = true; g.add(p);
+                [-1, 1].forEach(k => { const l = new THREE.Mesh(K.leafGeo, K.leaf); l.position.set(x + k * 0.05 * s, y + 0.025, z + 0.06 * s); l.rotation.set(-1.1, 0, k * 0.8); g.add(l); });
+            };
+            for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2; put(Math.sin(a) * 0.2, 0.06, Math.cos(a) * 0.2, 1); }
+            for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2 + 0.5; put(Math.sin(a) * 0.1, 0.2, Math.cos(a) * 0.1, 0.95); }
+            put(0, 0.33, 0, 1.05);
+            const card = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.3), K.card); card.position.set(0, 0.36, -0.3); g.add(card);
+            g.scale.setScalar(scale || 1);
+            return g;
+        }
+        // find a flat spot in front of the deity (the altar top, a pedestal step or the floor) and set the tower there
+        function placePeachTower(e) {
+            const A = shengdanAnchor(e.at);
+            if (!A) return null;
+            templeGroup.updateMatrixWorld(true);
+            const rc = new THREE.Raycaster();
+            rc.camera = (typeof camera !== 'undefined' && camera) || new THREE.PerspectiveCamera();   // sprites in the scene need a camera to raycast
+            const own = o => { for (let q = o; q; q = q.parent) if (q === A.obj) return true; return false; };
+            let spot = null;
+            for (const dd of (e.at.dist ? [e.at.dist, e.at.dist + 0.5, e.at.dist + 1] : [1.25, 1.0, 1.6, 0.8, 2.0, 2.5])) {
+                const right = new THREE.Vector3(A.f.z, 0, -A.f.x);
+                const from = A.pos.clone().addScaledVector(A.f, dd).addScaledVector(right, -(e.at.side || 0)); from.y = A.pos.y + 1.6;
+                rc.set(from, new THREE.Vector3(0, -1, 0)); rc.far = 4;
+                // land only on something table-sized (an altar top, a pedestal step or the floor), never on a censer or a plate
+                const big = o => { const g = o.geometry; if (!g.boundingBox) g.computeBoundingBox(); const sz = g.boundingBox.getSize(new THREE.Vector3()); const sc = new THREE.Vector3(); o.matrixWorld.decompose(new THREE.Vector3(), new THREE.Quaternion(), sc); return Math.min(sz.x * Math.abs(sc.x), sz.z * Math.abs(sc.z)) > 0.75 || Math.min(sz.x * Math.abs(sc.x), sz.y * Math.abs(sc.y)) > 0.75; };
+                const hit = rc.intersectObject(templeGroup, true).find(h => h.face && h.object.isMesh && !h.object.isInstancedMesh && h.object.visible && !own(h.object) && !(h.object.material && h.object.material.transparent) && !(h.object.userData && h.object.userData.interactType === 'shengdan') && big(h.object));
+                if (hit && hit.point.y > A.pos.y - 2.2) {
+                    const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+                    if (n.y > 0.85) { spot = hit.point.clone(); break; }
+                }
+            }
+            if (!spot) spot = A.pos.clone().addScaledVector(A.f, e.at.dist || 1.2).addScaledVector(new THREE.Vector3(A.f.z, 0, -A.f.x), -(e.at.side || 0));
+            const t = buildPeachTower(/玉皇|天官|地官|水官|道德/.test(e.name) ? 1.3 : 1.15);
+            t.position.copy(templeGroup.worldToLocal(spot.clone()));
+            t.position.y += 0.005;
+            t.rotation.y = Math.atan2(A.f.x, A.f.z);
+            templeGroup.add(t);
+            t.traverse(o => { if (o.isMesh) { o.userData = { interactType: 'shengdan', name: e.name, label: `🍑 ${e.name}聖誕壽桃（點擊祝壽）` }; clickableMeshes.push(o); } });
+            const lab = new THREE.Object3D(); lab.position.set(0, 0.85, 0); t.add(lab);
+            register3DLabel(lab, 0, `🍑 ${e.name}聖誕`, '#f9a8d4', () => openShengdanModal());
+            e.tower = t;
+            return t;
+        }
+        function buildShengdan() {
+            SD.today = shengdanToday();
+            SD.today.forEach(placePeachTower);
+            if (SD.today.length) {
+                const names = SD.today.map(e => e.name).join('、');
+                MARQUEE_LINES.unshift(`今日恭逢 ${names} 聖誕・各殿敬備壽桃・歡迎善信入廟祝壽`);
+                setTimeout(() => showToast(`🍑 今天是農曆${lunarText(SD.today[0].m, SD.today[0].d)}，恭逢 ${names} 聖誕！殿前已敬備壽桃，歡迎前往祝壽。`), 7000);
+            }
+            updateShengdanButton();
+        }
+        function updateShengdanButton() {
+            const b = document.getElementById('camBtn-shengdan');
+            if (b) b.textContent = SD.today.length ? `🍑 今日聖誕：${SD.today[0].name.replace(/（.*）/, '')}${SD.today.length > 1 ? '等' : ''}` : '🍑 神明聖誕';
+        }
+        function shengdanBow(ud) {
+            if (playerAvatarGroup) performRitualAction('bow');
+            playTempleBellSound(659); setTimeout(() => playTempleBellSound(784), 300);
+            showToast(['🍑 恭祝 ' + ud.name + ' 聖誕千秋，聖壽無疆！', '🙏 獻上壽桃，恭祝 ' + ud.name + ' 聖誕：神恩浩蕩、庇佑眾生。', '🎉 ' + ud.name + ' 聖誕快樂！祈求闔家平安、事事如意。'][(Math.random() * 3) | 0]);
+            emitAct('shengdan');
+        }
+        function goShengdan(i) {
+            const e = SHENGDAN[i], A = e && shengdanAnchor(e.at);
+            if (!A) return;
+            document.getElementById('shengdanModal').classList.add('hidden');
+            const far = e.at.dist ? e.at.dist + 4 : (A.pos.y > 5 ? 4.4 : 5.2);
+            moveCameraTo({ r: far, theta: Math.atan2(A.f.x, A.f.z) + 0.2, phi: A.pos.y > 5 ? 1.15 : 1.3, tx: A.pos.x + A.f.x * (e.at.dist ? e.at.dist * 0.5 : 0), ty: A.pos.y + (A.pos.y > 5 ? 0.3 : 0.7), tz: A.pos.z + A.f.z * (e.at.dist ? e.at.dist * 0.5 : 0) });
+        }
+        function openShengdanModal() {
+            const rows = SHENGDAN.map((e, i) => ({ e, i, days: SD.override ? (e.m === SD.override.m && e.d === SD.override.d ? 0 : daysUntilLunar(e.m, e.d)) : daysUntilLunar(e.m, e.d) })).sort((a, b) => a.days - b.days);
+            const today = lunarMonthDay();
+            document.getElementById('shengdanToday').textContent = `今天是農曆${today.leap ? '閏' : ''}${lunarText(today.m, today.d)}`;
+            document.getElementById('shengdanList').innerHTML = rows.map(({ e, i, days }) => `<div class="flex items-center gap-2 py-1.5 border-b border-white/5 ${days === 0 ? 'bg-rose-900/30 rounded-lg px-1.5' : ''}">
+                <div class="w-16 shrink-0 text-[11px] text-amber-200">${lunarText(e.m, e.d)}</div>
+                <div class="flex-1 min-w-0"><div class="text-xs text-stone-100 truncate">${days === 0 ? '🍑 ' : ''}${escapeHtmlLite(e.name)}</div><div class="text-[10px] text-stone-400">${escapeHtmlLite(e.hall)}</div></div>
+                <div class="text-[11px] ${days === 0 ? 'text-rose-300 font-bold' : 'text-stone-300'} shrink-0">${days === 0 ? '今天' : days > 0 ? days + ' 天後' : ''}</div>
+                <button onclick="goShengdan(${i})" class="shrink-0 px-2 py-0.5 rounded border border-amber-300/40 text-[11px] text-amber-100">前往</button></div>`).join('');
+            document.getElementById('shengdanModal').classList.remove('hidden');
+        }
+
+        // =====================================================================
         // 浴佛檯：大雄寶殿前廟埕（大香爐西側）——八角浴佛亭，亭中青銅浴佛盆盛香湯，蓮台上立金身太子像（右手指天、左手指地）
         // 點擊：信眾立於盆前，以長柄竹勺舀香湯，自太子像肩上灌沐三次；農曆四月初八浴佛節另有花雨
         // =====================================================================
@@ -16579,8 +16779,8 @@
         function lunarMonthDay(d = new Date()) {
             try {
                 const parts = new Intl.DateTimeFormat('zh-TW-u-ca-chinese', { month: 'numeric', day: 'numeric' }).formatToParts(d);
-                const m = parseInt((parts.find(p => p.type === 'month') || {}).value, 10), dd = parseInt((parts.find(p => p.type === 'day') || {}).value, 10);
-                return { m, d: dd };
+                const mv = String((parts.find(p => p.type === 'month') || {}).value || ''), dd = parseInt((parts.find(p => p.type === 'day') || {}).value, 10);
+                return { m: parseInt(mv, 10), d: dd, leap: !/^[0-9]+$/.test(mv) };   // a leap month (閏月) comes back like 6bis
             } catch (e) { return { m: 0, d: 0 }; }
         }
         function buildYufoArea(goldMat) {
@@ -16754,7 +16954,7 @@
 
             // festival flower rain on 農曆四月初八
             const ld = lunarMonthDay();
-            YUFO.festival = ld.m === 4 && ld.d === 8;
+            YUFO.festival = ld.m === 4 && ld.d === 8 && !ld.leap;
             if (YUFO.festival) {
                 const n = 60, pos = new Float32Array(n * 3);
                 for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - 0.5) * 4; pos[i * 3 + 1] = Math.random() * 3.5; pos[i * 3 + 2] = (Math.random() - 0.5) * 4; }
@@ -18696,7 +18896,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             ['偏殿', ['tudigong', 'light', 'lampwall_gm', 'lampwall_ts', 'side_left', 'side_right', 'side_wing_left', 'side_wing_right', 'tigercave', 'side_dizang']],
             ['後殿', ['rearhall', 'guandi', 'tianshi', 'xuantian', 'yuhuang', 'sanqing']],
             ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'wishtree', 'puppet', 'longquan', 'village', 'guanyinpond', 'grounds']],
-            ['活動', ['myhome', 'fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'yufo', 'cat', 'monk', 'fireworks', 'festival']]
+            ['活動', ['shengdan', 'myhome', 'fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'yufo', 'cat', 'monk', 'fireworks', 'festival']]
         ];
         let camGroupActive = 0;
         function showCamGroup(i) {
@@ -18944,6 +19144,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             else if (type === 'yufo') yufoInteract();
             else if (type === 'longquan') longquanInteract();
             else if (type === 'vhome') villageInteract(ud);
+            else if (type === 'shengdan') shengdanBow(ud);
             else if (type === 'xiaoren') openXiaorenModal();
             else if (type && type.startsWith('miaozhu')) miaozhuInteract(type, ud);
             else if (type && type.startsWith('zhaitang')) zhaitangInteract(type);
