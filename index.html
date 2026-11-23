@@ -3597,7 +3597,8 @@
                 }
             })));
             // 博山爐：三寶佛前供桌上各一座（在中央香爐與蓮花燈後方）
-            SANBAO.forEach(b => buildBoshanCenser(X + b.x, F + 0.645, Z - 1.95, 1.2));
+            // the center one sits right of the fruit plate: straight behind the 三足香爐 the two censers would overlap
+            SANBAO.forEach(b => buildBoshanCenser(X + (b.x === 0 ? 1.42 : b.x), F + 0.645, Z - 1.75, 1.2));
             buildDaxiongWorship(hg, goldMat);
             // Walls, dais and altar are solid for walking
             for (let x = -W / 2 + 0.5; x <= W / 2 - 0.5; x += 1.0) colliders.push({ x: X + x, z: Z + back + 0.25, r: 0.5 });
@@ -16589,34 +16590,34 @@
         // 跑馬燈與進場提示同步公告；「活動 → 🍑 神明聖誕」可查看全年聖誕日與倒數。
         // =====================================================================
         const SHENGDAN = [
-            { m: 1, d: 1, name: '彌勒佛', hall: '彌勒殿', at: { key: 'mile' } },
-            { m: 1, d: 9, name: '玉皇上帝（天公）', hall: '後殿頂樓', at: { key: 'yuhuang', i: 3 } },
-            { m: 1, d: 15, name: '上元天官大帝', hall: '三官殿', at: { key: 'yuhuang', i: 0 } },
-            { m: 2, d: 2, name: '福德正神（土地公）', hall: '福德殿', at: { key: 'tudigong' } },
-            { m: 2, d: 2, name: '濟公活佛', hall: '大殿', at: { key: 'jigong', side: 0.95 } },
-            { m: 2, d: 15, name: '太上道祖（道德天尊）', hall: '三清殿', at: { key: 'daode' } },
-            { m: 2, d: 15, name: '岳武穆王', hall: '五恩主殿', at: { key: 'yuefei' } },
-            { m: 2, d: 19, name: '觀世音菩薩', hall: '觀音蓮池', at: { key: 'guanyin', dist: 7.4, side: 2.4 } },
-            { m: 3, d: 3, name: '玄天上帝', hall: '玄天上帝殿', at: { key: 'xuantian' } },
-            { m: 3, d: 15, name: '武財神趙公明', hall: '財神殿', at: { key: 'zhaogongming' } },
-            { m: 3, d: 23, name: '天上聖母（媽祖）', hall: '大殿', at: { key: 'mazu' } },
-            { m: 4, d: 8, name: '釋迦牟尼佛', hall: '大雄寶殿', at: { key: 'shakya' } },
-            { m: 4, d: 14, name: '孚佑帝君（呂洞賓）', hall: '五恩主殿', at: { key: 'lvdongbin' } },
-            { m: 5, d: 18, name: '張天師', hall: '天師殿', at: { key: 'tianshi' } },
-            { m: 6, d: 6, name: '下壇虎爺', hall: '大殿', at: { interact: 'tiger', side: 0.9 } },
-            { m: 6, d: 19, name: '觀世音菩薩（成道日）', hall: '觀音蓮池', at: { key: 'guanyin', dist: 7.4, side: 2.4 } },
-            { m: 6, d: 24, name: '關聖帝君', hall: '五恩主殿', at: { key: 'guandi' } },
-            { m: 7, d: 15, name: '中元地官大帝', hall: '三官殿', at: { key: 'yuhuang', i: 1 } },
-            { m: 7, d: 30, name: '地藏王菩薩', hall: '地藏殿', at: { key: 'dizang' } },
-            { m: 8, d: 3, name: '司命真君（灶君）', hall: '五恩主殿', at: { key: 'siming' } },
-            { m: 8, d: 15, name: '月下老人', hall: '許願樹・月老石', at: { interact: 'yuelaoshi', side: 0.9 } },
-            { m: 9, d: 1, name: '文財神比干', hall: '財神殿', at: { key: 'bigan' } },
-            { m: 9, d: 9, name: '中壇元帥（三太子）', hall: '大殿', at: { key: 'nezha' } },
-            { m: 9, d: 9, name: '斗姥元君', hall: '斗姥殿', at: { key: 'doumu' } },
-            { m: 9, d: 19, name: '觀世音菩薩（出家日）', hall: '觀音蓮池', at: { key: 'guanyin', dist: 7.4, side: 2.4 } },
-            { m: 9, d: 30, name: '藥師佛', hall: '大雄寶殿', at: { key: 'yaoshi' } },
-            { m: 10, d: 15, name: '下元水官大帝', hall: '三官殿', at: { key: 'yuhuang', i: 2 } },
-            { m: 11, d: 17, name: '阿彌陀佛', hall: '大雄寶殿', at: { key: 'amitabha' } }
+            { m: 1, d: 1, name: '彌勒佛', hall: '彌勒殿', at: { key: 'mile' }, spot: [-43.8, 1.345, 22, 0.85, 0, 0] },
+            { m: 1, d: 9, name: '玉皇上帝（天公）', hall: '後殿頂樓', at: { key: 'yuhuang', i: 3 }, spot: [-1.5, 18.36, -30.4, 0.85, 0, 0] },
+            { m: 1, d: 15, name: '上元天官大帝', hall: '三官殿', at: { key: 'yuhuang', i: 0 }, spot: [-1.85, 9.75, -1.95, 0.5, 0, 0] },
+            { m: 2, d: 2, name: '福德正神（土地公）', hall: '福德殿', at: { key: 'tudigong' }, spot: [-23.15, 1.345, -7.75, 0.65, 0, 0] },
+            { m: 2, d: 2, name: '濟公活佛', hall: '大殿', at: { key: 'jigong', side: 0.95 }, spot: [-4.05, 1.9, -3.3, 0.95, 0, 0] },
+            { m: 2, d: 15, name: '太上道祖（道德天尊）', hall: '三清殿', at: { key: 'daode' }, spot: [-4.8, 23.9, -29.8, 0.5, 0, 0] },
+            { m: 2, d: 15, name: '岳武穆王', hall: '五恩主殿', at: { key: 'yuefei' }, spot: [-8.1, 1.455, -31, 0.65, 0, 0] },
+            { m: 2, d: 19, name: '觀世音菩薩', hall: '觀音蓮池', at: { key: 'guanyin', dist: 7.4, side: 2.4 }, spot: [-43.7, 0.785, -24.4, 0.95, 1, 0] },
+            { m: 3, d: 3, name: '玄天上帝', hall: '玄天上帝殿', at: { key: 'xuantian' }, spot: [-1.5, 12.76, -30.9, 0.85, 0, 0] },
+            { m: 3, d: 15, name: '武財神趙公明', hall: '財神殿', at: { key: 'zhaogongming' }, spot: [41.3, 1.345, 19.55, 0.85, 0, 0] },
+            { m: 3, d: 23, name: '天上聖母（媽祖）', hall: '大殿', at: { key: 'mazu' }, spot: [-5.8, 1.9, -3.05, 1.15, 0, 0] },
+            { m: 4, d: 8, name: '釋迦牟尼佛', hall: '大雄寶殿', at: { key: 'shakya' }, spot: [39.65, 0.95, -25.95, 0.5, 0, 0] },
+            { m: 4, d: 14, name: '孚佑帝君（呂洞賓）', hall: '五恩主殿', at: { key: 'lvdongbin' }, spot: [0.05, 1.56, -31.9, 0.85, 0, 0] },
+            { m: 5, d: 18, name: '張天師', hall: '天師殿', at: { key: 'tianshi' }, spot: [-1.5, 7.16, -31.4, 0.85, 0, 0] },
+            { m: 6, d: 6, name: '下壇虎爺', hall: '大殿', at: { interact: 'tiger', side: 0.95, low: true, table: true }, spot: [-2.45, 0.899, 0.52, 0.95, 1, 0.474] },
+            { m: 6, d: 19, name: '觀世音菩薩（成道日）', hall: '觀音蓮池', at: { key: 'guanyin', dist: 7.4, side: 2.4 }, spot: [-43.7, 0.785, -24.4, 0.95, 1, 0] },
+            { m: 6, d: 24, name: '關聖帝君', hall: '五恩主殿', at: { key: 'guandi' }, spot: [-1.5, 1.56, -31.9, 0.85, 0, 0] },
+            { m: 7, d: 15, name: '中元地官大帝', hall: '三官殿', at: { key: 'yuhuang', i: 1 }, spot: [2.4, 9.75, -1.85, 0.65, 0, 0] },
+            { m: 7, d: 30, name: '地藏王菩薩', hall: '地藏殿', at: { key: 'dizang' }, spot: [-43.8, 1.345, 6, 0.85, 0, 0] },
+            { m: 8, d: 3, name: '司命真君（灶君）', hall: '五恩主殿', at: { key: 'siming' }, spot: [-3.05, 1.56, -31.9, 0.85, 0, 0] },
+            { m: 8, d: 15, name: '月下老人', hall: '許願樹・月老石', at: { interact: 'yuelaoshi', side: 1.0, dist: 1.6, table: true }, spot: [21.7, 0.785, 29.6, 0.95, 1, 0] },
+            { m: 9, d: 1, name: '文財神比干', hall: '財神殿', at: { key: 'bigan' }, spot: [41.3, 1.345, 22.45, 0.85, 0, 0] },
+            { m: 9, d: 9, name: '中壇元帥（三太子）', hall: '大殿', at: { key: 'nezha' }, spot: [2.6, 1.9, -3.05, 1.15, 0, 0] },
+            { m: 9, d: 9, name: '斗姥元君', hall: '斗姥殿', at: { key: 'doumu' }, spot: [21, 1.345, -8.3, 0.85, 0, 0] },
+            { m: 9, d: 19, name: '觀世音菩薩（出家日）', hall: '觀音蓮池', at: { key: 'guanyin', dist: 7.4, side: 2.4 }, spot: [-43.7, 0.785, -24.4, 0.95, 1, 0] },
+            { m: 9, d: 30, name: '藥師佛', hall: '大雄寶殿', at: { key: 'yaoshi' }, spot: [43.55, 0.95, -25.95, 0.5, 0, 0] },
+            { m: 10, d: 15, name: '下元水官大帝', hall: '三官殿', at: { key: 'yuhuang', i: 2 }, spot: [-5.4, 9.75, -1.85, 0.65, 0, 0] },
+            { m: 11, d: 17, name: '阿彌陀佛', hall: '大雄寶殿', at: { key: 'amitabha' }, spot: [36.45, 0.95, -25.95, 0.5, 0, 0] },
         ];
         const SD = { today: [], override: null };
         function lunarText(m, d) {
@@ -16700,28 +16701,107 @@
             return g;
         }
         // find a flat spot in front of the deity (the altar top, a pedestal step or the floor) and set the tower there
+        // spots measured once offline (with findPeachSpot) and saved: [x, y, z, scale, needs a small table, table floor y]
         function placePeachTower(e) {
+            if (e.spot) return putPeachTower(e, e.spot);
+            return findPeachSpot(e);
+        }
+        function putPeachTower(e, sp) {
+            const A = shengdanAnchor(e.at);
+            if (!A) return null;
+            const [x, y, z, sc, table, ty] = sp;
+            if (table) e.table = buildShengdanTable(e, A, new THREE.Vector3(x, ty, z));
+            const spot = new THREE.Vector3(x, y, z);
+            return finishPeachTower(e, A, spot, sc);
+        }
+        function buildShengdanTable(e, A, spot) {
+            const K = shengdanPeachMats();
+            const tb = new THREE.Group();
+            const h = e.at.low ? 0.42 : 0.78;
+            const top = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.6), K.tray); top.position.y = h - 0.03; tb.add(top);
+            const edge = new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.03, 0.64), K.gold); edge.position.y = h - 0.075; tb.add(edge);
+            const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.84, h - 0.1, 0.02), new THREE.MeshStandardMaterial({ color: 0xc0261e, roughness: 0.7 })); skirt.position.set(0, (h - 0.1) / 2, 0.29); tb.add(skirt);
+            [[-0.4, -0.26], [0.4, -0.26], [-0.4, 0.26], [0.4, 0.26]].forEach(([x, z]) => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.06, h - 0.06, 0.06), K.tray); l.position.set(x, (h - 0.06) / 2, z); tb.add(l); });
+            tb.position.copy(templeGroup.worldToLocal(spot.clone()));
+            tb.rotation.y = Math.atan2(A.f.x, A.f.z);
+            templeGroup.add(tb);
+            tb.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; o.userData = { interactType: 'shengdan', name: e.name, label: `🍑 ${e.name}聖誕供桌（點擊祝壽）` }; clickableMeshes.push(o); } });
+            colliders.push({ x: spot.x, z: spot.z, r: 0.5 });
+            return tb;
+        }
+        function findPeachSpot(e) {
             const A = shengdanAnchor(e.at);
             if (!A) return null;
             templeGroup.updateMatrixWorld(true);
             const rc = new THREE.Raycaster();
             rc.camera = (typeof camera !== 'undefined' && camera) || new THREE.PerspectiveCamera();   // sprites in the scene need a camera to raycast
+            rc.layers.enableAll();   // far-away details sit on a culled layer; they still occupy the altar
             const own = o => { for (let q = o; q; q = q.parent) if (q === A.obj) return true; return false; };
-            let spot = null;
-            for (const dd of (e.at.dist ? [e.at.dist, e.at.dist + 0.5, e.at.dist + 1] : [1.25, 1.0, 1.6, 0.8, 2.0, 2.5])) {
-                const right = new THREE.Vector3(A.f.z, 0, -A.f.x);
-                const from = A.pos.clone().addScaledVector(A.f, dd).addScaledVector(right, -(e.at.side || 0)); from.y = A.pos.y + 1.6;
-                rc.set(from, new THREE.Vector3(0, -1, 0)); rc.far = 4;
-                // land only on something table-sized (an altar top, a pedestal step or the floor), never on a censer or a plate
-                const big = o => { const g = o.geometry; if (!g.boundingBox) g.computeBoundingBox(); const sz = g.boundingBox.getSize(new THREE.Vector3()); const sc = new THREE.Vector3(); o.matrixWorld.decompose(new THREE.Vector3(), new THREE.Quaternion(), sc); return Math.min(sz.x * Math.abs(sc.x), sz.z * Math.abs(sc.z)) > 0.75 || Math.min(sz.x * Math.abs(sc.x), sz.y * Math.abs(sc.y)) > 0.75; };
-                const hit = rc.intersectObject(templeGroup, true).find(h => h.face && h.object.isMesh && !h.object.isInstancedMesh && h.object.visible && !own(h.object) && !(h.object.material && h.object.material.transparent) && !(h.object.userData && h.object.userData.interactType === 'shengdan') && big(h.object));
-                if (hit && hit.point.y > A.pos.y - 2.2) {
-                    const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
-                    if (n.y > 0.85) { spot = hit.point.clone(); break; }
-                }
+            // sample along the line in front of the deity; keep the highest table-sized flat top (the 供桌) that is free of
+            // other offerings; if only the floor is found, set a small red offering table down first
+            const big = o => { const g = o.geometry; if (!g.boundingBox) g.computeBoundingBox(); const sz = g.boundingBox.getSize(new THREE.Vector3()); const sc = new THREE.Vector3(); o.matrixWorld.decompose(new THREE.Vector3(), new THREE.Quaternion(), sc); return Math.min(sz.x * Math.abs(sc.x), sz.z * Math.abs(sc.z)) > 0.5 || Math.min(sz.x * Math.abs(sc.x), sz.y * Math.abs(sc.y)) > 0.5; };
+            const right = new THREE.Vector3(A.f.z, 0, -A.f.x), side = -(e.at.side || 0);
+            const ds = []; const d0 = e.at.dist || 0.6, d1 = e.at.dist ? e.at.dist + 1.2 : 3.4;
+            for (let dd = d0; dd <= d1 + 1e-6; dd += 0.1) ds.push(+dd.toFixed(2));
+            const down = new THREE.Vector3(0, -1, 0);
+            // lathe-turned censers and vases face inward to a ray from above; while probing, let every nearby surface count from both sides
+            const flipped = [], wb = new THREE.Sphere();
+            templeGroup.traverse(o => {
+                if (!o.isMesh || !o.geometry) return;
+                if (!o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+                wb.copy(o.geometry.boundingSphere).applyMatrix4(o.matrixWorld);
+                if (wb.center.distanceTo(A.pos) > 6 + wb.radius) return;
+                (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => { if (m && m.side !== THREE.DoubleSide) { flipped.push([m, m.side]); m.side = THREE.DoubleSide; } });
+            });
+            // the first table-sized flat top under (x, z), and whether anything else stands on it there
+            const probe = (x, z) => {
+                rc.set(new THREE.Vector3(x, A.pos.y + 1.6, z), down); rc.far = 4;
+                const hits = rc.intersectObject(templeGroup, true).filter(h => h.face && h.object.isMesh && h.object.visible && !own(h.object) && !(h.object.material && h.object.material.transparent) && !(h.object.userData && h.object.userData.interactType === 'shengdan'));
+                const notTop = o => { const it = o.userData && o.userData.interactType; return it === 'divination' || it === 'maincenser' || it === 'incense' || it === 'tiangong' || (typeof it === 'string' && it.startsWith('censer')); };
+                const i = hits.findIndex(h => !h.object.isInstancedMesh && !notTop(h.object) && big(h.object) && h.face.normal.clone().transformDirection(h.object.matrixWorld).y > 0.85);
+                if (i < 0) return null;
+                const H = hits[i];
+                return { y: H.point.y, p: H.point.clone(), busy: hits.slice(0, i).some(h => h.point.y > H.point.y + 0.03) };
+            };
+            const baseScale = /玉皇|天官|地官|水官|道德/.test(e.name) ? 1.3 : 1.15;
+            let cands = [], all = [], scale = baseScale;
+            for (const sc of [baseScale, 0.85, 0.65, 0.5]) {
+            const R = 0.36 * sc, ring = [];
+            for (const [rr, n] of [[R, 12], [R * 0.6, 8], [R * 0.25, 4]]) for (let k = 0; k < n; k++) ring.push([Math.cos(k / n * Math.PI * 2) * rr, Math.sin(k / n * Math.PI * 2) * rr]);
+            cands = []; scale = sc;
+            ds.forEach(dd => [0, -0.35, 0.35, -0.7, 0.7, -1.0, 1.0, -1.3, 1.3].forEach(lo => {
+                const c = A.pos.clone().addScaledVector(A.f, dd).addScaledVector(right, side + lo);
+                const H = probe(c.x, c.z);
+                if (!H || H.y < A.pos.y - 2.2 || H.y > A.pos.y + 0.5) return;
+                // the whole tray must sit on the same top, clear of censers, candles and other offerings
+                let busy = H.busy;
+                for (const [ox, oz] of ring) { if (busy) break; const q = probe(c.x + ox, c.z + oz); if (!q || q.busy || Math.abs(q.y - H.y) > 0.04) busy = true; }
+                cands.push({ dd, lo, y: H.y, p: H.p, busy, sc });
+            }));
+            all = all.concat(cands);
             }
-            if (!spot) spot = A.pos.clone().addScaledVector(A.f, e.at.dist || 1.2).addScaledVector(new THREE.Vector3(A.f.z, 0, -A.f.x), -(e.at.side || 0));
-            const t = buildPeachTower(/玉皇|天官|地官|水官|道德/.test(e.name) ? 1.3 : 1.15);
+            flipped.forEach(([m, sd]) => { m.side = sd; });
+            cands = all;   // every size tried: the highest free top wins (the altar over a pedestal step), larger trays first
+            const free = cands.filter(c => !c.busy);
+            let spot = null, table = false;
+            if (free.length) {
+                const lowest = Math.min(...cands.map(c => c.y));
+                const cost = c => Math.abs(c.dd - 1.6) + Math.abs(c.lo) * 1.5 - c.sc * 2;
+                const top = free.reduce((m, c) => (c.y > m.y + 0.02 || (Math.abs(c.y - m.y) <= 0.02 && cost(c) < cost(m)) ? c : m), free[0]);
+                // only the floor out here (no altar): put a small 供桌 down and the peaches on it
+                if (e.at.table || (top.y < lowest + 0.25 && top.y < A.pos.y - 0.25)) table = true;
+                const pick = table ? free.reduce((m, c) => Math.abs(c.dd - (e.at.dist || 1.4)) < Math.abs(m.dd - (e.at.dist || 1.4)) ? c : m, free[0]) : top;
+                spot = pick.p; scale = pick.sc;
+            }
+            if (!spot) { spot = A.pos.clone().addScaledVector(A.f, e.at.dist || 1.4).addScaledVector(right, side); table = true; }
+            if (table) {
+                e.table = buildShengdanTable(e, A, spot);
+                spot = spot.clone(); spot.y += e.at.low ? 0.42 : 0.78;
+            }
+            return finishPeachTower(e, A, spot, e.table ? 0.95 : scale);
+        }
+        function finishPeachTower(e, A, spot, scale) {
+            const t = buildPeachTower(scale);
             t.position.copy(templeGroup.worldToLocal(spot.clone()));
             t.position.y += 0.005;
             t.rotation.y = Math.atan2(A.f.x, A.f.z);
@@ -16756,6 +16836,7 @@
             const e = SHENGDAN[i], A = e && shengdanAnchor(e.at);
             if (!A) return;
             document.getElementById('shengdanModal').classList.add('hidden');
+            if (e.tower) { const w = new THREE.Vector3(); e.tower.getWorldPosition(w); moveCameraTo({ r: 4.2, theta: Math.atan2(A.f.x, A.f.z) + 0.2, phi: 1.02, tx: w.x, ty: w.y + 0.3, tz: w.z }); return; }
             const far = e.at.dist ? e.at.dist + 4 : (A.pos.y > 5 ? 4.4 : 5.2);
             moveCameraTo({ r: far, theta: Math.atan2(A.f.x, A.f.z) + 0.2, phi: A.pos.y > 5 ? 1.15 : 1.3, tx: A.pos.x + A.f.x * (e.at.dist ? e.at.dist * 0.5 : 0), ty: A.pos.y + (A.pos.y > 5 ? 0.3 : 0.7), tz: A.pos.z + A.f.z * (e.at.dist ? e.at.dist * 0.5 : 0) });
         }
