@@ -183,10 +183,12 @@
             <button onclick="moveCameraPreset('wishtree')" id="camBtn-wishtree" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🌳 許願樹</button>
             <button onclick="moveCameraPreset('puppet')" id="camBtn-puppet" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🎭 布袋戲</button>
             <button onclick="moveCameraPreset('longquan')" id="camBtn-longquan" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🐉 龍泉</button>
+            <button onclick="moveCameraPreset('village')" id="camBtn-village" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏘️ 問心村</button>
             <button onclick="moveCameraPreset('rearhall')" id="camBtn-rearhall" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏯 後殿五層樓</button>
             <button onclick="moveCameraPreset('fortune')" id="camBtn-fortune" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🔮 算命館</button>
             <button onclick="moveCameraPreset('xiaoren')" id="camBtn-xiaoren" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">👡 打小人</button>
             <button onclick="moveCameraPreset('miaozhu')" id="camBtn-miaozhu" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏠 廟祝的窩</button>
+            <button onclick="goMyHome()" id="camBtn-myhome" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏠 我的家</button>
             <button onclick="moveCameraPreset('zhaitang')" id="camBtn-zhaitang" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🍚 齋堂</button>
             <button onclick="moveCameraPreset('yufo')" id="camBtn-yufo" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🪷 浴佛檯</button>
             <button onclick="focusTempleCat()" id="camBtn-cat" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🐈 廟貓在哪</button>
@@ -593,6 +595,28 @@
                     <div id="wishAll" class="text-[11px] max-h-44 overflow-y-auto pr-1"></div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- 問心村：空地 / 我的家 / 鄰居的家 / 留言簿 / 蓋房子 -->
+    <div id="villageModal" class="hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3">
+        <div class="xinxiang-modal max-w-md w-full p-5 relative">
+            <button onclick="closeVillageModal()" class="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-bold">✕</button>
+            <div id="villageBody"></div>
+        </div>
+    </div>
+    <!-- 問心村：擺設布置 -->
+    <div id="vDecorPanel" class="hidden fixed left-1/2 -translate-x-1/2 bottom-24 z-50 w-[96vw] max-w-xl palace-pill rounded-2xl p-2.5 border border-amber-400/45 pointer-events-auto">
+        <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1.5" id="vDecorItems"></div>
+        <div class="flex items-center gap-1.5">
+            <div id="vDecorInfo" class="flex-1 text-[11px] text-amber-100 truncate"></div>
+            <div id="vDecorSelBtns" class="hidden flex gap-1">
+                <button onclick="villageDecorRotate(-1)" class="px-2 py-1 rounded-lg bg-black/40 border border-amber-300/40 text-xs text-amber-100">⟲</button>
+                <button onclick="villageDecorRotate(1)" class="px-2 py-1 rounded-lg bg-black/40 border border-amber-300/40 text-xs text-amber-100">⟳</button>
+                <button onclick="villageDecorDelete()" class="px-2 py-1 rounded-lg bg-black/40 border border-red-300/50 text-xs text-red-200">🗑️</button>
+            </div>
+            <button onclick="finishVillageDecor(true)" class="px-3 py-1 btn-warm-gold text-xs">完成</button>
+            <button onclick="finishVillageDecor(false)" class="px-2 py-1 rounded-lg bg-black/40 border border-amber-300/40 text-xs text-amber-100">取消</button>
         </div>
     </div>
 
@@ -12092,13 +12116,18 @@
         const NET_ACT_TEXT = {
             bell: '敲響了祈福鐘 🔔', drum: '擊響了鼓樓大鼓 🥁', fireworks: '施放了煙火 🎆', firecracker: '點燃了鞭炮 🧨',
             incense: '插香參拜 🙏', bow: '合掌參拜 🙏', kowtow: '行三跪九叩大禮 🙇', meditate: '盤腿打坐 🪷', chant: '念經持咒 📖',
-            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', lqdrink: '喝了一口龍泉水 🥤', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
+            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', lqdrink: '喝了一口龍泉水 🥤', vhome: '在問心村蓋好了自己的家 🏡', vdecor: '把自己的家布置得更漂亮了 🪴', vmsg: '在鄰居的信箱留了言 📮', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
         };
         function onNetAct(msg) {
             if (!msg || msg.sameTab || msg.kind !== 'viewer') return;
             const d = msg.data || {};
             const kind = typeof d.kind === 'string' ? d.kind : '';
             const name = peerName(msg.by, msg.peer);
+            if (kind === 'doorbell') {
+                showPeerBubble(msg.peer, '🔔');
+                if (d.to === NET.myPeer) { playTempleBellSound(880); setTimeout(() => playTempleBellSound(698), 260); showToast(`🔔 叮咚～「${name}」在你家門口按門鈴！`); }
+                return;
+            }
             if (kind === 'greet') {
                 showPeerBubble(msg.peer, '🙏');
                 if (d.to === NET.myPeer) { playTempleBellSound(660); showToast(`🙏「${name}」向您合掌問好`); }
@@ -12132,6 +12161,7 @@
                     renderBlessingWall();
                     renderNetTotals();
                     refreshWishTreePlaques();
+                    refreshVillage();
                 }, () => { clearTimeout(loading); NET.db = null; renderBlessingWall(); });
             }).catch(() => {});
         }
@@ -14378,6 +14408,7 @@
             buildCourtyardLights(goldMat);
             buildYufoArea(goldMat);
             buildLongquan(goldMat);
+            buildVillage(goldMat);
             refreshLqChip();
             RESERVE_PLOTS.filter(pl => pl.key !== 'right').forEach(buildReservePlot);   // the right plot now holds the 龍泉 rockery   // the left plot now holds the 地藏殿
             buildFudeCenser(goldMat);
@@ -15534,7 +15565,7 @@
             return t;
         }
         // dragon scales: staggered rows of rounded scales, each with a dark rim and a light sheen (u = around the body, v = along it)
-        function createDragonScaleTexture() {
+        function createLongquanScaleTexture() {
             const W = 512, H = 384, c = document.createElement('canvas'); c.width = W; c.height = H;
             const x = c.getContext('2d');
             x.fillStyle = '#1d5e4a'; x.fillRect(0, 0, W, H);
@@ -15711,7 +15742,7 @@
             const holder = new THREE.Group(); holder.position.set(59, 0, L.z); g.add(holder);
             const stand = new THREE.Group(); holder.add(stand);
             upgradeStatuesFromGLB([{ key: 'longquan', container: holder, figure: stand, offsetY: 0, interact: { ...click },
-                textures: { LQ_Scale: createDragonScaleTexture, LQ_Belly: createDragonBellyTexture },
+                textures: { LQ_Scale: createLongquanScaleTexture, LQ_Belly: createDragonBellyTexture },
                 onReady: m => {
                     // the body is modelled in place (one continuous dragon weaving over the rocks); only the head is posed here
                     const o = m.getObjectByName('LQ_Head');
@@ -15756,6 +15787,788 @@
                     showToast(['🐉 已裝滿一葫蘆龍泉水！龍泉甘露，洗淨塵勞，闔家平安。', '💧 龍口吐珠，泉水清甜：願你身體健康、心想事成。', '🌊 一瓢龍泉，萬事順遂：帶回家淨宅、澆花、供佛皆宜。'][(Math.random() * 3) | 0] + `（這是你的第 ${n} 瓶龍泉水，葫蘆已掛在腰間）`);
                 }
             }
+        }
+
+        // =====================================================================
+        // 問心村：山門外新闢的村落。每位香客可認領一塊地、蓋自己的家（三種房型、牆色、屋瓦、門牌），
+        // 走進屋內（神明桌上香、床上休息、凳子坐下），在院子與屋內擺設家具；訪客可按門鈴、在信箱留言。
+        // 家存在自己的 pilgrims/<id>.home；留言存在留言者自己的 pilgrims/<id>.visits（不必寫入別人的資料）。
+        // 同一塊地有兩人認領時，先認領的人（ts 較早）擁有。
+        // =====================================================================
+        const VILLAGE = { axisX: GROUNDS.axisX, z0: GROUNDS.maxZ, z1: 136, x0: -70, x1: 67, crossZ: 90, half: 3.5, W: 11, D: 14,
+            plots: [], houses: [], owners: new Map(), insideIdx: -1, decor: null, sleeping: false, draft: null, group: null, keyCache: [] };
+        const V_WALLS = [{ name: '紅磚', c: 0xffffff, brick: true }, { name: '白灰', c: 0xeae3d2 }, { name: '木色', c: 0xa0703f }, { name: '青灰', c: 0x8c9a9c }];
+        const V_ROOFS = [{ name: '紅瓦', c: 0xc0533a }, { name: '黑瓦', c: 0x45454c }, { name: '綠瓦', c: 0x2f7a55 }, { name: '灰瓦', c: 0x8a8f95 }];
+        const V_TYPES = [{ k: 'brick', name: '紅磚平房' }, { k: 'sanhe', name: '三合院小厝' }, { k: 'wood', name: '木造小屋' }];
+        const V_ITEMS = {
+            pot: { name: '盆栽', e: '🪴' }, flower: { name: '花圃', e: '🌸' }, tree: { name: '小樹', e: '🌳' }, lantern: { name: '燈籠柱', e: '🏮' },
+            lion: { name: '石獅', e: '🦁' }, jar: { name: '水缸', e: '🏺' }, bench: { name: '長椅', e: '🪑' }, shrine: { name: '土地公龕', e: '🛕' }, teaset: { name: '茶桌', e: '🍵' }
+        };
+        const V_MAX_ITEMS = 24;
+        // house footprint in plot-local coords (front = +z, toward the street)
+        const VH = { hw: 3.6, zb: -5.6, zf: 0.4, H: 2.9, T: 0.22, door: 1.5 };
+
+        function villageLayout() {
+            const V = VILLAGE, P = [], ax = V.axisX, h = V.half;
+            [[V.z0 + 4, V.crossZ - h - 0.5], [V.crossZ + h + 0.5, V.z1 - 2]].forEach(([a, b]) => {
+                const n = Math.floor((b - a) / V.W);
+                for (let i = 0; i < n; i++) {
+                    const cz = a + V.W * (i + 0.5);
+                    P.push({ x: ax - (h + 0.5 + V.D / 2), z: cz, rot: Math.PI / 2 });
+                    P.push({ x: ax + (h + 0.5 + V.D / 2), z: cz, rot: -Math.PI / 2 });
+                }
+            });
+            [[V.x0 + 1, ax - h - 0.5 - V.D - 0.5], [ax + h + 0.5 + V.D + 0.5, V.x1 - 1]].forEach(([a, b]) => {
+                const n = Math.floor((b - a) / V.W);
+                for (let i = 0; i < n; i++) {
+                    const cx = a + V.W * (i + 0.5);
+                    P.push({ x: cx, z: V.crossZ - h - 0.5 - V.D / 2, rot: 0 });
+                    P.push({ x: cx, z: V.crossZ + h + 0.5 + V.D / 2, rot: Math.PI });
+                }
+            });
+            P.forEach((p, i) => { p.i = i; p.no = i + 1; });
+            return P;
+        }
+        const vLocal = (p, lx, ly, lz) => localToWorld(p, lx, ly, lz);
+        function vToLocal(p, x, z) {   // world → plot-local (inverse of localToWorld)
+            const c = Math.cos(p.rot), s = Math.sin(p.rot), dx = x - p.x, dz = z - p.z;
+            return { x: dx * c - dz * s, z: dx * s + dz * c };
+        }
+
+        // ---------------------------------------------------------------- shared materials and textures
+        function villageMats() {
+            if (villageMats.m) return villageMats.m;
+            const M = propMats();
+            const grassC = document.createElement('canvas'); grassC.width = grassC.height = 256;
+            const gx = grassC.getContext('2d');
+            gx.fillStyle = '#6f8f4e'; gx.fillRect(0, 0, 256, 256);
+            for (let i = 0; i < 2600; i++) { gx.fillStyle = Math.random() < 0.5 ? `rgba(60,95,40,${Math.random() * 0.5})` : `rgba(150,170,90,${Math.random() * 0.35})`; gx.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2, 2 + Math.random() * 4); }
+            const grass = new THREE.CanvasTexture(grassC); grass.wrapS = grass.wrapT = THREE.RepeatWrapping;
+            const slabC = document.createElement('canvas'); slabC.width = slabC.height = 256;
+            const sx = slabC.getContext('2d');
+            sx.fillStyle = '#a49c8e'; sx.fillRect(0, 0, 256, 256);
+            for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) {
+                const o = (r % 2) * 32;
+                sx.fillStyle = `rgb(${150 + Math.random() * 30},${143 + Math.random() * 28},${128 + Math.random() * 25})`;
+                sx.fillRect(k * 64 + o + 2, r * 64 + 2, 60, 60);
+            }
+            for (let i = 0; i < 1500; i++) { sx.fillStyle = `rgba(60,55,48,${Math.random() * 0.18})`; sx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2); }
+            const slab = new THREE.CanvasTexture(slabC); slab.wrapS = slab.wrapT = THREE.RepeatWrapping;
+            // grey roof tiles (tinted per house by the material colour)
+            const tileC = document.createElement('canvas'); tileC.width = tileC.height = 128;
+            const tx = tileC.getContext('2d');
+            tx.fillStyle = '#d8d8d8'; tx.fillRect(0, 0, 128, 128);
+            for (let k = 0; k < 8; k++) { const g = tx.createLinearGradient(k * 16, 0, k * 16 + 16, 0); g.addColorStop(0, '#9a9a9a'); g.addColorStop(0.5, '#f2f2f2'); g.addColorStop(1, '#8a8a8a'); tx.fillStyle = g; tx.fillRect(k * 16, 0, 16, 128); }
+            for (let r = 0; r < 8; r++) { tx.fillStyle = 'rgba(40,40,40,0.35)'; tx.fillRect(0, r * 16 + 14, 128, 2); }
+            const tile = new THREE.CanvasTexture(tileC); tile.wrapS = tile.wrapT = THREE.RepeatWrapping;
+            const plank = document.createElement('canvas'); plank.width = plank.height = 128;
+            const px = plank.getContext('2d');
+            px.fillStyle = '#b08458'; px.fillRect(0, 0, 128, 128);
+            for (let k = 0; k < 8; k++) { px.fillStyle = `rgba(70,40,20,${0.15 + Math.random() * 0.15})`; px.fillRect(0, k * 16, 128, 1.5); for (let j = 0; j < 30; j++) { px.fillStyle = 'rgba(80,50,25,0.12)'; px.fillRect(Math.random() * 128, k * 16 + Math.random() * 16, 10 + Math.random() * 20, 1); } }
+            const planks = new THREE.CanvasTexture(plank); planks.wrapS = planks.wrapT = THREE.RepeatWrapping;
+            const brick = createRedBrickWallTexture(); brick.wrapS = brick.wrapT = THREE.RepeatWrapping; brick.repeat.set(2, 1);
+            const signC = document.createElement('canvas'); signC.width = 256; signC.height = 160;
+            const sg = signC.getContext('2d');
+            sg.fillStyle = '#c9a26a'; sg.fillRect(0, 0, 256, 160);
+            sg.strokeStyle = '#6b4a22'; sg.lineWidth = 8; sg.strokeRect(4, 4, 248, 152);
+            sg.fillStyle = '#4a2a10'; sg.textAlign = 'center'; sg.textBaseline = 'middle';
+            sg.font = '900 44px "LXGW WenKai TC","Noto Serif TC",serif'; sg.fillText('空地 可認領', 128, 58);
+            sg.font = '700 26px "LXGW WenKai TC","Noto Serif TC",serif'; sg.fillText('點我蓋自己的家', 128, 112);
+            const coupletC = document.createElement('canvas'); coupletC.width = 64; coupletC.height = 320;
+            const cx = coupletC.getContext('2d');
+            cx.fillStyle = '#c0261e'; cx.fillRect(0, 0, 64, 320);
+            cx.fillStyle = '#1a0f0a'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.font = '900 46px "LXGW WenKai TC","Noto Serif TC",serif';
+            '出入平安'.split('').forEach((ch, i) => cx.fillText(ch, 32, 42 + i * 78));
+            const coupletC2 = document.createElement('canvas'); coupletC2.width = 64; coupletC2.height = 320;
+            const cx2 = coupletC2.getContext('2d');
+            cx2.fillStyle = '#c0261e'; cx2.fillRect(0, 0, 64, 320);
+            cx2.fillStyle = '#1a0f0a'; cx2.textAlign = 'center'; cx2.textBaseline = 'middle'; cx2.font = '900 46px "LXGW WenKai TC","Noto Serif TC",serif';
+            '闔家興旺'.split('').forEach((ch, i) => cx2.fillText(ch, 32, 42 + i * 78));
+            const fuC = document.createElement('canvas'); fuC.width = fuC.height = 128;
+            const fx = fuC.getContext('2d');
+            fx.fillStyle = '#8c1d18'; fx.fillRect(0, 0, 128, 128);
+            fx.strokeStyle = '#e2b04a'; fx.lineWidth = 6; fx.strokeRect(6, 6, 116, 116);
+            fx.fillStyle = '#f5cf5a'; fx.textAlign = 'center'; fx.textBaseline = 'middle'; fx.font = '900 80px "LXGW WenKai TC","Noto Serif TC",serif'; fx.fillText('福', 64, 68);
+            const lanMat = createRedLanternMat();
+            return (villageMats.m = {
+                M, grass: new THREE.MeshStandardMaterial({ map: grass, color: 0x9cc47a, roughness: 0.95 }), grassTex: grass,
+                slab: new THREE.MeshStandardMaterial({ map: slab, roughness: 0.9 }), slabTex: slab,
+                tileTex: tile, planksTex: planks, brickTex: brick,
+                floor: new THREE.MeshStandardMaterial({ map: planks, color: 0xd9b48a, roughness: 0.8 }),
+                plaster: new THREE.MeshStandardMaterial({ color: 0xf1ead8, roughness: 0.9 }),
+                lacquer: new THREE.MeshStandardMaterial({ color: 0x8c1d18, roughness: 0.4 }),
+                darkWood: new THREE.MeshStandardMaterial({ color: 0x4a2c18, roughness: 0.7 }),
+                lightWood: new THREE.MeshStandardMaterial({ map: planks, color: 0xc89a66, roughness: 0.75 }),
+                gold: new THREE.MeshStandardMaterial({ color: 0xd9a520, metalness: 0.7, roughness: 0.3 }),
+                cloth: new THREE.MeshStandardMaterial({ color: 0xb8303a, roughness: 0.85 }),
+                linen: new THREE.MeshStandardMaterial({ color: 0xf0ebe0, roughness: 0.9 }),
+                window: new THREE.MeshStandardMaterial({ map: createLatticeWindowTexture(), roughness: 0.6, emissive: 0x332211, emissiveIntensity: 0.2 }),
+                hedge: new THREE.MeshStandardMaterial({ color: 0x3f6b35, roughness: 0.9 }),
+                yard: new THREE.MeshStandardMaterial({ color: 0x9a927a, roughness: 0.95 }),
+                terracotta: new THREE.MeshStandardMaterial({ color: 0xa8582e, roughness: 0.7 }),
+                leaf: new THREE.MeshStandardMaterial({ color: 0x4d8a3e, roughness: 0.8 }),
+                water: new THREE.MeshStandardMaterial({ color: 0x3d7f86, roughness: 0.1, metalness: 0.2 }),
+                sign: new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(signC), roughness: 0.8 }),
+                coupletL: new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(coupletC), roughness: 0.8 }),
+                coupletR: new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(coupletC2), roughness: 0.8 }),
+                fu: new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(fuC), roughness: 0.6 }),
+                lantern: lanMat
+            });
+        }
+
+        // ---------------------------------------------------------------- the village grounds, streets, fence, lamps
+        function buildVillage(goldMat) {
+            const V = VILLAGE, VM = villageMats();
+            V.plots = villageLayout();
+            const g = new THREE.Group(); templeGroup.add(g); V.group = g;
+            const W = V.x1 - V.x0 + 4, D = V.z1 - V.z0;
+            const ground = new THREE.Mesh(new THREE.PlaneGeometry(W, D), VM.grass);
+            VM.grassTex.repeat.set(W / 6, D / 6);
+            ground.rotation.x = -Math.PI / 2; ground.position.set((V.x0 + V.x1) / 2, 0.005, V.z0 + D / 2); ground.receiveShadow = true; g.add(ground);
+            const street = (x, z, w, d) => {
+                const tex = VM.slabTex.clone(); tex.needsUpdate = true; tex.repeat.set(w / 3, d / 3);
+                const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 }));
+                m.rotation.x = -Math.PI / 2; m.position.set(x, 0.02, z); m.receiveShadow = true; g.add(m);
+            };
+            street(V.axisX, V.z0 + D / 2, V.half * 2, D);
+            street((V.x0 + V.x1) / 2, V.crossZ, V.x1 - V.x0, V.half * 2);
+            // low bamboo fence around the outer edge
+            const fenceMat = new THREE.MeshStandardMaterial({ color: 0xb59a5c, roughness: 0.8 });
+            const rails = [[V.x0 - 1, V.z0 + 0.6, V.x0 - 1, V.z1], [V.x1 + 1, V.z0 + 0.6, V.x1 + 1, V.z1], [V.x0 - 1, V.z1, V.x1 + 1, V.z1]];
+            const posts = [];
+            rails.forEach(([x1, z1, x2, z2]) => {
+                const len = Math.hypot(x2 - x1, z2 - z1), ang = Math.atan2(x2 - x1, z2 - z1);
+                [0.45, 0.85].forEach(y => { const r = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, len), fenceMat); r.position.set((x1 + x2) / 2, y, (z1 + z2) / 2); r.rotation.y = ang; g.add(r); });
+                for (let t = 0; t <= len; t += 2.5) posts.push([x1 + (x2 - x1) * t / len, z1 + (z2 - z1) * t / len]);
+            });
+            const postMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.08, 1.1, 6), fenceMat, posts.length);
+            const d0 = new THREE.Object3D();
+            posts.forEach(([x, z], i) => { d0.position.set(x, 0.55, z); d0.updateMatrix(); postMesh.setMatrixAt(i, d0.matrix); });
+            g.add(postMesh);
+            // entrance stone: 問心村
+            const stoneC = document.createElement('canvas'); stoneC.width = 128; stoneC.height = 384;
+            const scx = stoneC.getContext('2d');
+            scx.fillStyle = '#8a8378'; scx.fillRect(0, 0, 128, 384);
+            scx.font = '900 92px "LXGW WenKai TC","Noto Serif TC",serif'; scx.textAlign = 'center'; scx.textBaseline = 'middle';
+            ['問', '心', '村'].forEach((ch, i) => { scx.fillStyle = 'rgba(40,20,10,0.5)'; scx.fillText(ch, 62, 70 + i * 118); scx.fillStyle = '#a3121a'; scx.fillText(ch, 64, 68 + i * 118); });
+            const mk = new THREE.Mesh(new THREE.BoxGeometry(0.9, 2.6, 0.5), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(stoneC), roughness: 0.8 }));
+            mk.position.set(V.axisX - V.half - 1.3, 1.3, V.z0 + 6.5); mk.rotation.y = Math.PI / 2; mk.castShadow = true; g.add(mk);
+            colliders.push({ x: mk.position.x, z: mk.position.z, r: 0.6 });
+            const anchor = new THREE.Object3D(); anchor.position.set(V.axisX, 4.2, V.z0 + 7); g.add(anchor);
+            register3DLabel(anchor, 0, '🏘️ 問心村', '#86efac', () => moveCameraPreset('village'));
+            // lantern posts along both streets
+            const lanMat = VM.lantern;
+            for (let z = V.z0 + 9; z < V.z1 - 4; z += 15) [-1, 1].forEach(s => { if (Math.abs(z - V.crossZ) > 6) buildLanternPost(V.axisX + s * (V.half + 0.4), z, s < 0 ? Math.PI / 2 : -Math.PI / 2, lanMat, goldMat); });
+            for (let x = V.x0 + 8; x < V.x1 - 4; x += 16) if (Math.abs(x - V.axisX) > 8) buildLanternPost(x, V.crossZ - V.half - 0.4, 0, lanMat, goldMat);
+            // every plot: corner stakes (one instanced mesh), its sign / house is built by refreshVillage
+            const stakeGeo = new THREE.BoxGeometry(0.1, 0.5, 0.1);
+            const stakes = new THREE.InstancedMesh(stakeGeo, VM.darkWood, V.plots.length * 4);
+            V.plots.forEach((p, i) => {
+                [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([a, b], k) => { const w = vLocal(p, a * (V.W / 2 - 0.3), 0, b * (V.D / 2 - 0.3)); d0.position.set(w.x, 0.25, w.z); d0.updateMatrix(); stakes.setMatrixAt(i * 4 + k, d0.matrix); });
+                p.anchor = new THREE.Object3D(); p.anchor.position.copy(vLocal(p, 0, 3.9, 1.0)); g.add(p.anchor);
+                registerMinorLabel(p.anchor, 0, `空地 #${p.no}`, () => villageInteract({ act: 'plot', plot: i }));
+                p.label = tracked3DLabels[tracked3DLabels.length - 1];
+                p.label.maxDist = 30;
+                V.houses[i] = null;
+                V.keyCache[i] = '';
+            });
+            g.add(stakes);
+            // shade trees: along the fence, at the crossroads and in the gaps between plots
+            const spots = [];
+            const rnd = seededRandom(909);
+            for (let z = V.z0 + 6; z < V.z1 - 2; z += 7) { spots.push([V.x0 + 0.5 + rnd(), z + rnd() * 3]); spots.push([V.x1 - 0.5 - rnd(), z + rnd() * 3]); }
+            for (let x = V.x0 + 4; x < V.x1 - 2; x += 8) spots.push([x + rnd() * 3, V.z1 - 1.5 - rnd()]);
+            [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => spots.push([V.axisX + a * (V.half + 1.6), V.crossZ + b * (V.half + 1.6)]));
+            const ok = ([x, z]) => !V.plots.some(p => Math.abs(x - p.x) < V.W / 2 + 0.6 && Math.abs(z - p.z) < V.D / 2 + 0.6 && (p.rot === 0 || Math.abs(p.rot) === Math.PI)) && !V.plots.some(p => Math.abs(x - p.x) < V.D / 2 + 0.6 && Math.abs(z - p.z) < V.W / 2 + 0.6 && Math.abs(Math.abs(p.rot) - Math.PI / 2) < 0.01);
+            const trees = spots.filter(ok);
+            const TM = treeMats();
+            const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.18, 0.28, 1, 6).translate(0, 0.5, 0), TM.bark, trees.length);
+            const crowns = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), TM.leaf, trees.length * 3);
+            const col = new THREE.Color();
+            trees.forEach(([x, z], i) => {
+                const s = 1.1 + rnd() * 0.7, h = s * 1.7;
+                d0.position.set(x, 0, z); d0.rotation.set(0, 0, 0); d0.scale.set(s, h, s); d0.updateMatrix(); trunks.setMatrixAt(i, d0.matrix);
+                for (let j = 0; j < 3; j++) {
+                    const a = rnd() * Math.PI * 2, rr = j ? s * 0.6 : 0;
+                    d0.position.set(x + Math.cos(a) * rr, h + s * (j ? 0.6 : 1.0), z + Math.sin(a) * rr); d0.rotation.set(rnd() * 3, rnd() * 3, 0);
+                    const cs = s * (j ? 0.8 : 1.15); d0.scale.set(cs, cs * 0.85, cs); d0.updateMatrix();
+                    crowns.setMatrixAt(i * 3 + j, d0.matrix);
+                    crowns.setColorAt(i * 3 + j, col.setHex([0x3b6440, 0x46703a, 0x55784a][j]).multiplyScalar(0.75));
+                }
+                colliders.push({ x, z, r: 0.35 });
+            });
+            trunks.castShadow = crowns.castShadow = true;
+            g.add(trunks, crowns);
+            refreshVillage();
+        }
+
+        // ---------------------------------------------------------------- owners and homes
+        function myHome() {
+            if (NET.db && NET.myId) { const d = myNetDoc(); return d.home && typeof d.home.p === 'number' ? d.home : null; }
+            try { const h = JSON.parse(localStorage.getItem('temple.home') || 'null'); return h && typeof h.p === 'number' ? h : null; } catch (e) { return null; }
+        }
+        function saveMyHome(h) {
+            try { if (h) localStorage.setItem('temple.home', JSON.stringify(h)); else localStorage.removeItem('temple.home'); } catch (e) {}
+            if (NET.db && NET.myId) {
+                const doc = myNetDoc();
+                if (h) doc.home = JSON.parse(JSON.stringify(h)); else delete doc.home;
+                const mine = NET.docs.find(d => d.id === NET.myId);
+                if (mine) mine.data = JSON.parse(JSON.stringify(doc)); else NET.docs.push({ id: NET.myId, data: JSON.parse(JSON.stringify(doc)) });
+                scheduleNetWrite();
+            }
+            refreshVillage();
+        }
+        function sanitizeHome(h) {
+            if (!h || typeof h.p !== 'number' || h.p < 0 || h.p >= VILLAGE.plots.length) return null;
+            const it = (Array.isArray(h.it) ? h.it : (h.it && typeof h.it === 'object' ? Object.values(h.it) : [])).filter(x => x && V_ITEMS[x.t] && isFinite(x.x) && isFinite(x.z)).slice(0, V_MAX_ITEMS);
+            return { p: h.p | 0, ty: V_TYPES.some(t => t.k === h.ty) ? h.ty : 'brick', wc: Math.max(0, Math.min(V_WALLS.length - 1, h.wc | 0)), rc: Math.max(0, Math.min(V_ROOFS.length - 1, h.rc | 0)),
+                nm: String(h.nm || '').slice(0, 10), ts: +h.ts || 0, it: it.map(x => ({ t: x.t, x: Math.max(-5.2, Math.min(5.2, +x.x)), z: Math.max(-6.7, Math.min(6.7, +x.z)), r: +x.r || 0 })) };
+        }
+        function computeVillageOwners() {
+            const owners = new Map();
+            const consider = (uid, raw, mine) => {
+                const h = sanitizeHome(raw);
+                if (!h) return;
+                const cur = owners.get(h.p);
+                if (!cur || h.ts < cur.home.ts || (h.ts === cur.home.ts && uid < cur.uid)) owners.set(h.p, { uid, home: h, mine });
+            };
+            if (NET.db && NET.myId) NET.docs.forEach(d => consider(d.id, d.data && d.data.home, d.id === NET.myId));
+            else { const h = myHome(); if (h) consider('me', h, true); }
+            return owners;
+        }
+        function refreshVillage() {
+            const V = VILLAGE;
+            if (!V.group) return;
+            V.owners = computeVillageOwners();
+            V.plots.forEach((p, i) => {
+                let o = V.owners.get(i) || null;
+                if (V.draft && V.draft.p === i) o = { uid: NET.myId || 'me', home: V.draft, mine: true };
+                if (V.decor && V.decor.plot === i && o) o = { uid: o.uid, home: Object.assign({}, o.home, { it: V.decor.items }), mine: true };
+                const key = o ? JSON.stringify([o.mine, o.home.ty, o.home.wc, o.home.rc, o.home.nm, o.home.it]) : '';
+                if (key === V.keyCache[i]) return;
+                V.keyCache[i] = key;
+                if (V.houses[i]) { disposeVillageHouse(V.houses[i]); V.houses[i] = null; }
+                V.houses[i] = o ? buildVillageHouse(p, o.home, o.mine) : buildEmptyPlot(p);
+                p.label.el.textContent = o ? `🏠 ${o.home.nm || '香客'}的家${o.mine ? '（我）' : ''}` : `空地 #${p.no}`;
+            });
+            updateMyHomeButton();
+        }
+        function disposeVillageHouse(h) {
+            if (!h) return;
+            if (VILLAGE.selRing && VILLAGE.selRing.parent) VILLAGE.selRing.parent.remove(VILLAGE.selRing);
+            h.group.parent && h.group.parent.remove(h.group);
+            const S = villageShared(), done = new Set();
+            h.group.traverse(o => {
+                if (!o.isMesh) return;
+                const ci = clickableMeshes.indexOf(o); if (ci >= 0) clickableMeshes.splice(ci, 1);
+                if (o.geometry && !V_GEO_SET.has(o.geometry) && !done.has(o.geometry)) { done.add(o.geometry); o.geometry.dispose(); }
+                (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
+                    if (!m || S.mats.has(m) || done.has(m)) return;
+                    done.add(m);
+                    if (m.map && !S.texs.has(m.map)) m.map.dispose();
+                    m.dispose();
+                });
+            });
+        }
+        const V_GEO = {}, V_GEO_SET = new Set();
+        const vBox = (w, h, d) => { const k = 'b' + [w, h, d].join(','); if (!V_GEO[k]) { V_GEO[k] = new THREE.BoxGeometry(w, h, d); V_GEO_SET.add(V_GEO[k]); } return V_GEO[k]; };
+        function villageShared() {
+            if (villageShared.s) return villageShared.s;
+            const VM = villageMats(), mats = new Set(), texs = new Set();
+            [VM, VM.M].forEach(o => Object.values(o).forEach(v => { if (v && v.isMaterial) mats.add(v); if (v && v.isTexture) texs.add(v); }));
+            mats.forEach(m => { if (m.map) texs.add(m.map); if (m.bumpMap) texs.add(m.bumpMap); });
+            return (villageShared.s = { mats, texs });
+        }
+        function buildEmptyPlot(p) {
+            const VM = villageMats();
+            const g = new THREE.Group(); g.position.set(p.x, 0, p.z); g.rotation.y = p.rot; VILLAGE.group.add(g);
+            const post = new THREE.Mesh(vBox(0.12, 1.3, 0.12), VM.darkWood); post.position.set(0, 0.65, 4.8); g.add(post);
+            const sign = new THREE.Mesh(vBox(1.3, 0.8, 0.06), [VM.darkWood, VM.darkWood, VM.darkWood, VM.darkWood, VM.sign, VM.darkWood]);
+            sign.position.set(0, 1.25, 4.86); sign.castShadow = true; g.add(sign);
+            sign.userData = { interactType: 'vhome', act: 'plot', plot: p.i, label: `🏗️ 空地 #${p.no}（點擊認領、蓋自己的家）` };
+            clickableMeshes.push(sign);
+            return { group: g, empty: true, segs: [] };
+        }
+
+        // ---------------------------------------------------------------- a house
+        function buildVillageHouse(p, home, mine) {
+            const VM = villageMats(), M = VM.M;
+            const { hw, zb, zf, H, T, door } = VH;
+            const g = new THREE.Group(); g.position.set(p.x, 0, p.z); g.rotation.y = p.rot; VILLAGE.group.add(g);
+            const roofG = new THREE.Group(), frontG = new THREE.Group(), decoG = new THREE.Group();
+            g.add(roofG, frontG, decoG);
+            const ud = (act, extra) => Object.assign({ interactType: 'vhome', act, plot: p.i }, extra || {});
+            const click = (m, act, label, extra) => { m.userData = Object.assign(ud(act, extra), { label }); clickableMeshes.push(m); return m; };
+            const add = (geo, mat, x, y, z, parent = g, own = false) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; if (own) m.userData.ownGeo = true; parent.add(m); return m; };
+            const wallDef = V_WALLS[home.wc], roofDef = V_ROOFS[home.rc];
+            let wallMat;
+            if (home.ty === 'wood' && home.wc === 2) wallMat = new THREE.MeshStandardMaterial({ map: VM.planksTex, color: 0xc08a52, roughness: 0.75 });
+            else if (wallDef.brick) wallMat = new THREE.MeshStandardMaterial({ map: VM.brickTex, roughness: 0.65 });
+            else wallMat = new THREE.MeshStandardMaterial({ color: wallDef.c, roughness: 0.85 });
+            const roofTex = VM.tileTex.clone(); roofTex.needsUpdate = true; roofTex.repeat.set(4, 2);
+            const roofMat = new THREE.MeshStandardMaterial({ map: roofTex, color: roofDef.c, roughness: 0.6 });
+            const depth = zf - zb, zc = (zb + zf) / 2;
+            // yard: stone path and low hedges on the plot's sides and back
+            const yard = add(vBox(VILLAGE.W - 0.6, 0.01, VILLAGE.D - 0.6), VM.yard, 0, 0.008, 0); yard.castShadow = false;
+            const path = add(vBox(1.4, 0.03, VILLAGE.D / 2 - zf + 0.2), VM.slab, 0, 0.03, (zf + VILLAGE.D / 2) / 2); path.castShadow = false;
+            [[-1, 0], [1, 0]].forEach(([s]) => add(vBox(0.45, 0.7, VILLAGE.D - 1.2), VM.hedge, s * (VILLAGE.W / 2 - 0.35), 0.35, -0.2));
+            add(vBox(VILLAGE.W - 1.2, 0.7, 0.45), VM.hedge, 0, 0.35, -VILLAGE.D / 2 + 0.35);
+            // floor and inside walls (plaster) — the walls are boxes so the inside faces are plaster-coloured by a thin lining
+            const fl = add(vBox(hw * 2 - T, 0.02, depth - T), VM.floor, 0, 0.014, zc); fl.castShadow = false;
+            const W2 = hw * 2;
+            add(vBox(W2, H, T), wallMat, 0, H / 2, zb);
+            [-1, 1].forEach(s => add(vBox(T, H, depth), wallMat, s * hw, H / 2, zc));
+            add(vBox(W2 - T * 2, H - 0.05, 0.02), VM.plaster, 0, H / 2, zb + T / 2 + 0.01);
+            [-1, 1].forEach(s => add(vBox(0.02, H - 0.05, depth - T * 2), VM.plaster, s * (hw - T / 2 - 0.01), H / 2, zc));
+            const pw = (W2 - door) / 2;
+            [-1, 1].forEach(s => {
+                add(vBox(pw, H, T), wallMat, s * (door / 2 + pw / 2), H / 2, zf, frontG);
+                add(vBox(pw - 0.02, H - 0.05, 0.02), VM.plaster, s * (door / 2 + pw / 2), H / 2, zf - T / 2 - 0.01, frontG);
+                const win = add(vBox(1.0, 0.85, 0.04), VM.window, s * (door / 2 + pw / 2), 1.55, zf + T / 2 + 0.01, frontG); win.castShadow = false;
+                add(vBox(1.12, 0.08, 0.1), VM.darkWood, s * (door / 2 + pw / 2), 1.1, zf + T / 2 + 0.03, frontG);
+                const sideWin = add(vBox(0.04, 0.8, 1.0), VM.window, s * (hw + T / 2 + 0.01), 1.55, zc + 0.6); sideWin.castShadow = false;
+                // couplets beside the door and an open door leaf
+                const cp = add(new THREE.PlaneGeometry(0.28, 1.35), s < 0 ? VM.coupletL : VM.coupletR, s * (door / 2 + 0.22), 1.35, zf + T / 2 + 0.012, frontG); cp.castShadow = false;
+                const hinge = new THREE.Group(); hinge.position.set(s * door / 2, 0, zf - T / 2 - 0.03); hinge.rotation.y = -s * 1.35; g.add(hinge);
+                add(vBox(door / 2 - 0.02, 2.05, 0.06), VM.lacquer, -s * (door / 4), 1.03, 0, hinge);
+            });
+            add(vBox(door, H - 2.15, T), wallMat, 0, 2.15 + (H - 2.15) / 2, zf, frontG);
+            add(vBox(door + 0.1, 0.12, 0.3), M.stone, 0, 0.06, zf + 0.05);   // threshold
+            // nameplate over the door
+            const nmTex = createSignboardTexture(`${home.nm || '香客'} 宅`, 320, 96, '#7a1814', '#facc15', '#fde68a', false, 46);
+            const plate = add(new THREE.PlaneGeometry(1.5, 0.45), new THREE.MeshStandardMaterial({ map: nmTex, roughness: 0.5 }), 0, 2.52, zf + T / 2 + 0.015, frontG);
+            plate.castShadow = false;
+            click(plate, 'door', `🏠 ${home.nm || '香客'}的家（點擊${mine ? '管理我的家' : '按門鈴、留言'}）`);
+            // roof: two tiled slopes with eaves, gable ends, a ridge (swallowtail for 三合院, low and deep-eaved for 木造)
+            const over = home.ty === 'wood' ? 0.95 : 0.6, rise = home.ty === 'wood' ? 1.05 : 1.45;
+            const half = depth / 2 + over, slope = Math.hypot(half, rise), ang = Math.atan2(rise, half);
+            [-1, 1].forEach(s => {
+                const sl = add(vBox(W2 + over * 1.6, 0.14, slope), roofMat, 0, H + rise / 2 - 0.02, zc + s * half / 2, roofG);
+                sl.rotation.x = s * ang;
+            });
+            const gable = new THREE.Shape(); gable.moveTo(-depth / 2, 0); gable.lineTo(depth / 2, 0); gable.lineTo(0, rise * (depth / 2) / half); gable.lineTo(-depth / 2, 0);
+            const gGeo = new THREE.ShapeGeometry(gable);
+            [-1, 1].forEach(s => { const gm = add(gGeo, new THREE.MeshStandardMaterial({ color: wallDef.brick ? 0xb85a43 : wallDef.c, roughness: 0.85, side: THREE.DoubleSide }), s * hw, H, zc, roofG, true); gm.rotation.y = Math.PI / 2; });
+            const ridgeMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(roofDef.c).multiplyScalar(0.7), roughness: 0.6 });
+            add(vBox(W2 + over * 1.6, 0.18, 0.26), ridgeMat, 0, H + rise + 0.05, zc, roofG);
+            if (home.ty === 'sanhe' || home.ty === 'brick') {   // swallowtail (燕尾) or simple upturned ridge ends
+                const swallow = home.ty === 'sanhe';
+                [-1, 1].forEach(s => {
+                    const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(s * (hw + over * 0.6), H + rise + 0.05, zc), new THREE.Vector3(s * (hw + over * 0.8 + 0.3), H + rise + 0.2, zc), new THREE.Vector3(s * (hw + over * 0.8 + (swallow ? 0.75 : 0.45)), H + rise + (swallow ? 0.75 : 0.4), zc)]);
+                    const t = add(new THREE.TubeGeometry(curve, 10, 0.09, 6, false), ridgeMat, 0, 0, 0, roofG, true);
+                    if (swallow) [-1, 1].forEach(f => { const tip = add(new THREE.ConeGeometry(0.07, 0.4, 5), ridgeMat, s * (hw + over * 0.8 + 0.8), H + rise + 0.85, zc + f * 0.12, roofG); tip.rotation.z = -s * 0.6; tip.rotation.x = f * 0.4; });
+                });
+            }
+            const ceil = add(new THREE.PlaneGeometry(W2 - T, depth - T), VM.plaster, 0, H - 0.01, zc, roofG); ceil.rotation.x = Math.PI / 2; ceil.castShadow = false;
+            // 三合院: two wing rooms (護龍) flanking the front yard
+            const segs = [];
+            if (home.ty === 'sanhe') {
+                [-1, 1].forEach(s => {
+                    const wx = s * (hw - 0.6), wz0 = zf + 0.1, wz1 = zf + 3.4, ww = 1.9, wd = wz1 - wz0, wzc = (wz0 + wz1) / 2;
+                    add(vBox(ww, 2.4, wd), wallMat, wx, 1.2, wzc);
+                    const wwin = add(vBox(0.04, 0.7, 1.1), VM.window, wx - s * (ww / 2 + 0.02), 1.4, wzc); wwin.castShadow = false;
+                    [-1, 1].forEach(f => { const sl = add(vBox(ww / 2 + 0.55, 0.12, wd + 0.5), roofMat, wx + f * (ww / 4 + 0.12), 2.72, wzc, roofG); sl.rotation.z = -f * 0.5; });
+                    const a = vLocal(p, wx - ww / 2, 0, wz0), b = vLocal(p, wx + ww / 2, 0, wz0), c = vLocal(p, wx + ww / 2, 0, wz1), d = vLocal(p, wx - ww / 2, 0, wz1);
+                    segs.push([a, b], [b, c], [c, d], [d, a]);
+                });
+            }
+            // 木造: an engawa porch along the front with two posts
+            if (home.ty === 'wood') {
+                add(vBox(W2, 0.12, 1.1), VM.lightWood, 0, 0.12, zf + 0.6);
+                [-1, 1].forEach(s => add(new THREE.CylinderGeometry(0.07, 0.07, H + 0.3, 8), VM.darkWood, s * (hw - 0.1), (H + 0.3) / 2, zf + 1.05));
+            }
+            // ---- inside: 神明桌 against the back wall, a bed, a round table with two stools
+            const altar = add(vBox(1.7, 0.9, 0.55), VM.lacquer, 0, 0.45, zb + 0.45);
+            click(altar, 'altar', '🙏 神明桌（點擊上香）');
+            add(vBox(1.8, 0.05, 0.62), VM.gold, 0, 0.92, zb + 0.45);
+            const fu = add(new THREE.PlaneGeometry(1.1, 1.1), VM.fu, 0, 1.75, zb + T / 2 + 0.03); fu.castShadow = false;
+            add(new THREE.CylinderGeometry(0.07, 0.09, 0.22, 10), VM.gold, 0, 1.06, zb + 0.4);
+            add(new THREE.SphereGeometry(0.08, 10, 8), VM.gold, 0, 1.24, zb + 0.4);
+            [-1, 1].forEach(s => { const lp = add(new THREE.SphereGeometry(0.07, 10, 8), VM.lantern, s * 0.6, 1.02, zb + 0.45); lp.castShadow = false; });
+            add(new THREE.CylinderGeometry(0.08, 0.06, 0.1, 10), M.bronze, 0.32, 0.99, zb + 0.5);
+            const bed = new THREE.Group(); bed.position.set(-hw + 0.95, 0, zb + 1.35); g.add(bed);
+            add(vBox(1.3, 0.35, 2.1), VM.darkWood, 0, 0.18, 0, bed);
+            add(vBox(1.2, 0.14, 2.0), VM.linen, 0, 0.42, 0, bed);
+            add(vBox(1.22, 0.1, 1.2), VM.cloth, 0, 0.52, 0.35, bed);
+            add(vBox(0.6, 0.12, 0.35), VM.linen, 0, 0.54, -0.75, bed);
+            add(vBox(1.3, 0.9, 0.08), VM.darkWood, 0, 0.45, -1.05, bed);
+            bed.children.forEach(m => click(m, 'bed', mine ? '🛏️ 床（點擊躺下休息）' : '🛏️ 別人家的床'));
+            const tx = hw - 1.25, tz = zc + 0.5;
+            const table = add(new THREE.CylinderGeometry(0.5, 0.5, 0.06, 18), VM.lightWood, tx, 0.72, tz);
+            add(new THREE.CylinderGeometry(0.08, 0.14, 0.7, 10), VM.darkWood, tx, 0.36, tz);
+            add(new THREE.CylinderGeometry(0.13, 0.13, 0.08, 12), VM.linen, tx, 0.79, tz);
+            [[-0.85, 0], [0, 0.85]].forEach(([ox, oz], k) => {
+                const st = add(new THREE.CylinderGeometry(0.2, 0.18, 0.44, 12), VM.lightWood, tx + ox, 0.22, tz + oz);
+                click(st, 'seat', '🪑 凳子（點擊坐下）', { sx: tx + ox, sz: tz + oz, face: Math.atan2(-ox, -oz) });
+            });
+            // mailbox at the front gate
+            const mb = new THREE.Group(); mb.position.set(VILLAGE.W / 2 - 1.6, 0, VILLAGE.D / 2 - 0.9); g.add(mb);
+            add(vBox(0.1, 1.05, 0.1), VM.darkWood, 0, 0.52, 0, mb);
+            add(vBox(0.42, 0.34, 0.3), VM.lacquer, 0, 1.2, 0, mb);
+            add(vBox(0.3, 0.03, 0.02), VM.gold, 0, 1.28, 0.16, mb);
+            mb.children.forEach(m => click(m, 'mail', mine ? '📮 我的信箱（看留言）' : '📮 信箱（點擊留言）'));
+            // decorations
+            (home.it || []).forEach((it, k) => { const m = buildVillageItem(it.t); m.position.set(it.x, 0, it.z); m.rotation.y = it.r || 0; m.userData.itemIdx = k; decoG.add(m); });
+            // collision segments (world): walls with the door gap
+            const L = (lx, lz) => vLocal(p, lx, 0, lz);
+            segs.push([L(-hw, zb), L(hw, zb)], [L(hw, zb), L(hw, zf)], [L(-hw, zb), L(-hw, zf)], [L(-hw, zf), L(-door / 2, zf)], [L(door / 2, zf), L(hw, zf)]);
+            segs.push([L(-VILLAGE.W / 2 + 0.35, -VILLAGE.D / 2 + 0.6), L(-VILLAGE.W / 2 + 0.35, VILLAGE.D / 2 - 0.8)], [L(VILLAGE.W / 2 - 0.35, -VILLAGE.D / 2 + 0.6), L(VILLAGE.W / 2 - 0.35, VILLAGE.D / 2 - 0.8)], [L(-VILLAGE.W / 2 + 0.6, -VILLAGE.D / 2 + 0.35), L(VILLAGE.W / 2 - 0.6, -VILLAGE.D / 2 + 0.35)]);
+            const bedC = L(-hw + 0.95, zb + 1.35), altC = L(0, zb + 0.45), tabC = L(tx, tz);
+            return { group: g, roofG, frontG, decoG, segs, home, mine, solids: [{ x: bedC.x, z: bedC.z, r: 0.75 }, { x: altC.x, z: altC.z, r: 0.55 }, { x: tabC.x, z: tabC.z, r: 0.5 }], bedAt: { lx: -hw + 0.95, lz: zb + 1.35 }, altarAt: { lx: 0, lz: zb + 1.25 } };
+        }
+
+        // ---------------------------------------------------------------- decorations
+        function buildVillageItem(t) {
+            const VM = villageMats(), M = VM.M, g = new THREE.Group();
+            const add = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+            if (t === 'pot') { add(new THREE.CylinderGeometry(0.28, 0.2, 0.42, 12), VM.terracotta, 0, 0.21, 0); add(new THREE.SphereGeometry(0.36, 10, 8), VM.leaf, 0, 0.66, 0).scale.y = 0.85; }
+            else if (t === 'flower') {
+                add(vBox(1.2, 0.2, 0.7), M.stone, 0, 0.1, 0); add(vBox(1.1, 0.06, 0.6), new THREE.MeshStandardMaterial({ color: 0x4a3020 }), 0, 0.22, 0);
+                const cols = [0xf472b6, 0xfacc15, 0xf87171, 0xffffff, 0xc084fc];
+                for (let i = 0; i < 10; i++) { const f = add(new THREE.SphereGeometry(0.07, 6, 5), new THREE.MeshStandardMaterial({ color: cols[i % 5] }), -0.45 + (i % 5) * 0.22, 0.34, i < 5 ? -0.13 : 0.13); f.castShadow = false; add(new THREE.CylinderGeometry(0.01, 0.01, 0.12, 4), VM.leaf, f.position.x, 0.27, f.position.z); }
+            }
+            else if (t === 'tree') { add(new THREE.CylinderGeometry(0.1, 0.15, 1.4, 7), VM.darkWood, 0, 0.7, 0); [[0, 1.7, 0, 0.75], [0.35, 1.45, 0.1, 0.5], [-0.3, 1.5, -0.15, 0.5]].forEach(([x, y, z, r]) => add(new THREE.IcosahedronGeometry(r, 1), VM.leaf, x, y, z)); }
+            else if (t === 'lantern') { add(new THREE.CylinderGeometry(0.06, 0.08, 1.9, 8), VM.darkWood, 0, 0.95, 0); add(vBox(0.5, 0.06, 0.06), VM.darkWood, 0.2, 1.85, 0); const l = add(new THREE.SphereGeometry(0.2, 12, 10), VM.lantern, 0.38, 1.55, 0); l.scale.y = 1.15; add(new THREE.CylinderGeometry(0.1, 0.1, 0.05, 10), VM.gold, 0.38, 1.79, 0); }
+            else if (t === 'lion') { add(vBox(0.6, 0.35, 0.6), M.stone, 0, 0.18, 0); add(new THREE.SphereGeometry(0.26, 12, 10), M.stone, 0, 0.6, -0.05).scale.set(1, 1.1, 1.2); add(new THREE.SphereGeometry(0.22, 12, 10), M.stone, 0, 0.92, 0.12); add(new THREE.TorusGeometry(0.2, 0.07, 6, 14), M.darkStone, 0, 0.9, 0.08); add(new THREE.SphereGeometry(0.09, 8, 6), M.stone, 0.14, 0.4, 0.22); }
+            else if (t === 'jar') { add(new THREE.LatheGeometry([[0, 0], [0.32, 0], [0.45, 0.25], [0.48, 0.45], [0.42, 0.62], [0.44, 0.66], [0.4, 0.66], [0.36, 0.6]].map(([r, y]) => new THREE.Vector2(r, y)), 18), new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.4, side: THREE.DoubleSide }), 0, 0, 0); const w = add(new THREE.CircleGeometry(0.38, 16), VM.water, 0, 0.58, 0); w.rotation.x = -Math.PI / 2; add(new THREE.CircleGeometry(0.1, 10), VM.leaf, 0.1, 0.585, 0.05).rotation.x = -Math.PI / 2; }
+            else if (t === 'bench') { add(vBox(1.4, 0.08, 0.42), VM.lightWood, 0, 0.45, 0); [-0.55, 0.55].forEach(x => add(vBox(0.08, 0.42, 0.38), VM.darkWood, x, 0.21, 0)); add(vBox(1.4, 0.32, 0.06), VM.lightWood, 0, 0.72, -0.19); }
+            else if (t === 'shrine') { add(vBox(0.6, 0.7, 0.5), M.stone, 0, 0.35, 0); add(vBox(0.62, 0.55, 0.45), VM.lacquer, 0, 0.98, 0); add(new THREE.ConeGeometry(0.55, 0.35, 4), new THREE.MeshStandardMaterial({ color: 0x2f7a55 }), 0, 1.43, 0).rotation.y = Math.PI / 4; add(new THREE.SphereGeometry(0.1, 8, 6), VM.gold, 0, 1.0, 0.18); add(new THREE.CylinderGeometry(0.08, 0.1, 0.16, 8), VM.gold, 0, 0.85, 0.18); }
+            else if (t === 'teaset') { add(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 16), VM.lightWood, 0, 0.45, 0); add(new THREE.CylinderGeometry(0.06, 0.1, 0.42, 8), VM.darkWood, 0, 0.21, 0); add(new THREE.SphereGeometry(0.09, 10, 8), new THREE.MeshStandardMaterial({ color: 0x6b4a2a }), 0, 0.55, 0); [[0.2, 0.1], [-0.2, 0.1], [0, -0.22]].forEach(([x, z]) => add(new THREE.CylinderGeometry(0.035, 0.028, 0.05, 8), VM.linen, x, 0.5, z)); }
+            return g;
+        }
+
+        // ---------------------------------------------------------------- walking: walls, solids and inside detection
+        function villageCollide(pos) {
+            const V = VILLAGE;
+            for (let i = 0; i < V.houses.length; i++) {
+                const h = V.houses[i];
+                if (!h || h.empty) continue;
+                const p = V.plots[i];
+                if (Math.abs(pos.x - p.x) > 10 || Math.abs(pos.z - p.z) > 10) continue;
+                for (const [a, b] of h.segs) {
+                    const ex = b.x - a.x, ez = b.z - a.z, L2 = ex * ex + ez * ez;
+                    let t = ((pos.x - a.x) * ex + (pos.z - a.z) * ez) / L2; t = Math.max(0, Math.min(1, t));
+                    const cx = a.x + ex * t, cz = a.z + ez * t, dx = pos.x - cx, dz = pos.z - cz, d = Math.hypot(dx, dz);
+                    const min = 0.42;
+                    if (d < min && d > 1e-5) { pos.x = cx + dx / d * min; pos.z = cz + dz / d * min; }
+                }
+                for (const c of h.solids) {
+                    const dx = pos.x - c.x, dz = pos.z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.3;
+                    if (d < min && d > 1e-4) { pos.x = c.x + dx / d * min; pos.z = c.z + dz / d * min; }
+                }
+            }
+        }
+        function updateVillage(t, dt) {
+            const V = VILLAGE;
+            if (!V.group || !playerAvatarGroup) return;
+            const pos = playerAvatarGroup.position;
+            // inside a house: lift its roof and front wall away so the camera can see in
+            let inside = -1;
+            if (pos.z > V.z0 - 1) {
+                for (let i = 0; i < V.plots.length; i++) {
+                    const h = V.houses[i]; if (!h || h.empty) continue;
+                    const l = vToLocal(V.plots[i], pos.x, pos.z);
+                    if (Math.abs(l.x) < VH.hw + 0.2 && l.z > VH.zb - 0.2 && l.z < VH.zf + 0.35) { inside = i; break; }
+                }
+            }
+            if (inside !== V.insideIdx) {
+                const old = V.houses[V.insideIdx];
+                if (old && !old.empty) { old.roofG.visible = true; old.frontG.visible = true; }
+                const h = V.houses[inside];
+                if (h && !h.empty) { h.roofG.visible = false; h.frontG.visible = false; }
+                V.insideIdx = inside;
+            }
+            if (V.sleeping && !state.seated) { V.sleeping = false; playerAvatarGroup.rotation.x = 0; playerAvatarGroup.rotation.z = 0; }
+            // far houses are hidden (saves draw calls)
+            if (!(t % 1 < dt)) return;
+            const cam = camera.position, far = LOW_MEM_DEVICE ? 55 : 80;
+            V.houses.forEach((h, i) => { if (h) h.group.visible = Math.hypot(V.plots[i].x - cam.x, V.plots[i].z - cam.z) < far || (V.decor && V.decor.plot === i); });
+        }
+
+        // ---------------------------------------------------------------- interactions
+        function villageInteract(ud) {
+            const V = VILLAGE, p = V.plots[ud.plot];
+            if (!p) return;
+            const o = V.owners.get(p.i), mine = !!(o && o.mine), act = ud.act;
+            if (act === 'altar') {
+                const h = V.houses[p.i]; if (!h) return;
+                walkPlayerTo(vLocal(p, h.altarAt.lx, 0, h.altarAt.lz), p.rot + Math.PI, 'kneel');
+                playTempleBellSound(587);
+                showToast(mine ? '🙏 在自家神明廳點香：祖先保佑、闔家平安、出入順遂。' : `🙏 在「${o ? o.home.nm || '香客' : ''}」家的神明桌前合掌：祝福這一家平安喜樂。`);
+                return;
+            }
+            if (act === 'bed') {
+                if (!mine) { showToast('🛏️ 這是別人家的床，不好意思躺上去喔～'); return; }
+                const h = V.houses[p.i];
+                const w = vLocal(p, h.bedAt.lx, 0, h.bedAt.lz);
+                walkPlayerTo(w, p.rot + Math.PI, 'stand');
+                playerAvatarGroup.position.y = 0.55;
+                playerAvatarGroup.rotation.y = p.rot + Math.PI;
+                playerAvatarGroup.rotation.x = -Math.PI / 2;
+                playerAvatarGroup.position.copy(vLocal(p, h.bedAt.lx, 0.62, h.bedAt.lz - 0.15));
+                state.seated = true; V.sleeping = true;
+                showToast(['😴 躺在自己的床上，蓋好被子，好好休息一下。移動搖桿即可起床。', '🌙 窗外蟲鳴，屋裡香煙，睡個好覺。移動搖桿起床。'][(Math.random() * 2) | 0]);
+                return;
+            }
+            if (act === 'seat') {
+                const sx = ud.sx, sz = ud.sz;
+                const sw = vLocal(p, sx, 0, sz);
+                if (!playerAvatarGroup) return;
+                if (state.upstairs) { state.upstairs = false; state.followCam = false; updateStairsButton(); }
+                if (state.towerFloor) { state.towerFloor = 0; state.followCam = false; }
+                playerAvatarGroup.userData.kowtowToken = null;
+                setPlayerPose('stand', true);
+                playerAvatarGroup.position.set(sw.x, 0.08, sw.z);
+                playerAvatarGroup.rotation.y = p.rot + ud.face;
+                const { legs, leftArm, rightArm } = playerAvatarGroup.userData;
+                if (legs) legs.forEach(l => { l.rotation.x = -1.35; });
+                leftArm.rotation.x = -0.3; rightArm.rotation.x = -0.3;
+                state.seated = true;
+                showToast('🪑 坐下來喝杯茶，歇一會兒。移動搖桿即可起身。');
+                return;
+            }
+            if (act === 'plot' && !o) { openVillageModal(p.i); return; }
+            openVillageModal(p.i);
+        }
+        function walkPlayerTo(w, face, pose) {
+            if (!playerAvatarGroup) return;
+            if (state.upstairs) { state.upstairs = false; state.followCam = false; updateStairsButton(); }
+            if (state.towerFloor) { state.towerFloor = 0; state.followCam = false; }
+            playerAvatarGroup.userData.kowtowToken = null;
+            setPlayerPose('stand', true);
+            playerAvatarGroup.position.set(w.x, 0, w.z);
+            playerAvatarGroup.rotation.set(0, face, 0);
+            if (pose && pose !== 'stand') setPlayerPose(pose, true);
+        }
+        function visitsTo(uid) {
+            const out = [];
+            if (!(NET.db && NET.myId)) return out;
+            NET.docs.forEach(d => (Array.isArray(d.data.visits) ? d.data.visits : (d.data.visits && typeof d.data.visits === 'object' ? Object.values(d.data.visits) : [])).forEach(v => {
+                if (v && v.to === uid && typeof v.text === 'string' && typeof v.ts === 'number') out.push({ from: d.id, name: String(v.name || '香客'), text: v.text, ts: v.ts, mine: d.id === NET.myId });
+            }));
+            return out.sort((a, b) => b.ts - a.ts).slice(0, 40);
+        }
+        function addVisit(to, text) {
+            if (!(NET.db && NET.myId)) return false;
+            const doc = myNetDoc();
+            const list = Array.isArray(doc.visits) ? doc.visits : (doc.visits && typeof doc.visits === 'object' ? Object.values(doc.visits) : []);
+            list.unshift({ to: String(to).slice(0, 64), text: String(text).slice(0, 40), name: (getNick() || '香客').slice(0, 10), ts: Date.now() });
+            doc.visits = list.slice(0, 20);
+            const mine = NET.docs.find(d => d.id === NET.myId);
+            if (mine) mine.data = JSON.parse(JSON.stringify(doc)); else NET.docs.push({ id: NET.myId, data: JSON.parse(JSON.stringify(doc)) });
+            scheduleNetWrite();
+            return true;
+        }
+        function unreadVisits() {
+            if (!(NET.db && NET.myId) || !myHome()) return 0;
+            let seen = 0; try { seen = +localStorage.getItem('temple.homeSeen') || 0; } catch (e) {}
+            return visitsTo(NET.myId).filter(v => !v.mine && v.ts > seen).length;
+        }
+        function updateMyHomeButton() {
+            const b = document.getElementById('camBtn-myhome');
+            if (!b) return;
+            const n = unreadVisits();
+            b.textContent = n ? `🏠 我的家（${n} 則新留言）` : '🏠 我的家';
+        }
+        function ringDoorbell(uid, name) {
+            const peers = [...NET.peers.entries()].filter(([, e]) => e.by === uid).map(([peer]) => peer);
+            playTempleBellSound(880); setTimeout(() => playTempleBellSound(698), 260);
+            if (!NET.room || !peers.length) { showToast(`🔔 叮咚～「${name}」現在不在線上，可以在信箱留言給他。`); return; }
+            peers.forEach(peer => NET.room.emit('act', { kind: 'doorbell', to: peer }).catch(() => {}));
+            showToast(`🔔 叮咚～已按「${name}」家的門鈴，主人正在線上！`);
+        }
+
+        // ---------------------------------------------------------------- the village modal (plot / house / guestbook / editor)
+        function openVillageModal(i, view) {
+            const V = VILLAGE, p = V.plots[i], o = V.owners.get(i), mh = myHome();
+            const body = document.getElementById('villageBody');
+            const btn = (txt, fn, cls = 'btn-warm-gold') => `<button onclick="${fn}" class="w-full py-2.5 ${cls} text-sm tracking-widest">${txt}</button>`;
+            const ghost = 'rounded-xl border border-amber-300/40 bg-black/30 text-amber-100 font-bold';
+            let h = '';
+            if (view === 'edit') { renderHomeEditor(i); return showVillageModal(); }
+            if (view === 'book') {
+                const host = o ? o.uid : null, list = host ? visitsTo(host) : [];
+                h += `<h3 class="text-lg font-bold text-amber-300 tracking-wider mb-1">📮 ${escapeHtmlLite(o ? (o.home.nm || '香客') : '')}的留言簿</h3>`;
+                if (o && o.mine) { try { localStorage.setItem('temple.homeSeen', String(Date.now())); } catch (e) {} setTimeout(updateMyHomeButton, 0); }
+                if (o && !o.mine) h += `<div class="flex gap-2 mb-2"><input id="vMsg" maxlength="40" placeholder="寫一句話給主人（最多 40 字）" class="flex-1 px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white"><button onclick="sendVillageMsg(${i})" class="px-3 btn-warm-gold text-sm">送出</button></div>`;
+                h += `<div class="text-[11px] max-h-64 overflow-y-auto pr-1 bg-black/30 border border-amber-300/25 rounded-xl p-2">${list.length ? list.map(v => `<div class="py-1.5 border-b border-white/5"><div class="text-stone-200 break-all">${escapeHtmlLite(v.text)}</div><div class="text-[10px] text-stone-500">${escapeHtmlLite(v.name)}${v.mine ? '（我）' : ''}・${relTime(v.ts)}</div></div>`).join('') : '<div class="text-stone-500 p-2">還沒有人留言。</div>'}</div>`;
+                if (!(NET.db && NET.myId)) h += '<div class="text-[10px] text-stone-400 mt-2">目前未連線，留言簿要連上線才能使用。</div>';
+                h += `<div class="mt-3">${btn('返回', `openVillageModal(${i})`, ghost)}</div>`;
+                body.innerHTML = h; return showVillageModal();
+            }
+            if (!o) {
+                h += `<h3 class="text-lg font-bold text-amber-300 tracking-wider mb-1">🏗️ 問心村・空地 #${p.no}</h3>`;
+                h += `<p class="text-xs text-stone-300 mb-3">約 ${V.W} × ${V.D} 的一塊地，${p.rot === 0 || Math.abs(p.rot) === Math.PI ? '面向東西大街' : '面向村中大街'}。認領後可以蓋房子、擺設院子，鄰居都看得到。</p>`;
+                h += mh ? `<p class="text-xs text-amber-200 mb-3">你目前住在 #${mh.p + 1}。搬來這裡的話，房子和擺設會一起搬過來。</p>${btn('🚚 搬到這塊地', `villageClaim(${i})`)}` : btn('🏡 認領這塊地，蓋我的家', `villageClaim(${i})`);
+                if (!(NET.db && NET.myId)) h += '<div class="text-[10px] text-stone-400 mt-2">目前未連線：房子只會存在這台裝置，其他香客看不到。</div>';
+            } else if (o.mine) {
+                h += `<h3 class="text-lg font-bold text-amber-300 tracking-wider mb-1">🏠 我的家（#${p.no}）</h3><p class="text-xs text-stone-300 mb-3">${escapeHtmlLite(V_TYPES.find(t => t.k === o.home.ty).name)}・${V_WALLS[o.home.wc].name}牆・${V_ROOFS[o.home.rc].name}；院子裡有 ${o.home.it.length} 件擺設。</p>`;
+                const n = unreadVisits();
+                h += `<div class="grid grid-cols-2 gap-2">${btn('🎨 整修房子', `openVillageModal(${i}, 'edit')`)}${btn('🪴 擺設布置', `startVillageDecor(${i})`)}${btn(`📮 留言簿${n ? `（${n} 新）` : ''}`, `openVillageModal(${i}, 'book')`, ghost)}${btn('🚪 搬走', `villageRelease(${i})`, ghost)}</div>`;
+            } else {
+                h += `<h3 class="text-lg font-bold text-amber-300 tracking-wider mb-1">🏠 ${escapeHtmlLite(o.home.nm || '香客')}的家（#${p.no}）</h3><p class="text-xs text-stone-300 mb-3">${escapeHtmlLite(V_TYPES.find(t => t.k === o.home.ty).name)}。可以進屋參觀、按門鈴，或在信箱留言給主人。</p>`;
+                h += `<div class="grid grid-cols-2 gap-2">${btn('🔔 按門鈴', `closeVillageModal(); ringDoorbell(${JSON.stringify(o.uid).replace(/"/g, '&quot;')}, ${JSON.stringify(o.home.nm || '香客').replace(/"/g, '&quot;')})`)}${btn('📮 留言簿', `openVillageModal(${i}, 'book')`, ghost)}</div>`;
+            }
+            body.innerHTML = h;
+            showVillageModal();
+        }
+        function showVillageModal() { document.getElementById('villageModal').classList.remove('hidden'); }
+        function closeVillageModal() {
+            document.getElementById('villageModal').classList.add('hidden');
+            if (VILLAGE.draft) { VILLAGE.draft = null; refreshVillage(); }
+        }
+        function sendVillageMsg(i) {
+            const o = VILLAGE.owners.get(i), inp = document.getElementById('vMsg');
+            const text = String(inp && inp.value || '').replace(/[\u0000-\u001f<>]/g, '').trim();
+            if (!o || !text) return;
+            if (!addVisit(o.uid, text)) { showToast('📮 目前未連線，留言沒有送出。'); return; }
+            emitAct('vmsg');
+            playTempleBellSound(784);
+            showToast(`📮 已在「${o.home.nm || '香客'}」的信箱留言！`);
+            openVillageModal(i, 'book');
+        }
+        function villageClaim(i) {
+            const V = VILLAGE, mh = myHome();
+            if (V.owners.get(i)) { showToast('🏗️ 這塊地剛被別人認領了，換一塊吧！'); openVillageModal(i); return; }
+            const h = mh ? Object.assign({}, mh, { p: i, ts: Date.now() }) : { p: i, ty: 'brick', wc: 0, rc: 0, nm: (getNick() || '香客').slice(0, 10), ts: Date.now(), it: [] };
+            if (mh) { saveMyHome(h); showToast(`🚚 搬家完成！新家在 #${i + 1}。`); closeVillageModal(); goMyHome(); return; }
+            V.draft = h;
+            refreshVillage();
+            renderHomeEditor(i, true);
+        }
+        function villageRelease(i) {
+            if (!confirm('確定要搬走嗎？房子和擺設都會拆掉，這塊地會變回空地。')) return;
+            saveMyHome(null);
+            closeVillageModal();
+            showToast('🚪 已經搬走了，這塊地變回空地。想回來隨時可以再認領。');
+        }
+        function renderHomeEditor(i, isNew) {
+            const V = VILLAGE, o = V.owners.get(i);
+            if (!V.draft) V.draft = JSON.parse(JSON.stringify(o ? o.home : myHome()));
+            const d = V.draft;
+            const sw = (arr, key) => arr.map((c, k) => `<button onclick="villageDraft('${key}', ${k})" class="flex-1 py-1.5 rounded-lg text-[11px] font-bold border ${d[key] === k ? 'border-amber-300 ring-2 ring-amber-300/60' : 'border-white/20'}" style="background:#${new THREE.Color(c.brick ? 0xb5523b : c.c).getHexString()};color:${key === 'wc' && (k === 1) ? '#3a2a1a' : '#fff'}">${c.name}</button>`).join('');
+            document.getElementById('villageBody').innerHTML = `
+                <h3 class="text-lg font-bold text-amber-300 tracking-wider mb-1">${isNew ? '🏡 蓋我的家' : '🎨 整修房子'}（#${i + 1}）</h3>
+                <p class="text-xs text-stone-300 mb-3">選好後房子會立刻在後面變化，可以邊看邊挑。</p>
+                <div class="space-y-3 bg-black/30 border border-amber-300/25 rounded-xl p-3">
+                    <div><div class="text-[11px] text-amber-200 mb-1">房型</div><div class="flex gap-1.5">${V_TYPES.map(t => `<button onclick="villageDraft('ty', '${t.k}')" class="flex-1 py-2 rounded-lg text-xs font-bold border ${d.ty === t.k ? 'border-amber-300 bg-amber-900/50 text-amber-100' : 'border-white/20 bg-black/30 text-stone-300'}">${t.name}</button>`).join('')}</div></div>
+                    <div><div class="text-[11px] text-amber-200 mb-1">外牆</div><div class="flex gap-1.5">${sw(V_WALLS, 'wc')}</div></div>
+                    <div><div class="text-[11px] text-amber-200 mb-1">屋瓦</div><div class="flex gap-1.5">${sw(V_ROOFS, 'rc')}</div></div>
+                    <label class="block text-[11px] text-amber-200">門牌名字（最多 10 字）<input id="vName" maxlength="10" value="${escapeHtmlLite(d.nm || '')}" oninput="villageDraft('nm', this.value)" class="mt-1 w-full px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white"></label>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-3"><button onclick="saveHomeDraft()" class="py-2.5 btn-warm-gold text-sm tracking-widest">${isNew ? '🏡 蓋好了' : '✅ 儲存'}</button><button onclick="closeVillageModal()" class="py-2.5 rounded-xl border border-amber-300/40 bg-black/30 text-amber-100 text-sm font-bold">取消</button></div>`;
+            V.editorNew = !!isNew;
+            showVillageModal();
+            const p = V.plots[i];
+            moveCameraTo({ r: 17, theta: p.rot + 0.35, phi: 1.2, tx: p.x, ty: 1.8, tz: p.z });
+        }
+        function villageDraft(k, v) {
+            const V = VILLAGE; if (!V.draft) return;
+            V.draft[k] = k === 'nm' ? cleanNick(v) : v;
+            if (k !== 'nm') renderHomeEditor(V.draft.p, V.editorNew);
+            clearTimeout(villageDraft.t); villageDraft.t = setTimeout(refreshVillage, k === 'nm' ? 400 : 0);
+        }
+        function saveHomeDraft() {
+            const V = VILLAGE, d = V.draft;
+            if (!d) return;
+            if (!d.nm) d.nm = (getNick() || '香客').slice(0, 10);
+            const isNew = V.editorNew;
+            V.draft = null;
+            saveMyHome(sanitizeHome(d));
+            document.getElementById('villageModal').classList.add('hidden');
+            playTempleBellSound(784);
+            showToast(isNew ? '🏡 新家落成！走進屋裡看看，或按「🪴 擺設布置」裝飾院子。' : '🎨 房子整修好了！');
+            emitAct('vhome');
+            if (isNew) goMyHome();
+        }
+
+        // ---------------------------------------------------------------- 擺設布置 mode
+        function startVillageDecor(i) {
+            const V = VILLAGE, o = V.owners.get(i);
+            if (!o || !o.mine) return;
+            document.getElementById('villageModal').classList.add('hidden');
+            V.decor = { plot: i, items: JSON.parse(JSON.stringify(o.home.it || [])), sel: -1 };
+            const p = V.plots[i];
+            moveCameraTo({ r: 19, theta: p.rot + 0.15, phi: 0.82, tx: p.x, ty: 0, tz: p.z });
+            const bar = document.getElementById('vDecorItems');
+            bar.innerHTML = Object.entries(V_ITEMS).map(([k, v]) => `<button onclick="villageDecorAdd('${k}')" class="shrink-0 px-2 py-1.5 rounded-lg bg-black/40 border border-amber-300/40 text-[11px] text-amber-100 font-bold">${v.e} ${v.name}</button>`).join('');
+            document.getElementById('vDecorPanel').classList.remove('hidden');
+            updateDecorPanel();
+            refreshVillage();
+            showToast('🪴 擺設模式：按下方加入擺設，點地面把選中的擺設移過去，點擺設可以選取它。');
+        }
+        function updateDecorPanel() {
+            const D = VILLAGE.decor; if (!D) return;
+            document.getElementById('vDecorInfo').textContent = D.sel >= 0 ? `選取：${V_ITEMS[D.items[D.sel].t].e} ${V_ITEMS[D.items[D.sel].t].name}（點地面移動）` : `已擺 ${D.items.length}/${V_MAX_ITEMS} 件・點擺設可選取`;
+            document.getElementById('vDecorSelBtns').classList.toggle('hidden', D.sel < 0);
+            const h = VILLAGE.houses[D.plot];
+            if (h && h.decoG) h.decoG.children.forEach(m => { const on = m.userData.itemIdx === D.sel; m.scale.setScalar(on ? 1.15 : 1); m.position.y = on ? 0.1 : 0; });
+            if (h && h.decoG) {
+                if (!VILLAGE.selRing) { VILLAGE.selRing = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.68, 32), new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide, transparent: true, opacity: 0.9, depthWrite: false })); VILLAGE.selRing.rotation.x = -Math.PI / 2; }
+                const it = D.items[D.sel];
+                if (it) { h.decoG.add(VILLAGE.selRing); VILLAGE.selRing.position.set(it.x, 0.06, it.z); VILLAGE.selRing.visible = true; } else VILLAGE.selRing.visible = false;
+            }
+        }
+        function villageDecorAdd(t) {
+            const V = VILLAGE, D = V.decor; if (!D) return;
+            if (D.items.length >= V_MAX_ITEMS) { showToast(`🪴 最多擺 ${V_MAX_ITEMS} 件喔`); return; }
+            const p = V.plots[D.plot];
+            let l = playerAvatarGroup ? vToLocal(p, playerAvatarGroup.position.x, playerAvatarGroup.position.z) : { x: 0, z: 3 };
+            if (Math.abs(l.x) > 5.2 || Math.abs(l.z) > 6.7) l = { x: (Math.random() - 0.5) * 6, z: 3 + Math.random() * 2.5 };
+            D.items.push({ t, x: +(l.x + 0.8).toFixed(1), z: +l.z.toFixed(1), r: 0 });
+            D.sel = D.items.length - 1;
+            refreshVillage(); updateDecorPanel();
+        }
+        function villageDecorRotate(dir) { const D = VILLAGE.decor; if (!D || D.sel < 0) return; D.items[D.sel].r = +((D.items[D.sel].r || 0) + dir * Math.PI / 4).toFixed(3); refreshVillage(); updateDecorPanel(); }
+        function villageDecorDelete() { const D = VILLAGE.decor; if (!D || D.sel < 0) return; D.items.splice(D.sel, 1); D.sel = -1; refreshVillage(); updateDecorPanel(); }
+        function villageDecorClick(ray) {
+            const V = VILLAGE, D = V.decor; if (!D) return false;
+            const p = V.plots[D.plot];
+            const t = -ray.ray.origin.y / ray.ray.direction.y;
+            if (!(t > 0)) return false;
+            const wx = ray.ray.origin.x + ray.ray.direction.x * t, wz = ray.ray.origin.z + ray.ray.direction.z * t;
+            const l = vToLocal(p, wx, wz);
+            if (Math.abs(l.x) > V.W / 2 || Math.abs(l.z) > V.D / 2) return false;
+            let best = -1, bd = 0.8;
+            D.items.forEach((it, k) => { const d = Math.hypot(it.x - l.x, it.z - l.z); if (d < bd) { bd = d; best = k; } });
+            if (best >= 0 && best !== D.sel) D.sel = best;
+            else if (D.sel >= 0) { D.items[D.sel].x = +Math.max(-5.2, Math.min(5.2, l.x)).toFixed(1); D.items[D.sel].z = +Math.max(-6.7, Math.min(6.7, l.z)).toFixed(1); }
+            else return true;
+            refreshVillage(); updateDecorPanel();
+            return true;
+        }
+        function finishVillageDecor(save) {
+            const V = VILLAGE, D = V.decor; if (!D) return;
+            V.decor = null;
+            document.getElementById('vDecorPanel').classList.add('hidden');
+            if (save) { const h = myHome(); if (h) { h.it = D.items; saveMyHome(sanitizeHome(h)); showToast('🪴 擺設完成！鄰居經過都看得到。'); emitAct('vdecor'); } }
+            else refreshVillage();
+        }
+
+        // ---------------------------------------------------------------- camera helpers and 回家
+        function moveCameraTo(c) {
+            camControl.desiredTarget.set(c.tx, c.ty, c.tz);
+            Object.assign(camControl.desiredSpherical, { radius: c.r, theta: c.theta, phi: c.phi });
+            state.followCam = false;
+        }
+        function goMyHome() {
+            const h = myHome(), o = h ? VILLAGE.owners.get(h.p) : null;
+            if (!h || !o || !o.mine) {
+                if (h && (!o || !o.mine)) showToast('🏗️ 你原本的地被別人先認領了，請在問心村另找一塊空地。');
+                else showToast('🏘️ 你還沒有家。到問心村找一塊「空地」，點告示牌就能認領、蓋房子！');
+                moveCameraPreset('village');
+                return;
+            }
+            const p = VILLAGE.plots[h.p];
+            if (playerAvatarGroup) {
+                if (state.upstairs) { state.upstairs = false; state.followCam = false; updateStairsButton(); }
+                if (state.towerFloor) { state.towerFloor = 0; state.followCam = false; }
+                const w = vLocal(p, 0, 0, VILLAGE.D / 2 - 0.6);
+                playerAvatarGroup.position.set(w.x, 0, w.z);
+                playerAvatarGroup.rotation.set(0, p.rot + Math.PI, 0);
+                setPlayerPose('stand', true);
+            }
+            moveCameraPreset('myhome');
         }
 
         // =====================================================================
@@ -17882,8 +18695,8 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             ['大殿', ['overview', 'festival', 'shrine', 'altar', 'mazu', 'nezha', 'tiger', 'tiangong', 'upper', 'stairs', 'sanguan', 'daxiong', 'sanbao']],
             ['偏殿', ['tudigong', 'light', 'lampwall_gm', 'lampwall_ts', 'side_left', 'side_right', 'side_wing_left', 'side_wing_right', 'tigercave', 'side_dizang']],
             ['後殿', ['rearhall', 'guandi', 'tianshi', 'xuantian', 'yuhuang', 'sanqing']],
-            ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'wishtree', 'puppet', 'longquan', 'guanyinpond', 'grounds']],
-            ['活動', ['fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'yufo', 'cat', 'monk', 'fireworks', 'festival']]
+            ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'wishtree', 'puppet', 'longquan', 'village', 'guanyinpond', 'grounds']],
+            ['活動', ['myhome', 'fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'yufo', 'cat', 'monk', 'fireworks', 'festival']]
         ];
         let camGroupActive = 0;
         function showCamGroup(i) {
@@ -17948,6 +18761,8 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             presets.fudecenser = { r: 7.5, theta: 0.15, phi: 1.3, tx: FUDE_CENSER_POS.x, ty: 1.4, tz: FUDE_CENSER_POS.z - 1 };
             presets.wishtree = { r: 13, theta: -0.95, phi: 1.12, tx: WISHTREE.x - 2, ty: 2.0, tz: WISHTREE.z + 0.5 };
             if (TIGER_CAVE.cam) presets.tigercave = TIGER_CAVE.cam;
+            presets.village = { r: 72, theta: 0.35, phi: 0.95, tx: VILLAGE.axisX, ty: 0, tz: VILLAGE.crossZ };
+            { const mh = myHome(), pl = mh && VILLAGE.plots[mh.p]; presets.myhome = pl ? { r: 15, theta: pl.rot + 0.4, phi: 1.2, tx: pl.x, ty: 1.4, tz: pl.z } : presets.village; }
             presets.longquan = { r: 24, theta: -Math.PI / 2 - 0.25, phi: 1.3, tx: 57, ty: 4.5, tz: LONGQUAN.z + 3 };
             presets.yufo = { r: 6.2, theta: YUFO.rot + 0.45, phi: 1.3, tx: YUFO.x, ty: 1.3, tz: YUFO.z };
             presets.shitou = { r: 6.5, theta: Math.PI / 2 + 0.25, phi: 1.3, tx: SHITOU_TREE.x + 3.4, ty: 1.2, tz: SHITOU_TREE.z };
@@ -18101,6 +18916,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
                     mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
                     mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
                     raycaster.setFromCamera(mouse, camera);
+                    if (VILLAGE.decor && villageDecorClick(raycaster)) return;
                     const hits = raycaster.intersectObjects(clickableMeshes, false);
                     if (hits.length > 0) handle3DClick(hits[0].object.userData.interactType, hits[0].object.userData);
                 }
@@ -18127,6 +18943,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             else if (type && type.startsWith('tigercave')) tigerCaveInteract(type);
             else if (type === 'yufo') yufoInteract();
             else if (type === 'longquan') longquanInteract();
+            else if (type === 'vhome') villageInteract(ud);
             else if (type === 'xiaoren') openXiaorenModal();
             else if (type && type.startsWith('miaozhu')) miaozhuInteract(type, ud);
             else if (type && type.startsWith('zhaitang')) zhaitangInteract(type);
@@ -18260,12 +19077,21 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
                 // Stay inside the temple grounds' walls
                 // The main hall (with its back wall and stair tower) is a solid block; walk around it to reach the back
                 const inMainHall = (x, z) => x > -12.2 && x < 9.2 && z > -11.2 && z < -1.2;
-                const nx = Math.max(GROUNDS.minX + 1.0, Math.min(GROUNDS.maxX - 1.0, pos.x + dx));
-                const nz = Math.max(GROUNDS.minZ + 2.0, Math.min(GROUNDS.maxZ - 1.0, pos.z + dz));
+                // the front wall can only be crossed through the 山門 opening; beyond it lies 問心村
+                const inGate = x => Math.abs(x - GROUNDS.axisX) < 4.0;
+                let nx, nz;
+                if (pos.z <= GROUNDS.maxZ - 0.3) {
+                    nx = Math.max(GROUNDS.minX + 1.0, Math.min(GROUNDS.maxX - 1.0, pos.x + dx));
+                    nz = Math.max(GROUNDS.minZ + 2.0, Math.min(inGate(nx) && inGate(pos.x) ? VILLAGE.z1 - 1 : GROUNDS.maxZ - 1.0, pos.z + dz));
+                } else {
+                    nx = Math.max(VILLAGE.x0, Math.min(VILLAGE.x1, pos.x + dx));
+                    nz = Math.min(VILLAGE.z1 - 1, Math.max(inGate(nx) && inGate(pos.x) ? GROUNDS.minZ + 2.0 : GROUNDS.maxZ + 0.7, pos.z + dz));
+                }
                 if (!inMainHall(nx, nz)) { pos.x = nx; pos.z = nz; }
                 else if (!inMainHall(nx, pos.z)) pos.x = nx;
                 else if (!inMainHall(pos.x, nz)) pos.z = nz;
                 resolveCollisions(pos);
+                if (pos.z > GROUNDS.maxZ - 2) villageCollide(pos);
                 const inHallX = pos.x > -11.3 && pos.x < 8.3;
                 const jlx = pos.x - JINLU_POS.x, jlz = pos.z - JINLU_POS.z, jc = Math.cos(JINLU_POS.rot), jsn = Math.sin(JINLU_POS.rot);
                 const onPad = Math.abs(jlx * jc - jlz * jsn) < JINLU_DIM.padHalf && Math.abs(jlx * jsn + jlz * jc) < JINLU_DIM.padHalf;
@@ -18567,6 +19393,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             updateYufo(t, performance.now());
             updateLongquan(t, dt, performance.now());
             updateLongquanDrink(performance.now());
+            updateVillage(t, dt);
             if (!MONK.mesh && DAXIONG.lotus.length && typeof towerAnim !== 'undefined') buildResidentMonk();
             updateResidentMonk(t, dt);
             renderer.render(scene, camera);
