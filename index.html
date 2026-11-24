@@ -609,7 +609,8 @@
             <button onclick="closeTofuGame()" class="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-bold z-10">✕</button>
             <h3 class="text-base font-bold text-amber-300 tracking-wider mb-2 pl-1">🍢 村口臭豆腐攤</h3>
             <div class="relative mx-auto" style="max-width:340px">
-                <canvas id="tofuCanvas" class="block w-full rounded-xl touch-none select-none" style="aspect-ratio:340/330"></canvas>
+                <canvas id="tofu3d" class="block w-full rounded-xl" style="aspect-ratio:340/330;position:absolute;inset:0;height:auto"></canvas>
+                <canvas id="tofuCanvas" class="block w-full rounded-xl touch-none select-none" style="aspect-ratio:340/330;position:relative"></canvas>
                 <div id="tofuHeat" style="position:absolute;right:8px;top:24%;display:flex;flex-direction:column;gap:6px;padding:6px;border-radius:16px;background:rgba(0,0,0,0.35)"></div>
             </div>
             <div id="tofuPanel" class="mx-auto mt-2" style="max-width:340px"></div>
@@ -17016,6 +17017,9 @@
         ];
         const TOFU_SEA_NAME = Object.fromEntries(TOFU_SEA.map(s => [s.k, s.name]));
         const TOFU_HEAT = { big: { name: '大', mul: 1.6 }, mid: { name: '中', mul: 1.0 }, small: { name: '小', mul: 0.6 } };
+        // ---------------------------------------------------------------- 炸臭豆腐（精細實景版）
+        // 油溫：火力把油溫往目標推（大 220、中 180、小 140 ℃），每下一塊豆腐油溫掉一些；油少升溫快、也容易冒煙。
+        // 豆腐兩面分開熟：貼鍋那面熟得快，點一下翻面；拖到右下盤子撈起。兩面都金黃才完美；油溫太低會吸油變油膩。
         function openTofuGame() {
             emitAct('tofu');
             document.getElementById('tofuModal').classList.remove('hidden');
@@ -17025,7 +17029,10 @@
             cv.width = TG.W * TG.dpr; cv.height = TG.H * TG.dpr;
             if (!cv.dataset.bound) {
                 cv.dataset.bound = '1';
-                cv.addEventListener('pointerdown', e => { const r = cv.getBoundingClientRect(); tofuTap((e.clientX - r.left) * TG.W / r.width, (e.clientY - r.top) * TG.H / r.height); e.preventDefault(); });
+                const pt = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * TG.W / r.width, (e.clientY - r.top) * TG.H / r.height]; };
+                cv.addEventListener('pointerdown', e => { const [x, y] = pt(e); TG.px = x; TG.py = y; try { cv.setPointerCapture(e.pointerId); } catch (err) {} tofuTap(x, y); e.preventDefault(); });
+                cv.addEventListener('pointermove', e => { const [x, y] = pt(e); TG.px = x; TG.py = y; if (TG.drag) TG.drag.moved = TG.drag.moved || Math.hypot(x - TG.drag.x0, y - TG.drag.y0) > 8; });
+                ['pointerup', 'pointercancel'].forEach(ev => cv.addEventListener(ev, () => tofuRelease()));
             }
             tofuReset('menu');
             renderTofuPanel();
@@ -17036,67 +17043,88 @@
             TG.raf = requestAnimationFrame(loop);
         }
         function closeTofuGame() {
-            TG.on = false; cancelAnimationFrame(TG.raf);
+            TG.on = false; cancelAnimationFrame(TG.raf); tofuHumStop();
             document.getElementById('tofuModal').classList.add('hidden');
         }
-        const TOFU_COOK = { ready: 5.0, perfect: 7.2, over: 9.0, burnt: 11.0 };   // seconds in the oil at medium heat
-        const TOFU_WOK = { x: 150, y: 205, rx: 128, ry: 100 };
-        const TOFU_SLOTS = Array.from({ length: 6 }, (_, i) => { const a = -Math.PI / 2 + i / 6 * Math.PI * 2; return { x: TOFU_WOK.x + Math.cos(a) * 62, y: TOFU_WOK.y + Math.sin(a) * 46 }; });
+        // doneness of one face, in "seconds at 180 ℃"
+        const TOFU_COOK = { ready: 3.2, perfect: 5.0, over: 6.4, burnt: 8.0 };
+        const TOFU_WOK = { x: 150, y: 200, rx: 128, ry: 98 };
+        const TOFU_PLATE = { x: 262, y: 296, rx: 70, ry: 22 };
+        const TOFU_SLOTS = Array.from({ length: 6 }, (_, i) => { const a = -Math.PI / 2 + i / 6 * Math.PI * 2; return { x: TOFU_WOK.x + Math.cos(a) * 60, y: TOFU_WOK.y + 4 + Math.sin(a) * 44 }; });
         const TOFU_FACES = ['🧑', '👩', '👴', '👵', '👦', '👧', '🧔', '👨‍🦱'];
+        const TOFU_TARGET_T = { big: 222, mid: 182, small: 142 };
         function tofuReset(mode) {
-            Object.assign(TG, { mode, time: 60, score: 0, combo: 0, served: 0, slots: TOFU_SLOTS.map(() => null), plate: [], sea: new Set(), queue: [], spawnT: 0.5, fx: [], heat: 'mid', oilLv: 1, bubbles: [] });
+            Object.assign(TG, { mode, time: 75, score: 0, combo: 0, served: 0, slots: TOFU_SLOTS.map(() => null), plate: [], sea: new Set(), queue: [], spawnT: 0.5, fx: [], heat: 'mid', oilLv: 1, temp: 175, bubbles: [], splats: [], smoke: [], drag: null });
             if (document.getElementById('tofuPanel')) renderTofuPanel();
         }
         function tofuNewCustomer() {
-            const hard = Math.min(1, (60 - TG.time) / 60);
+            const hard = Math.min(1, (75 - TG.time) / 75);
             const pool = TOFU_SEA.map(s => s.k).sort(() => Math.random() - 0.5);
             const want = new Set(pool.slice(0, 1 + ((Math.random() * (1.4 + hard * 1.6)) | 0)));
             if (Math.random() < 0.55) want.add('pao');
-            TG.queue.push({ face: TOFU_FACES[(Math.random() * TOFU_FACES.length) | 0], n: 2 + ((Math.random() * (2 + hard * 2)) | 0), want, pat: 26 - hard * 8, max: 26 - hard * 8 });
+            TG.queue.push({ face: TOFU_FACES[(Math.random() * TOFU_FACES.length) | 0], n: 2 + ((Math.random() * (1.5 + hard * 2)) | 0), want, pat: 34 - hard * 10, max: 34 - hard * 10 });
         }
-        function tofuQuality(t) {
-            if (t < TOFU_COOK.ready) return { q: 'raw', pts: 3, label: '還沒熟' };
-            if (t < TOFU_COOK.perfect) return { q: 'perfect', pts: 30, label: '金黃酥脆！' };
-            if (t < TOFU_COOK.over) return { q: 'good', pts: 15, label: '有點老' };
-            if (t < TOFU_COOK.burnt) return { q: 'over', pts: 5, label: '炸太久' };
-            return { q: 'burnt', pts: -10, label: '焦掉了' };
+        // grade one tofu from both faces and how oily it got
+        function tofuQuality(s) {
+            const lo = Math.min(s.a, s.b), hi = Math.max(s.a, s.b);
+            if (hi >= TOFU_COOK.burnt) return { q: 'burnt', pts: -10, label: '焦掉了' };
+            if (lo < TOFU_COOK.ready) return { q: 'raw', pts: 3, label: hi >= TOFU_COOK.ready ? '另一面還沒熟' : '還沒熟' };
+            let r = lo >= TOFU_COOK.ready && hi < TOFU_COOK.perfect ? { q: 'perfect', pts: 30, label: '兩面金黃酥脆！' } : hi < TOFU_COOK.over ? { q: 'good', pts: 18, label: '有一面稍老' } : { q: 'over', pts: 6, label: '炸太老了' };
+            if (s.oily > 1.2) { r = Object.assign({}, r, { pts: r.pts - 8, label: r.label + '・有點油膩', oily: true }); if (r.q === 'perfect') r.q = 'good'; }
+            return r;
         }
         function tofuToast(text, x, y, col) { TG.fx.push({ text, x, y, col: col || '#fde68a', t: 0 }); }
         const TB = { start: { x: 95, y: 250, w: 150, h: 48 } };
         const tInside = (b, x, y) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
-        // tap in the canvas: start / restart, or lift a tofu out of the oil onto the plate
+        const onPlate = (x, y) => Math.hypot((x - TOFU_PLATE.x) / (TOFU_PLATE.rx + 16), (y - TOFU_PLATE.y) / (TOFU_PLATE.ry + 24)) < 1;
         function tofuTap(x, y) {
             ensureAudioCtx();
-            if (TG.mode !== 'play') { if (tInside(TB.start, x, y)) { tofuReset('play'); playWoodenFishSound(); } return; }
+            if (TG.mode !== 'play') { if (tInside(TB.start, x, y)) { tofuReset('play'); playWoodenFishSound(); tofuHumStart(); } return; }
             for (let i = 0; i < TG.slots.length; i++) {
                 const s = TOFU_SLOTS[i], cur = TG.slots[i];
-                if (!cur || Math.hypot(x - s.x, y - s.y) > 28) continue;
-                const q = tofuQuality(cur.t);
-                TG.slots[i] = null;
-                if (q.q === 'burnt') { TG.score = Math.max(0, TG.score - 10); TG.combo = 0; tofuToast('焦掉了 −10', s.x, s.y - 20, '#f87171'); tofuSizzle(0.4); return; }
-                if (TG.plate.length >= 6) { TG.slots[i] = cur; tofuToast('盤子滿了', s.x, s.y - 20, '#f87171'); return; }
-                TG.plate.push(q);
-                tofuToast(q.label, s.x, s.y - 20, q.q === 'perfect' ? '#facc15' : q.q === 'raw' ? '#fca5a5' : '#fdba74');
-                tofuSizzle(0.5);
-                renderTofuPanel();
+                if (!cur || Math.hypot(x - s.x, y - s.y) > 26) continue;
+                TG.drag = { i, x0: x, y0: y, moved: false };
                 return;
             }
         }
-        // the HTML panel: heat, tabs, ingredient / seasoning cards, 起鍋
+        function tofuRelease() {
+            const D = TG.drag; TG.drag = null;
+            if (!D || TG.mode !== 'play') return;
+            const cur = TG.slots[D.i]; if (!cur) return;
+            const s = TOFU_SLOTS[D.i];
+            if (!D.moved) {   // a tap flips it with the chopsticks
+                cur.flip = 0.35; [cur.a, cur.b] = [cur.b, cur.a];
+                tofuSizzle(0.45);
+                for (let n = 0; n < 5; n++) TG.splats.push({ x: s.x + (Math.random() - 0.5) * 30, y: s.y - 6, vx: (Math.random() - 0.5) * 80, vy: -60 - Math.random() * 60, t: 0 });
+                return;
+            }
+            if (!onPlate(TG.px, TG.py)) return;   // dropped back into the oil
+            const q = tofuQuality(cur);
+            TG.slots[D.i] = null;
+            if (q.q === 'burnt') { TG.score = Math.max(0, TG.score - 10); TG.combo = 0; tofuToast('焦掉了，丟掉 −10', TOFU_PLATE.x, TOFU_PLATE.y - 34, '#f87171'); return; }
+            if (TG.plate.length >= 6) { TG.slots[D.i] = cur; tofuToast('盤子滿了', TOFU_PLATE.x, TOFU_PLATE.y - 34, '#f87171'); return; }
+            TG.plate.push(Object.assign({}, q, { a: cur.a, b: cur.b, seed: Math.random() * 1000 }));
+            tofuToast(q.label, TOFU_PLATE.x - 20, TOFU_PLATE.y - 40, q.q === 'perfect' ? '#facc15' : q.q === 'raw' ? '#fca5a5' : '#fdba74');
+            tofuSizzle(0.25);
+            renderTofuPanel();
+        }
         function tofuHeat(h) { TG.heat = h; playWoodenFishSound(); renderTofuPanel(); }
         function tofuTab(t) { TG.tab = t; renderTofuPanel(); }
         function tofuCard(k) {
             ensureAudioCtx();
             if (TG.mode !== 'play') return;
             if (k === 'tofu') {
-                if (TG.oilLv < 0.15) { tofuToast('油不夠了，先添油！', 150, 205, '#fca5a5'); return; }
+                if (TG.oilLv < 0.15) { tofuToast('油不夠了，先添油！', 150, 200, '#fca5a5'); return; }
                 const i = TG.slots.findIndex(s => !s);
-                if (i < 0) { tofuToast('油鍋滿了', 150, 205, '#fca5a5'); return; }
-                TG.slots[i] = { t: 0 }; TG.oilLv = Math.max(0, TG.oilLv - 0.06); tofuSizzle(1);
-                for (let n = 0; n < 6; n++) TG.bubbles.push({ x: TOFU_SLOTS[i].x + (Math.random() - 0.5) * 40, y: TOFU_SLOTS[i].y + (Math.random() - 0.5) * 30, t: 0 });
+                if (i < 0) { tofuToast('油鍋滿了', 150, 200, '#fca5a5'); return; }
+                TG.slots[i] = { a: 0, b: 0, oily: 0, flip: 0, drop: 0.3, rot: (Math.random() - 0.5) * 0.5, seed: Math.random() * 1000 };
+                TG.oilLv = Math.max(0, TG.oilLv - 0.05); TG.temp -= 9;
+                tofuSizzle(1);
+                const s = TOFU_SLOTS[i];
+                for (let n = 0; n < 10; n++) TG.splats.push({ x: s.x + (Math.random() - 0.5) * 20, y: s.y - 4, vx: (Math.random() - 0.5) * 120, vy: -80 - Math.random() * 90, t: 0 });
                 return;
             }
-            if (k === 'oil') { TG.oilLv = 1; tofuSizzle(0.6); tofuToast('油添滿了', 150, 205); return; }
+            if (k === 'oil') { const before = TG.oilLv; TG.oilLv = 1; TG.temp -= (1 - before) * 40; tofuSizzle(0.6); tofuToast('添油：油溫會先降一點', 150, 200); return; }
             if (TOFU_SEA_NAME[k]) { if (TG.sea.has(k)) TG.sea.delete(k); else TG.sea.add(k); playWoodenFishSound(); renderTofuPanel(); }
         }
         function tofuServe() {
@@ -17121,6 +17149,441 @@
             renderTofuPanel();
         }
         function tofuDump() { if (TG.mode !== 'play' || (!TG.plate.length && !TG.sea.size)) return; TG.plate = []; TG.sea = new Set(); TG.combo = 0; tofuToast('倒掉重來', 150, 300, '#fca5a5'); renderTofuPanel(); }
+        // a soft continuous frying hiss whose loudness follows how many pieces are in the oil and how hot it is
+        function tofuHumStart() {
+            const ctx = ensureAudioCtx(); if (!ctx || TG.hum) return;
+            const len = 2, buf = ctx.createBuffer(1, ctx.sampleRate * len, ctx.sampleRate), d = buf.getChannelData(0);
+            for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (Math.random() < 0.08 ? 1 : 0.25);
+            const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+            const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 5200; f.Q.value = 0.7;
+            const g = ctx.createGain(); g.gain.value = 0;
+            src.connect(f); f.connect(g); g.connect(ctx.destination); src.start();
+            TG.hum = { src, g };
+        }
+        function tofuHumStop() { if (TG.hum) { try { TG.hum.src.stop(); } catch (e) {} TG.hum = null; } }
+        function tofuUpdate(dt) {
+            TG.fx.forEach(f => f.t += dt); TG.fx = TG.fx.filter(f => f.t < 1.2);
+            TG.bubbles.forEach(b => b.t += dt); TG.bubbles = TG.bubbles.filter(b => b.t < b.life);
+            TG.splats.forEach(s => { s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 420 * dt; }); TG.splats = TG.splats.filter(s => s.t < 0.5);
+            TG.smoke.forEach(s => { s.t += dt; s.y -= 26 * dt; s.x += Math.sin(s.t * 2 + s.p) * 10 * dt; }); TG.smoke = TG.smoke.filter(s => s.t < 2.2);
+            if (TG.mode !== 'play') { if (TG.hum) TG.hum.g.gain.value = 0; return; }
+            TG.time -= dt;
+            // oil temperature drifts toward what the flame can hold; less oil heats faster
+            const target = TOFU_TARGET_T[TG.heat] + (1 - TG.oilLv) * 25, k = (0.22 + (1 - TG.oilLv) * 0.5);
+            TG.temp += (target - TG.temp) * Math.min(1, dt * k);
+            const rate = Math.max(0, (TG.temp - 110) / 70);   // 1.0 at 180 ℃
+            let n = 0;
+            TG.slots.forEach((s, i) => {
+                if (!s) return; n++;
+                s.a += dt * rate; s.b += dt * rate * 0.28;   // the face down in the oil cooks, the top only a little
+                if (TG.temp < 150) s.oily += dt * (150 - TG.temp) / 30;
+                s.flip = Math.max(0, s.flip - dt); s.drop = Math.max(0, s.drop - dt);
+                const sp = TOFU_SLOTS[i];
+                if (Math.random() < dt * (4 + rate * 26)) TG.bubbles.push({ x: sp.x + (Math.random() - 0.5) * 46, y: sp.y + (Math.random() - 0.5) * 36, t: 0, life: 0.35 + Math.random() * 0.4, r: 1 + Math.random() * 2.4 });
+            });
+            if (n) TG.oilLv = Math.max(0, TG.oilLv - dt * 0.0035 * rate * n / 3);
+            if (TG.temp > 205 && Math.random() < dt * (TG.temp - 200) / 4) TG.smoke.push({ x: TOFU_WOK.x + (Math.random() - 0.5) * 140, y: TOFU_WOK.y - 10 + (Math.random() - 0.5) * 60, t: 0, p: Math.random() * 6 });
+            if (TG.hum) TG.hum.g.gain.value = Math.min(0.09, n * 0.012 * Math.max(0.3, rate));
+            TG.spawnT -= dt;
+            if (TG.spawnT <= 0 && TG.queue.length < 3) { tofuNewCustomer(); TG.spawnT = 8 + Math.random() * 5; }
+            TG.queue.forEach(c => c.pat -= dt);
+            if (TG.queue.length && TG.queue[0].pat <= 0) { TG.queue.shift(); TG.score = Math.max(0, TG.score - 15); TG.combo = 0; tofuToast('客人等太久走了 −15', 150, 90, '#f87171'); }
+            TG.queue = TG.queue.filter(c => c.pat > 0);
+            if (TG.time <= 0) tofuEnd();
+        }
+        function tofuEnd() {
+            TG.mode = 'over'; TG.drag = null;
+            renderTofuPanel();
+            const prev = tofuBest();
+            TG.newBest = TG.score > prev;
+            if (TG.newBest) tofuSaveBest(TG.score);
+            TG.best = Math.max(prev, TG.score);
+            const list = tofuLeaders();
+            TG.rank = list.findIndex(r => r.mine) + 1;
+            renderTofuLeaders(); refreshTofuBoard();
+            playTempleBellSound(TG.newBest ? 1046 : 659);
+            if (TG.newBest && TG.score > 0) emitAct('tofubest');
+        }
+        // crust colour for a face's doneness: pale curd → light gold → deep gold → brown → charred
+        function tofuColor(t) {
+            const stops = [[0, [236, 226, 196]], [TOFU_COOK.ready * 0.6, [232, 200, 120]], [TOFU_COOK.ready, [222, 165, 70]], [TOFU_COOK.perfect, [196, 122, 38]], [TOFU_COOK.over, [140, 78, 28]], [TOFU_COOK.burnt, [44, 30, 22]]];
+            for (let i = 0; i < stops.length - 1; i++) {
+                const [a, ca] = stops[i], [b, cb] = stops[i + 1];
+                if (t <= b) { const k = Math.max(0, (t - a) / (b - a)); return ca.map((v, j) => Math.round(v + (cb[j] - v) * k)); }
+            }
+            return [44, 30, 22];
+        }
+        const rgb = (c, m = 1, a = 1) => `rgba(${Math.min(255, c[0] * m) | 0},${Math.min(255, c[1] * m) | 0},${Math.min(255, c[2] * m) | 0},${a})`;
+        function tofuRR(x, X, Y, W, H, r) { x.beginPath(); if (x.roundRect) x.roundRect(X, Y, W, H, r); else x.rect(X, Y, W, H); }
+        // hammered-iron wok texture, painted once
+        function tofuWokTexture() {
+            if (TG.wokTex) return TG.wokTex;
+            const c = document.createElement('canvas'); c.width = 300; c.height = 240;
+            const x = c.getContext('2d');
+            const g = x.createRadialGradient(150, 120, 20, 150, 120, 150); g.addColorStop(0, '#3a3532'); g.addColorStop(0.7, '#24201e'); g.addColorStop(1, '#4b4542');
+            x.fillStyle = g; x.fillRect(0, 0, 300, 240);
+            for (let i = 0; i < 900; i++) { const px = Math.random() * 300, py = Math.random() * 240, r = 2 + Math.random() * 5; const hg = x.createRadialGradient(px - r * 0.3, py - r * 0.3, 0, px, py, r); hg.addColorStop(0, 'rgba(255,255,255,0.08)'); hg.addColorStop(1, 'rgba(0,0,0,0.12)'); x.fillStyle = hg; x.beginPath(); x.arc(px, py, r, 0, Math.PI * 2); x.fill(); }
+            for (let i = 0; i < 60; i++) { x.strokeStyle = `rgba(150,90,40,${Math.random() * 0.12})`; x.lineWidth = 4 + Math.random() * 10; x.beginPath(); x.arc(150, 120, 30 + Math.random() * 110, Math.random() * 6, Math.random() * 6 + 0.8); x.stroke(); }   // seasoning patina
+            return (TG.wokTex = c);
+        }
+        // one piece of 臭豆腐 seen from above at a slight angle: top face, front and side faces, crust blisters
+        function drawTofuPiece(x, s, cx, cy, size, rot, lift) {
+            const top = tofuColor(s.b), side = tofuColor((s.a + s.b) / 2), bottom = tofuColor(s.a);
+            x.save(); x.translate(cx, cy - (lift || 0)); x.rotate(rot || 0);
+            const w = size, h = size * 0.84, d = size * 0.32;
+            x.fillStyle = 'rgba(0,0,0,0.28)'; x.beginPath(); x.ellipse(3, h * 0.55 + d * 0.4, w * 0.62, h * 0.24, 0, 0, Math.PI * 2); x.fill();
+            // front face (shows the underside colour where it meets the oil) and right side
+            const fg = x.createLinearGradient(0, h / 2, 0, h / 2 + d); fg.addColorStop(0, rgb(side, 0.92)); fg.addColorStop(1, rgb(bottom, 0.75));
+            x.fillStyle = fg; x.beginPath(); x.moveTo(-w / 2, h / 2); x.lineTo(w / 2, h / 2); x.lineTo(w / 2, h / 2 + d); x.lineTo(-w / 2, h / 2 + d); x.closePath(); x.fill();
+            x.fillStyle = rgb(side, 0.7); x.beginPath(); x.moveTo(w / 2, -h / 2); x.lineTo(w / 2 + d * 0.35, -h / 2 + d * 0.5); x.lineTo(w / 2 + d * 0.35, h / 2 + d * 0.5); x.lineTo(w / 2, h / 2 + d); x.lineTo(w / 2, h / 2); x.closePath(); x.fill();
+            // top face with soft rounded corners and a light-to-dark gradient
+            const tg = x.createLinearGradient(-w / 2, -h / 2, w / 2, h / 2); tg.addColorStop(0, rgb(top, 1.12)); tg.addColorStop(1, rgb(top, 0.88));
+            x.fillStyle = tg; tofuRR(x, -w / 2, -h / 2, w, h, size * 0.12); x.fill();
+            // crust: blisters and pores grow as the face fries; the raw curd shows fine holes
+            let rs = s.seed;
+            const rnd = () => (rs = (rs * 9301 + 49297) % 233280) / 233280;
+            const fried = Math.min(1, s.b / TOFU_COOK.ready);
+            for (let k = 0; k < 16; k++) {
+                const px = (rnd() - 0.5) * w * 0.82, py = (rnd() - 0.5) * h * 0.8, r = (0.6 + rnd() * 1.6) * (0.6 + fried * 0.8) * size / 30;
+                x.fillStyle = rgb(top, 0.72, 0.8); x.beginPath(); x.arc(px, py, r, 0, Math.PI * 2); x.fill();
+                if (fried > 0.4) { x.fillStyle = rgb(top, 1.25, 0.55); x.beginPath(); x.arc(px - r * 0.35, py - r * 0.35, r * 0.45, 0, Math.PI * 2); x.fill(); }
+            }
+            x.fillStyle = `rgba(255,255,255,${0.12 + 0.12 * fried})`; tofuRR(x, -w / 2 + 2, -h / 2 + 2, w * 0.5, h * 0.18, size * 0.08); x.fill();   // oily sheen
+            x.restore();
+        }
+        // ---------------------------------------------------------------- 炸臭豆腐 3D：獨立的小 three.js 場景（鐵鍋、熱油、立體豆腐、爐火、白瓷盤與配料）
+        // 遊戲邏輯沿用 2D 座標：每格油位與盤子的畫面位置由 3D 投影算出，HUD／計時環／油泡畫在上層透明畫布
+        const T3 = { ok: null };
+        function tofu3DInit() {
+            if (T3.ok !== null) return T3.ok;
+            const cv = document.getElementById('tofu3d');
+            try {
+                const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+                r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+                r.setSize(TG.W, TG.H, false);
+                r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+                r.outputEncoding = THREE.sRGBEncoding;
+                r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 0.85;
+                T3.r = r;
+            } catch (e) { T3.ok = false; return false; }
+            const S = T3.scene = new THREE.Scene();
+            S.background = new THREE.Color(0x231c17);
+            const cam = T3.cam = new THREE.PerspectiveCamera(37, TG.W / TG.H, 0.05, 30);
+            cam.position.set(0.28, 3.05, 2.7); cam.lookAt(0.28, -0.25, 0.5);
+            const env = typeof getStatueEnvMap === 'function' ? getStatueEnvMap() : null;
+            S.add(new THREE.HemisphereLight(0xfff2dc, 0x3a2a1e, 0.4));
+            const key = new THREE.DirectionalLight(0xfff0d8, 1.25); key.position.set(-1.6, 3.2, 1.8); key.castShadow = true;
+            key.shadow.mapSize.set(1024, 1024); Object.assign(key.shadow.camera, { left: -2, right: 2, top: 2, bottom: -2, near: 0.5, far: 8 }); key.shadow.bias = -0.0008;
+            S.add(key);
+            T3.fire = new THREE.PointLight(0xff8a3d, 1.2, 3.2, 2); T3.fire.position.set(0, -0.55, 0); S.add(T3.fire);
+            const gc = document.createElement('canvas'); gc.width = gc.height = 128; const gx = gc.getContext('2d'); const gg = gx.createRadialGradient(64, 64, 30, 64, 64, 64); gg.addColorStop(0, 'rgba(255,140,50,0)'); gg.addColorStop(0.75, 'rgba(255,120,40,0.55)'); gg.addColorStop(1, 'rgba(255,90,20,0)'); gx.fillStyle = gg; gx.fillRect(0, 0, 128, 128);
+            T3.glow = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 3.0), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(gc), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+            T3.glow.rotation.x = -Math.PI / 2; T3.glow.position.y = -0.41; S.add(T3.glow);
+            const lamp = new THREE.PointLight(0xffe2b0, 0.5, 6); lamp.position.set(1.4, 1.8, 1.2); S.add(lamp);
+            // stainless counter and the burner ring under the wok
+            const steelTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 256; const x = c.getContext('2d'); x.fillStyle = '#8d9196'; x.fillRect(0, 0, 256, 256); for (let i = 0; i < 1600; i++) { x.fillStyle = `rgba(${Math.random() < 0.5 ? '255,255,255' : '0,0,0'},${Math.random() * 0.06})`; x.fillRect(Math.random() * 256, Math.random() * 256, 40 + Math.random() * 120, 1); } const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 3); return t; })();
+            const counter = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshStandardMaterial({ map: steelTex, color: 0x5d6166, metalness: 0.6, roughness: 0.5, envMap: env, envMapIntensity: 0.35 }));
+            counter.rotation.x = -Math.PI / 2; counter.position.y = -0.42; counter.receiveShadow = true; S.add(counter);
+            const burner = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.05, 8, 40), new THREE.MeshStandardMaterial({ color: 0x1b1b1b, metalness: 0.6, roughness: 0.5 }));
+            burner.rotation.x = Math.PI / 2; burner.position.y = -0.4; S.add(burner);
+            // flames: a ring of additive cones licking up the outside of the wok
+            T3.flames = [];
+            const flameMat = new THREE.MeshBasicMaterial({ color: 0xff9a3d, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false });
+            const blueMat = new THREE.MeshBasicMaterial({ color: 0x4f8cff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false });
+            for (let k = 0; k < 22; k++) {
+                const a = k / 22 * Math.PI * 2, g = new THREE.Group();
+                g.position.set(Math.cos(a) * 0.62, -0.4, Math.sin(a) * 0.62);
+                const o = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.22, 6, 1, true), flameMat); o.position.y = 0.11; g.add(o);
+                const b = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.08, 6, 1, true), blueMat); b.position.y = 0.04; g.add(b);
+                g.rotation.z = Math.cos(a) * -0.5; g.rotation.x = Math.sin(a) * 0.5;
+                S.add(g); T3.flames.push({ g, ph: Math.random() * 6 });
+            }
+            // the wok: a hammered-iron bowl (lathe), rolled rim, wooden handle on a steel stem
+            const prof = []; for (let i = 0; i <= 24; i++) { const r = i / 24; prof.push(new THREE.Vector2(Math.max(0.001, r), -0.4 + 0.4 * r * r)); }
+            prof.push(new THREE.Vector2(1.0, 0.0), new THREE.Vector2(1.04, 0.02));
+            const wokTex = new THREE.CanvasTexture(tofuWokTexture()); wokTex.encoding = THREE.sRGBEncoding;
+            const wok = new THREE.Mesh(new THREE.LatheGeometry(prof, 72), new THREE.MeshStandardMaterial({ map: wokTex, bumpMap: wokTex, bumpScale: 0.01, color: 0x9a9088, metalness: 0.82, roughness: 0.42, side: THREE.DoubleSide, envMap: env, envMapIntensity: 0.9 }));
+            wok.castShadow = true; wok.receiveShadow = true; S.add(wok);
+            const rimM = new THREE.Mesh(new THREE.TorusGeometry(1.03, 0.022, 10, 80), new THREE.MeshStandardMaterial({ color: 0x8b847e, metalness: 0.9, roughness: 0.3, envMap: env }));
+            rimM.rotation.x = Math.PI / 2; rimM.position.y = 0.015; S.add(rimM);
+            const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.35, 10), rimM.material); stem.rotation.z = Math.PI / 2; stem.position.set(-1.18, 0.03, 0); S.add(stem);
+            const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 0.7, 14), new THREE.MeshStandardMaterial({ color: 0x6b4424, roughness: 0.55 }));
+            handle.rotation.z = Math.PI / 2 - 0.12; handle.position.set(-1.68, 0.08, 0); handle.castShadow = true; S.add(handle);
+            // oil: a rippling disc with mirror-like highlights, sized to the oil level
+            const oil = T3.oil = new THREE.Mesh(new THREE.CircleGeometry(1, 64, 0, Math.PI * 2), new THREE.MeshPhysicalMaterial({ color: 0xd99a2e, roughness: 0.08, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.06, envMap: env, envMapIntensity: 0.45, transparent: true, opacity: 0.96 }));
+            oil.rotation.x = -Math.PI / 2; oil.receiveShadow = true; S.add(oil);
+            T3.oilBase = oil.geometry.attributes.position.array.slice();
+            // a shared pore texture for the tofu crust (bump)
+            const pc = document.createElement('canvas'); pc.width = pc.height = 128;
+            const px = pc.getContext('2d'); px.fillStyle = '#808080'; px.fillRect(0, 0, 128, 128);
+            for (let i = 0; i < 260; i++) { const r = 1 + Math.random() * 3.5, x0 = Math.random() * 128, y0 = Math.random() * 128; const g = px.createRadialGradient(x0, y0, 0, x0, y0, r); g.addColorStop(0, Math.random() < 0.5 ? '#3a3a3a' : '#d8d8d8'); g.addColorStop(1, 'rgba(128,128,128,0)'); px.fillStyle = g; px.beginPath(); px.arc(x0, y0, r, 0, Math.PI * 2); px.fill(); }
+            T3.pores = new THREE.CanvasTexture(pc); T3.pores.wrapS = T3.pores.wrapT = THREE.RepeatWrapping;
+            // tofu blocks, one per oil slot (rounded box with vertex colours: top / sides / bottom fry separately)
+            T3.tofuGeo = (() => {
+                const g = new THREE.BoxGeometry(0.27, 0.2, 0.27, 6, 5, 6), p = g.attributes.position, v = new THREE.Vector3(), inner = new THREE.Vector3(0.105, 0.07, 0.105);
+                for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const c = new THREE.Vector3(Math.max(-inner.x, Math.min(inner.x, v.x)), Math.max(-inner.y, Math.min(inner.y, v.y)), Math.max(-inner.z, Math.min(inner.z, v.z))); const d = v.clone().sub(c); if (d.length() > 1e-6) d.setLength(0.03); v.copy(c).add(d); p.setXYZ(i, v.x, v.y, v.z); }
+                g.computeVertexNormals();
+                g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(p.count * 3), 3));
+                return g;
+            })();
+            T3.blocks = TOFU_SLOTS.map(() => {
+                const m = new THREE.Mesh(T3.tofuGeo.clone(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, bumpMap: T3.pores, bumpScale: 0.004 }));
+                m.castShadow = true; m.receiveShadow = true; m.visible = false; S.add(m); return m;
+            });
+            // plate on the counter: white porcelain with a blue rim line
+            const P = T3.plate = new THREE.Group(); P.position.set(0.82, -0.42, 1.5); P.scale.setScalar(1.1); S.add(P);
+            const plate = new THREE.Mesh(new THREE.LatheGeometry([[0, 0.012], [0.3, 0.012], [0.38, 0.035], [0.42, 0.06], [0.43, 0.065], [0.41, 0.06], [0.36, 0.04], [0.28, 0.03], [0, 0.03]].map(([r, y]) => new THREE.Vector2(r, y)), 56), new THREE.MeshPhysicalMaterial({ color: 0xf8f6f0, roughness: 0.18, clearcoat: 0.8, envMap: env, envMapIntensity: 0.5 }));
+            plate.castShadow = true; plate.receiveShadow = true; plate.scale.z = 0.8; P.add(plate);
+            const blue = new THREE.Mesh(new THREE.TorusGeometry(0.37, 0.006, 6, 60), new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.4 })); blue.rotation.x = Math.PI / 2; blue.position.y = 0.045; blue.scale.y = 0.8; P.add(blue);
+            T3.plateItems = new THREE.Group(); P.add(T3.plateItems); T3.plateKey = '';
+            // slotted strainer, shown while a piece is being lifted out
+            const sc = document.createElement('canvas'); sc.width = sc.height = 128;
+            const sx = sc.getContext('2d'); sx.fillStyle = '#fff'; sx.beginPath(); sx.arc(64, 64, 62, 0, Math.PI * 2); sx.fill(); sx.globalCompositeOperation = 'destination-out';
+            for (let r = 10; r < 58; r += 12) for (let k = 0; k < Math.floor(r / 2); k++) { const a = k / Math.floor(r / 2) * Math.PI * 2; sx.beginPath(); sx.arc(64 + Math.cos(a) * r, 64 + Math.sin(a) * r, 2.6, 0, Math.PI * 2); sx.fill(); }
+            const strain = T3.strainer = new THREE.Group();
+            const disc = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 10, 0, Math.PI * 2, Math.PI * 0.62, Math.PI * 0.38), new THREE.MeshStandardMaterial({ color: 0xc8ccd0, metalness: 0.85, roughness: 0.3, alphaMap: new THREE.CanvasTexture(sc), alphaTest: 0.5, side: THREE.DoubleSide, envMap: env }));
+            disc.position.y = 0.17; disc.castShadow = true; strain.add(disc);
+            const sh = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.9, 8), disc.material.clone()); sh.material.alphaMap = null; sh.material.alphaTest = 0; sh.rotation.z = Math.PI / 2 - 0.5; sh.position.set(0.55, 0.25, 0.12); strain.add(sh);
+            strain.visible = false; S.add(strain);
+            // steam puffs
+            T3.steam = [];
+            const pm = new THREE.SpriteMaterial({ map: getPuffTexture(), color: 0xffffff, transparent: true, opacity: 0, depthWrite: false });
+            for (let k = 0; k < 10; k++) { const s = new THREE.Sprite(pm.clone()); S.add(s); T3.steam.push({ s, ph: k / 10, x: (Math.random() - 0.5) * 1.2, z: (Math.random() - 0.5) * 0.8 }); }
+            T3.ray = new THREE.Raycaster(); T3.v = new THREE.Vector3();
+            T3.ok = true;
+            return true;
+        }
+        const oilYAt = lv => { const f = 0.35 + 0.42 * lv; return { y: -0.4 + 0.4 * f, r: Math.sqrt(f) * 0.985 }; };
+        function t3Project(v) { v.project(T3.cam); return { x: (v.x + 1) / 2 * TG.W, y: (1 - v.y) / 2 * TG.H }; }
+        function t3SetColors(m, s) {
+            const top = tofuColor(s.b), bot = tofuColor(s.a), mid = tofuColor((s.a + s.b) / 2);
+            const g = m.geometry, p = g.attributes.position, c = g.attributes.color, col = [0, 0, 0];
+            for (let i = 0; i < p.count; i++) {
+                const y = p.getY(i) / 0.1;   // -1 bottom … 1 top
+                const src = y > 0.6 ? top : y < -0.6 ? bot : (y > 0 ? mid.map((v, j) => v + (top[j] - v) * (y / 0.6) * 0.4) : mid.map((v, j) => v + (bot[j] - v) * (-y / 0.6) * 0.6));
+                for (let j = 0; j < 3; j++) col[j] = Math.pow(src[j] / 255, 2.2);
+                c.setXYZ(i, col[0], col[1], col[2]);
+            }
+            c.needsUpdate = true;
+            const fried = Math.min(1, (s.a + s.b) / (2 * TOFU_COOK.ready));
+            m.material.roughness = 0.75 - fried * 0.4; m.material.bumpScale = 0.002 + fried * 0.006;
+        }
+        // rebuild what is on the plate: quartered pieces, then the chosen toppings
+        function t3BuildPlate() {
+            const key = JSON.stringify([TG.plate.map(q => [q.a, q.b].map(v => +v.toFixed(1))), [...TG.sea].sort()]);
+            if (key === T3.plateKey) return;
+            T3.plateKey = key;
+            const G = T3.plateItems;
+            while (G.children.length) { const o = G.children.pop(); if (o.geometry && o.geometry !== T3.tofuGeo) o.geometry.dispose(); }
+            let rs = 11; const rnd = () => (rs = (rs * 9301 + 49297) % 233280) / 233280;
+            TG.plate.forEach((q, k) => {
+                const cx = -0.18 + (k % 3) * 0.18, cz = -0.06 + ((k / 3) | 0) * 0.16;
+                [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([u, v]) => {
+                    const m = new THREE.Mesh(T3.tofuGeo.clone(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4, bumpMap: T3.pores, bumpScale: 0.006 }));
+                    m.scale.setScalar(0.32); m.position.set(cx + u * 0.045, 0.06, cz + v * 0.045); m.rotation.y = rnd() * 0.5; m.castShadow = true;
+                    t3SetColors(m, { a: q.a, b: q.a * 0.6 + q.b * 0.4 }); G.add(m);
+                });
+            });
+            if (!TG.plate.length) return;
+            const add = (geo, color, x, y, z, rx = 0, ry = 0, rz = 0, extra) => { const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.5 }, extra || {}))); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; G.add(m); return m; };
+            if (TG.sea.has('pao')) { const g = new THREE.CylinderGeometry(0.004, 0.004, 0.06, 4); for (let k = 0; k < 70; k++) add(g, [0xf4f1d6, 0xd9e9b8, 0xbfe0a0, 0xf2a07a][k % 4], -0.2 + rnd() * 0.4, 0.1 + rnd() * 0.03, -0.1 + rnd() * 0.2, Math.PI / 2 + (rnd() - 0.5), rnd() * 3, 0); }
+            const drizzle = (color, z0, amp, freq) => { const pts = []; for (let k = 0; k <= 30; k++) { const u = k / 30; pts.push(new THREE.Vector3(-0.26 + u * 0.52, 0.12, z0 + Math.sin(u * freq) * amp)); } add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 60, 0.008, 6), color, 0, 0, 0, 0, 0, 0, { roughness: 0.15 }); };
+            if (TG.sea.has('chili')) drizzle(0xc81e14, -0.04, 0.06, 14);
+            if (TG.sea.has('soy')) drizzle(0x3a1a0c, 0.05, 0.05, 11);
+            if (TG.sea.has('garlic')) { const g = new THREE.SphereGeometry(0.008, 6, 4); for (let k = 0; k < 30; k++) add(g, 0xfbf3d6, -0.2 + rnd() * 0.4, 0.12, -0.1 + rnd() * 0.2); }
+            if (TG.sea.has('cilantro')) { const g = new THREE.CircleGeometry(0.018, 7); for (let k = 0; k < 16; k++) add(g, k % 2 ? 0x3f9a3a : 0x5bbf4c, -0.2 + rnd() * 0.4, 0.13, -0.1 + rnd() * 0.2, -Math.PI / 2 + (rnd() - 0.5) * 0.6, 0, rnd() * 3, { side: THREE.DoubleSide }); }
+        }
+        function tofuDraw3D() {
+            const now = performance.now(), t = now / 1000;
+            const O = oilYAt(TG.oilLv), hm = TOFU_HEAT[TG.heat].mul, hot = Math.min(1, Math.max(0, (TG.temp - 190) / 40));
+            // oil surface: level, size, colour, gentle convection ripples
+            T3.oil.position.y = O.y; T3.oil.scale.set(O.r, O.r, 1);
+            T3.oil.material.color.setRGB(0.62 - hot * 0.3, 0.3 - hot * 0.18, 0.05 - hot * 0.03);
+            const p = T3.oil.geometry.attributes.position, b = T3.oilBase, rate = Math.max(0, (TG.temp - 110) / 70);
+            for (let i = 0; i < p.count; i++) { const x = b[i * 3], y = b[i * 3 + 1]; p.setZ(i, (Math.sin(x * 9 + t * 3) + Math.sin(y * 11 - t * 2.4)) * 0.004 * (0.5 + rate)); }
+            p.needsUpdate = true; T3.oil.geometry.computeVertexNormals();
+            // flames flicker with the heat setting; the burner light follows
+            T3.flames.forEach((f, k) => { const s = (0.55 + 0.5 * hm) * (0.8 + 0.25 * Math.sin(t * 18 + f.ph) + 0.1 * Math.sin(t * 41 + k)); f.g.scale.set(1, s, 1); });
+            T3.fire.intensity = (0.6 + 0.9 * hm) * (0.85 + 0.15 * Math.sin(t * 23));
+            T3.glow.material.opacity = Math.min(1, 0.35 + 0.45 * hm) * (0.85 + 0.15 * Math.sin(t * 19)); T3.glow.scale.setScalar(0.9 + 0.12 * hm);
+            // tofu: position on the oil, bob, flip spin, colours from both faces; record each slot's screen spot for the game
+            TOFU_SLOTS.forEach((s, i) => {
+                const a = -Math.PI / 2 + i / 6 * Math.PI * 2, rr = O.r * 0.52;
+                const wx = Math.cos(a) * rr, wz = Math.sin(a) * rr;
+                const sp = t3Project(T3.v.set(wx, O.y + 0.04, wz)); s.x = sp.x; s.y = sp.y;
+                const m = T3.blocks[i], cur = TG.slots[i];
+                if (!cur || (TG.drag && TG.drag.i === i && TG.drag.moved)) { m.visible = false; return; }
+                m.visible = true;
+                const bob = Math.sin(t * 6 + i) * 0.006, drop = cur.drop > 0 ? cur.drop * 0.6 : 0, flip = cur.flip > 0 ? (cur.flip / 0.35) * Math.PI : 0;
+                m.position.set(wx, O.y + 0.035 + bob + drop + (cur.flip > 0 ? Math.sin(flip) * 0.12 : 0), wz);
+                m.rotation.set(flip, cur.rot || 0, Math.sin(t * 3 + i) * 0.03);
+                t3SetColors(m, cur);
+            });
+            // plate screen spot (for dropping) and its contents
+            const pc = t3Project(T3.v.set(T3.plate.position.x, T3.plate.position.y + 0.05, T3.plate.position.z));
+            const pe = t3Project(T3.v.set(T3.plate.position.x + 0.46, T3.plate.position.y + 0.05, T3.plate.position.z));
+            TOFU_PLATE.x = pc.x; TOFU_PLATE.y = pc.y; TOFU_PLATE.rx = Math.abs(pe.x - pc.x); TOFU_PLATE.ry = TOFU_PLATE.rx * 0.42;
+            t3BuildPlate();
+            // strainer follows the pointer while lifting a piece; the piece rides in it
+            const D = TG.drag && TG.drag.moved && TG.slots[TG.drag.i];
+            T3.strainer.visible = !!D;
+            if (D) {
+                T3.ray.setFromCamera({ x: TG.px / TG.W * 2 - 1, y: -(TG.py / TG.H) * 2 + 1 }, T3.cam);
+                const h = 0.18, ray = T3.ray.ray, k = (h - ray.origin.y) / ray.direction.y;
+                const wx = ray.origin.x + ray.direction.x * k, wz = ray.origin.z + ray.direction.z * k;
+                T3.strainer.position.set(wx, h - 0.15, wz);
+                const m = T3.blocks[TG.drag.i]; m.visible = true; m.position.set(wx, h + 0.06, wz); m.rotation.set(0, D.rot || 0, 0); t3SetColors(m, D);
+            }
+            // steam rises off the oil, thicker when hot; grey smoke past 205 ℃
+            T3.steam.forEach(o => { const ph = (t * 0.35 + o.ph) % 1; o.s.position.set(o.x * O.r, O.y + 0.1 + ph * 1.4, o.z * O.r); o.s.scale.setScalar(0.25 + ph * 0.6); o.s.material.opacity = (0.08 + 0.1 * Math.min(1, rate)) * Math.sin(ph * Math.PI); o.s.material.color.setRGB(1 - hot * 0.6, 1 - hot * 0.62, 1 - hot * 0.64); });
+            T3.r.render(T3.scene, T3.cam);
+        }
+        function tofuDraw() {
+            const x = TG.ctx; if (!x) return;
+            const now = performance.now();
+            const D3 = tofu3DInit();
+            if (D3) tofuDraw3D();
+            x.setTransform(TG.dpr, 0, 0, TG.dpr, 0, 0);
+            x.textBaseline = 'middle';
+            if (D3) x.clearRect(0, 0, TG.W, TG.H);
+            if (!D3) {
+            // stainless counter top, warm light from below
+            const bg = x.createLinearGradient(0, 0, 0, TG.H); bg.addColorStop(0, '#2a2622'); bg.addColorStop(1, '#3d3833');
+            x.fillStyle = bg; x.fillRect(0, 0, TG.W, TG.H);
+            for (let i = 0; i < 40; i++) { x.fillStyle = `rgba(255,255,255,${0.012 + (i % 3) * 0.004})`; x.fillRect(0, i * 9, TG.W, 1); }
+            const W = TOFU_WOK, hm = TOFU_HEAT[TG.heat].mul, flick = 0.85 + 0.15 * Math.sin(now / 90) + 0.08 * Math.sin(now / 37);
+            // burner glow and blue-orange flame tips peeking out under the wok
+            const fg = x.createRadialGradient(W.x, W.y + 24, W.rx * 0.75, W.x, W.y + 24, W.rx * (1.1 + hm * 0.14));
+            fg.addColorStop(0, `rgba(255,140,40,${0.6 * flick * Math.min(1, hm)})`); fg.addColorStop(1, 'rgba(255,90,20,0)');
+            x.fillStyle = fg; x.beginPath(); x.ellipse(W.x, W.y + 24, W.rx * 1.35, W.ry * 1.35, 0, 0, Math.PI * 2); x.fill();
+            for (let k = 0; k < 14; k++) {
+                const a = Math.PI * 0.08 + k / 13 * Math.PI * 0.84, fx = W.x + Math.cos(a) * W.rx * 1.0, fy = W.y + Math.sin(a) * W.ry * 1.0 + 8, L = (8 + 8 * hm) * (0.7 + 0.3 * Math.sin(now / 60 + k * 2));
+                const flg = x.createLinearGradient(fx, fy, fx + Math.cos(a) * L, fy + Math.sin(a) * L); flg.addColorStop(0, 'rgba(90,150,255,0.85)'); flg.addColorStop(0.5, 'rgba(255,170,60,0.7)'); flg.addColorStop(1, 'rgba(255,90,20,0)');
+                x.fillStyle = flg; x.beginPath(); x.ellipse(fx + Math.cos(a) * L / 2, fy + Math.sin(a) * L / 2, L / 2, 3, a, 0, Math.PI * 2); x.fill();
+            }
+            // the wok: steel rim highlight, hammered bowl, wooden handle
+            x.fillStyle = '#6b4424'; tofuRR(x, 0, W.y - 10, 30, 20, 9); x.fill();
+            x.fillStyle = 'rgba(255,255,255,0.12)'; tofuRR(x, 2, W.y - 8, 26, 5, 3); x.fill();
+            x.fillStyle = '#55504c'; tofuRR(x, 26, W.y - 6, 10, 12, 3); x.fill();
+            const rim = x.createLinearGradient(W.x - W.rx, W.y - W.ry, W.x + W.rx, W.y + W.ry);
+            rim.addColorStop(0, '#8a847e'); rim.addColorStop(0.45, '#2c2826'); rim.addColorStop(1, '#5c5550');
+            x.fillStyle = rim; x.beginPath(); x.ellipse(W.x, W.y, W.rx, W.ry, 0, 0, Math.PI * 2); x.fill();
+            x.save(); x.beginPath(); x.ellipse(W.x, W.y + 4, W.rx - 9, W.ry - 8, 0, 0, Math.PI * 2); x.clip();
+            x.drawImage(tofuWokTexture(), W.x - W.rx, W.y - W.ry, W.rx * 2, W.ry * 2 + 8);
+            }   // end of the flat (2D) scene
+            const W = TOFU_WOK;
+            if (!D3) {
+            // the oil: its pool shrinks as the level drops; colour darkens with use and when it's too hot
+            const lv = 0.5 + 0.5 * TG.oilLv, hot = Math.min(1, Math.max(0, (TG.temp - 190) / 40));
+            const og = x.createRadialGradient(W.x - 24, W.y - 22, 8, W.x, W.y + 6, W.rx * lv);
+            og.addColorStop(0, `rgb(${246 - hot * 40},${206 - hot * 70},${102 - hot * 60})`); og.addColorStop(0.55, `rgb(${214 - hot * 50},${150 - hot * 60},${48 - hot * 30})`); og.addColorStop(1, `rgba(${120 - hot * 40},${76 - hot * 30},${20},0.95)`);
+            x.fillStyle = og; x.beginPath(); x.ellipse(W.x, W.y + 8, (W.rx - 12) * lv, (W.ry - 10) * lv, 0, 0, Math.PI * 2); x.fill();
+            // shimmering surface highlights that drift with convection
+            for (let k = 0; k < 5; k++) { const a = now / 2600 + k * 1.3; x.strokeStyle = `rgba(255,250,220,${0.16 - k * 0.02})`; x.lineWidth = 2.5 - k * 0.3; x.beginPath(); x.ellipse(W.x - 30 + Math.cos(a) * 16, W.y - 18 + Math.sin(a * 1.3) * 10, (36 - k * 4) * lv, (8 - k) * lv, -0.3, 0, Math.PI * 1.2); x.stroke(); }
+            }
+            // tofu frying: a ring of foam around each piece, then the piece floating and bobbing
+            TOFU_SLOTS.forEach((s, i) => {
+                const cur = TG.slots[i]; if (!cur || (TG.drag && TG.drag.i === i && TG.drag.moved)) return;
+                const rate = Math.max(0, (TG.temp - 110) / 70);
+                if (!D3) {
+                x.strokeStyle = `rgba(255,248,220,${0.25 + 0.35 * Math.min(1, rate)})`; x.lineWidth = 1.2;
+                for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2 + now / 600, r = 22 + Math.sin(now / 90 + k) * 2; x.beginPath(); x.arc(s.x + Math.cos(a) * r, s.y + Math.sin(a) * r * 0.75 + 4, 1.4 + (k % 3) * 0.6, 0, Math.PI * 2); x.stroke(); }
+                const bob = Math.sin(now / 160 + i) * 1.2 + (cur.drop > 0 ? cur.drop * 18 : 0), flip = cur.flip > 0 ? Math.sin((0.35 - cur.flip) / 0.35 * Math.PI) * 10 : 0;
+                drawTofuPiece(x, cur, s.x, s.y, 34, cur.rot, flip - bob * 0.3);
+                }
+                // doneness ring: two arcs, outer = face down in the oil, inner = face up
+                const tot = TOFU_COOK.burnt, a0 = -Math.PI / 2, ring = (r, v) => { x.strokeStyle = 'rgba(0,0,0,0.25)'; x.lineWidth = 3; x.beginPath(); x.arc(s.x, s.y, r, 0, Math.PI * 2); x.stroke(); x.strokeStyle = 'rgba(74,222,128,0.9)'; x.beginPath(); x.arc(s.x, s.y, r, a0 + TOFU_COOK.ready / tot * Math.PI * 2, a0 + TOFU_COOK.perfect / tot * Math.PI * 2); x.stroke(); x.strokeStyle = v > TOFU_COOK.over ? '#f87171' : '#fff7d6'; x.beginPath(); x.arc(s.x, s.y, r, a0, a0 + Math.min(1, v / tot) * Math.PI * 2); x.stroke(); };
+                ring(27, cur.a); ring(31, cur.b);
+            });
+            TG.bubbles.forEach(b => { const k = b.t / b.life; x.strokeStyle = `rgba(255,250,225,${0.75 * (1 - k)})`; x.lineWidth = 1; x.beginPath(); x.arc(b.x, b.y - k * 4, b.r * (0.6 + k), 0, Math.PI * 2); x.stroke(); });
+            if (!D3) x.restore();
+            TG.splats.forEach(s => { x.fillStyle = `rgba(255,220,130,${1 - s.t / 0.5})`; x.beginPath(); x.arc(s.x, s.y, 1.6, 0, Math.PI * 2); x.fill(); });
+            // steam, plus dark smoke when the oil is too hot
+            if (!D3) for (let k = 0; k < 6; k++) { const p = ((now / 1700 + k / 6) % 1); x.fillStyle = `rgba(255,255,255,${0.07 * (1 - p)})`; x.beginPath(); x.arc(W.x - 60 + k * 24 + Math.sin(now / 500 + k) * 8, W.y - 20 - p * 120, 14 + p * 20, 0, Math.PI * 2); x.fill(); }
+            TG.smoke.forEach(s => { x.fillStyle = `rgba(70,64,60,${0.35 * (1 - s.t / 2.2)})`; x.beginPath(); x.arc(s.x, s.y, 10 + s.t * 16, 0, Math.PI * 2); x.fill(); });
+            // plate on the right: cut pieces, then whatever seasoning was picked on top
+            const P = TOFU_PLATE;
+            if (!D3) {
+            x.fillStyle = 'rgba(0,0,0,0.35)'; x.beginPath(); x.ellipse(P.x + 4, P.y + 6, P.rx, P.ry, 0, 0, Math.PI * 2); x.fill();
+            const pg = x.createRadialGradient(P.x - 20, P.y - 8, 4, P.x, P.y, P.rx); pg.addColorStop(0, '#ffffff'); pg.addColorStop(0.8, '#ece8df'); pg.addColorStop(1, '#c9c2b4');
+            x.fillStyle = pg; x.beginPath(); x.ellipse(P.x, P.y, P.rx, P.ry, 0, 0, Math.PI * 2); x.fill();
+            x.strokeStyle = '#1d4ed8'; x.lineWidth = 1.5; x.beginPath(); x.ellipse(P.x, P.y, P.rx - 6, P.ry - 3, 0, 0, Math.PI * 2); x.stroke();
+            }
+            if (TG.drag && TG.drag.moved) { x.strokeStyle = 'rgba(250,204,21,0.9)'; x.lineWidth = 2.5; x.setLineDash([5, 4]); x.beginPath(); x.ellipse(P.x, P.y, P.rx + 4, P.ry + 4, 0, 0, Math.PI * 2); x.stroke(); x.setLineDash([]); }
+            if (!D3) TG.plate.forEach((q, k) => {
+                const col = k % 3, row = (k / 3) | 0, cx = P.x - 36 + col * 34 + row * 8, cy = P.y - 4 + row * -10;
+                // each block is cut into four, with a pocket for the 泡菜
+                [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([u, v]) => drawTofuPiece(x, { a: q.a, b: q.a * 0.6 + q.b * 0.4, seed: q.seed + u * 7 + v * 13 }, cx + u * 6, cy + v * 4, 12, 0.1 * u));
+            });
+            if (TG.plate.length) { if (!D3) {
+                let rs = 7; const rnd = () => (rs = (rs * 9301 + 49297) % 233280) / 233280;
+                if (TG.sea.has('pao')) for (let k = 0; k < 40; k++) { x.strokeStyle = ['#f4f1d6', '#d9e9b8', '#bfe0a0', '#f2a07a'][k % 4]; x.lineWidth = 1.6; const sx = P.x - 44 + rnd() * 70, sy = P.y - 18 + rnd() * 16; x.beginPath(); x.moveTo(sx, sy); x.quadraticCurveTo(sx + 4, sy - 3, sx + 6 + rnd() * 6, sy + 1); x.stroke(); }
+                if (TG.sea.has('chili')) { x.strokeStyle = 'rgba(200,30,20,0.85)'; x.lineWidth = 2.4; x.beginPath(); for (let k = 0; k <= 20; k++) { const u = k / 20; x.lineTo(P.x - 46 + u * 92, P.y - 10 + Math.sin(u * 14) * 6); } x.stroke(); }
+                if (TG.sea.has('soy')) { x.strokeStyle = 'rgba(60,30,15,0.85)'; x.lineWidth = 2; x.beginPath(); for (let k = 0; k <= 20; k++) { const u = k / 20; x.lineTo(P.x - 44 + u * 88, P.y - 4 + Math.cos(u * 12) * 5); } x.stroke(); }
+                if (TG.sea.has('garlic')) for (let k = 0; k < 18; k++) { x.fillStyle = '#fbf3d6'; x.beginPath(); x.arc(P.x - 40 + rnd() * 80, P.y - 16 + rnd() * 16, 1.4, 0, Math.PI * 2); x.fill(); }
+                if (TG.sea.has('cilantro')) for (let k = 0; k < 9; k++) { x.fillStyle = k % 2 ? '#3f9a3a' : '#5bbf4c'; const lx = P.x - 40 + rnd() * 76, ly = P.y - 20 + rnd() * 14; x.beginPath(); x.ellipse(lx, ly, 3.4, 2.2, rnd() * 3, 0, Math.PI * 2); x.fill(); }
+            } } else { x.fillStyle = D3 ? 'rgba(255,245,225,0.85)' : 'rgba(80,70,60,0.55)'; x.font = '11px "Noto Sans TC",sans-serif'; x.textAlign = 'center'; x.fillText('拖豆腐到這裡', P.x, P.y - (D3 ? 24 : 0)); }
+            // a slotted strainer carrying the dragged piece
+            if (!D3 && TG.drag && TG.drag.moved && TG.slots[TG.drag.i]) {
+                const cur = TG.slots[TG.drag.i];
+                x.fillStyle = '#b8bec4'; x.beginPath(); x.ellipse(TG.px, TG.py + 6, 28, 18, 0, 0, Math.PI * 2); x.fill();
+                x.fillStyle = '#7b8288'; for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; x.beginPath(); x.arc(TG.px + Math.cos(a) * 18, TG.py + 6 + Math.sin(a) * 11, 1.6, 0, Math.PI * 2); x.fill(); }
+                x.strokeStyle = '#8a9096'; x.lineWidth = 4; x.beginPath(); x.moveTo(TG.px + 24, TG.py + 14); x.lineTo(TG.px + 70, TG.py + 46); x.stroke();
+                drawTofuPiece(x, cur, TG.px, TG.py, 32, cur.rot, 4);
+                if (Math.random() < 0.5) TG.splats.push({ x: TG.px + (Math.random() - 0.5) * 30, y: TG.py + 16, vx: 0, vy: 40, t: 0.2 });
+            }
+            // gauges: oil temperature (green band 170–190 ℃) and oil level
+            const tx = 10, ty = 276, tw = 96;
+            x.fillStyle = 'rgba(0,0,0,0.45)'; tofuRR(x, tx, ty, tw, 9, 5); x.fill();
+            const tpos = t => tx + Math.max(0, Math.min(1, (t - 110) / 130)) * tw;
+            x.fillStyle = 'rgba(74,222,128,0.45)'; x.fillRect(tpos(168), ty, tpos(192) - tpos(168), 9);
+            const tc = TG.temp < 150 ? '#60a5fa' : TG.temp > 205 ? '#f87171' : '#facc15';
+            x.fillStyle = tc; x.beginPath(); x.arc(tpos(TG.temp), ty + 4.5, 5.5, 0, Math.PI * 2); x.fill();
+            x.fillStyle = '#fef3c7'; x.font = '11px "Noto Sans TC",sans-serif'; x.textAlign = 'left';
+            x.fillText(`油溫 ${Math.round(TG.temp)}℃${TG.temp < 150 ? '（太低會吸油）' : TG.temp > 205 ? '（冒煙了！）' : ''}`, tx, ty - 8);
+            x.fillStyle = 'rgba(0,0,0,0.45)'; tofuRR(x, tx, 306, tw, 9, 5); x.fill();
+            x.fillStyle = TG.oilLv < 0.3 ? '#f87171' : '#e8b84a'; tofuRR(x, tx, 306, tw * TG.oilLv, 9, 5); x.fill();
+            x.fillStyle = '#fef3c7'; x.fillText('油量', tx, 298);
+            // HUD and customers
+            x.fillStyle = 'rgba(0,0,0,0.45)'; tofuRR(x, 6, 6, 328, 26, 13); x.fill();
+            x.fillStyle = '#fde68a'; x.font = '700 14px "Noto Sans TC",sans-serif'; x.textAlign = 'left'; x.fillText(`⏱ ${Math.max(0, Math.ceil(TG.time))}`, 16, 19);
+            x.textAlign = 'right'; x.fillText(`分數 ${TG.score}`, 324, 19);
+            if (TG.combo > 1) { x.textAlign = 'center'; x.fillStyle = '#facc15'; x.fillText(`完美連擊 ×${TG.combo}`, 170, 19); }
+            TG.queue.forEach((c, i) => {
+                const cx = 24 + i * 106, cy = 58;
+                x.globalAlpha = i === 0 ? 1 : 0.55;
+                x.fillStyle = '#fff7ed'; tofuRR(x, cx - 18, cy - 18, 98, 40, 10); x.fill();
+                x.font = '24px serif'; x.textAlign = 'center'; x.fillText(c.face, cx, cy + 2);
+                x.fillStyle = '#7a1814'; x.font = '700 12px "Noto Sans TC",sans-serif'; x.textAlign = 'left'; x.fillText(`${c.n} 塊`, cx + 16, cy - 7);
+                x.font = '12px serif'; x.fillText([...c.want].map(k => (TOFU_SEA.find(s => s.k === k) || {}).icon).join(''), cx + 16, cy + 9);
+                const kk = Math.max(0, c.pat / c.max);
+                x.fillStyle = 'rgba(0,0,0,0.12)'; x.fillRect(cx - 14, cy + 16, 90, 3);
+                x.fillStyle = kk > 0.5 ? '#16a34a' : kk > 0.25 ? '#ca8a04' : '#dc2626'; x.fillRect(cx - 14, cy + 16, 90 * kk, 3);
+                x.globalAlpha = 1;
+            });
+            TG.fx.forEach(f => { x.globalAlpha = Math.max(0, 1 - f.t / 1.2); x.fillStyle = f.col; x.font = '800 15px "Noto Sans TC",sans-serif'; x.textAlign = 'center'; x.fillText(f.text, f.x, f.y - f.t * 30); x.globalAlpha = 1; });
+            if (TG.mode !== 'play') {
+                x.fillStyle = 'rgba(20,10,6,0.86)'; x.fillRect(0, 0, TG.W, TG.H);
+                x.textAlign = 'center'; x.fillStyle = '#fde68a';
+                const btn = label => { const b = TB.start; x.fillStyle = '#ea580c'; tofuRR(x, b.x, b.y, b.w, b.h, 12); x.fill(); x.fillStyle = '#fff'; x.font = '800 16px "Noto Sans TC",sans-serif'; x.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 1); };
+                if (TG.mode === 'menu') {
+                    x.font = '900 24px "LXGW WenKai TC","Noto Serif TC",serif'; x.fillText('🍢 炸臭豆腐', 170, 40);
+                    x.font = '12.5px "Noto Sans TC",sans-serif'; x.fillStyle = '#fef3c7';
+                    ['「食材」點臭豆腐下鍋，每下一塊油溫會掉', '油溫保持在綠色區（170–190℃）：火力調大小', '豆腐兩面分開熟：點一下鍋裡的豆腐翻面', '外圈＝鍋底那面、內圈＝上面，兩圈都綠才完美', '用漏勺把豆腐拖到右下盤子撈起', '油溫太低會吸油變油膩，太高會冒煙燒焦', '照客人點的調味勾選，湊齊份數按「起鍋！」'].forEach((l, i) => x.fillText(l, 170, 76 + i * 22));
+                    btn('開始營業');
+                    x.fillStyle = '#fde68a'; x.font = '12px "Noto Sans TC",sans-serif'; x.fillText(`我的最高分：${tofuBest()}　限時 75 秒`, 170, 316);
+                } else {
+                    x.font = '900 24px "LXGW WenKai TC","Noto Serif TC",serif'; x.fillText('收攤囉！', 170, 60);
+                    x.font = '800 38px "Noto Sans TC",sans-serif'; x.fillStyle = '#facc15'; x.fillText(String(TG.score), 170, 115);
+                    x.font = '14px "Noto Sans TC",sans-serif'; x.fillStyle = '#fef3c7';
+                    x.fillText(`賣出 ${TG.served} 份`, 170, 160);
+                    x.fillText(TG.newBest && TG.score > 0 ? '🎉 刷新個人最高分！' : `個人最高分 ${TG.best}`, 170, 186);
+                    if (TG.rank) x.fillText(`排行榜第 ${TG.rank} 名`, 170, 212);
+                    btn('再炸一鍋');
+                }
+            }
+        }
+
         function tofuIcon(icon) {
             if (icon !== 'tofu') return `<span class="text-2xl leading-none">${icon}</span>`;
             return '<svg width="30" height="26" viewBox="0 0 30 26"><path d="M4 9 L15 4 L26 9 L26 19 L15 24 L4 19 Z" fill="#c98a3a"/><path d="M4 9 L15 14 L26 9 L15 4 Z" fill="#dda34f"/><path d="M15 14 L15 24" stroke="#8a5a20" stroke-width="1"/><circle cx="9" cy="15" r="1" fill="#7a4a18"/><circle cx="20" cy="17" r="1" fill="#7a4a18"/><circle cx="14" cy="9" r="1" fill="#a8702a"/></svg>';
@@ -17141,142 +17604,7 @@
                     <button onclick="tofuServe()" style="margin-bottom:4px;padding:6px 16px;border-radius:12px;font-size:14px;font-weight:900;color:#fff;background:linear-gradient(135deg,#f97316,#dc2626);box-shadow:0 2px 6px rgba(220,38,38,0.4)">起鍋！</button>
                 </div>
                 <div style="background:#fbf5e9;border-radius:0 12px 12px 12px;padding:8px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px">${cards}</div>
-                <div style="font-size:10px;color:rgba(254,243,199,0.8);margin-top:4px;padding:0 4px">${TG.tab === 'food' ? '點「臭豆腐」下鍋，點鍋裡金黃的豆腐撈到盤子，湊齊份數再「起鍋！」上菜' : '照客人點的調味勾選，再按「起鍋！」'}</div>`;
-        }
-        function tofuUpdate(dt) {
-            TG.fx.forEach(f => f.t += dt); TG.fx = TG.fx.filter(f => f.t < 1.2);
-            TG.bubbles.forEach(b => b.t += dt); TG.bubbles = TG.bubbles.filter(b => b.t < 0.8);
-            if (TG.mode !== 'play') return;
-            TG.time -= dt;
-            const mul = TOFU_HEAT[TG.heat].mul * (TG.oilLv < 0.3 ? 1.35 : 1);   // too little oil burns faster
-            TG.slots.forEach(s => { if (s) s.t += dt * mul; });
-            if (TG.slots.some(s => s)) TG.oilLv = Math.max(0, TG.oilLv - dt * 0.004 * mul);
-            if (Math.random() < dt * 8 * mul) { const s = TG.slots.findIndex(x => x); if (s >= 0) TG.bubbles.push({ x: TOFU_SLOTS[s].x + (Math.random() - 0.5) * 44, y: TOFU_SLOTS[s].y + (Math.random() - 0.5) * 34, t: 0 }); }
-            TG.spawnT -= dt;
-            if (TG.spawnT <= 0 && TG.queue.length < 3) { tofuNewCustomer(); TG.spawnT = 6 + Math.random() * 4; }
-            TG.queue.forEach(c => c.pat -= dt);
-            if (TG.queue.length && TG.queue[0].pat <= 0) { TG.queue.shift(); TG.score = Math.max(0, TG.score - 15); TG.combo = 0; tofuToast('客人等太久走了 −15', 150, 90, '#f87171'); }
-            TG.queue = TG.queue.filter(c => c.pat > 0);
-            if (TG.time <= 0) tofuEnd();
-        }
-        function tofuEnd() {
-            TG.mode = 'over';
-            renderTofuPanel();
-            const prev = tofuBest();
-            TG.newBest = TG.score > prev;
-            if (TG.newBest) tofuSaveBest(TG.score);
-            TG.best = Math.max(prev, TG.score);
-            const list = tofuLeaders();
-            TG.rank = list.findIndex(r => r.mine) + 1;
-            renderTofuLeaders(); refreshTofuBoard();
-            playTempleBellSound(TG.newBest ? 1046 : 659);
-            if (TG.newBest && TG.score > 0) emitAct('tofubest');
-        }
-        function tofuColor(t) {
-            const stops = [[0, [242, 232, 205]], [TOFU_COOK.ready, [222, 170, 80]], [TOFU_COOK.perfect, [200, 125, 40]], [TOFU_COOK.over, [140, 80, 30]], [TOFU_COOK.burnt, [40, 28, 22]]];
-            for (let i = 0; i < stops.length - 1; i++) {
-                const [a, ca] = stops[i], [b, cb] = stops[i + 1];
-                if (t <= b) { const k = Math.max(0, (t - a) / (b - a)); return `rgb(${ca.map((v, j) => Math.round(v + (cb[j] - v) * k)).join(',')})`; }
-            }
-            return 'rgb(40,28,22)';
-        }
-        function tofuRR(x, X, Y, W, H, r) { x.beginPath(); if (x.roundRect) x.roundRect(X, Y, W, H, r); else x.rect(X, Y, W, H); }
-        function tofuDraw() {
-            const x = TG.ctx; if (!x) return;
-            const now = performance.now();
-            x.setTransform(TG.dpr, 0, 0, TG.dpr, 0, 0);
-            // stove top: dark steel with warm light from the flame
-            const bg = x.createRadialGradient(TOFU_WOK.x, TOFU_WOK.y + 30, 30, TOFU_WOK.x, TOFU_WOK.y, 260);
-            bg.addColorStop(0, '#5a3a24'); bg.addColorStop(0.55, '#2e2018'); bg.addColorStop(1, '#17110d');
-            x.fillStyle = bg; x.fillRect(0, 0, TG.W, TG.H);
-            x.textBaseline = 'middle';
-            // flame glow around the wok, stronger with more heat
-            const hm = TOFU_HEAT[TG.heat].mul, flick = 0.85 + 0.15 * Math.sin(now / 90) + 0.08 * Math.sin(now / 37);
-            const fg = x.createRadialGradient(TOFU_WOK.x, TOFU_WOK.y + 20, TOFU_WOK.rx * 0.8, TOFU_WOK.x, TOFU_WOK.y + 20, TOFU_WOK.rx * (1.12 + hm * 0.12));
-            fg.addColorStop(0, `rgba(255,140,40,${0.55 * flick * Math.min(1, hm)})`); fg.addColorStop(1, 'rgba(255,90,20,0)');
-            x.fillStyle = fg; x.beginPath(); x.ellipse(TOFU_WOK.x, TOFU_WOK.y + 20, TOFU_WOK.rx * 1.35, TOFU_WOK.ry * 1.35, 0, 0, Math.PI * 2); x.fill();
-            // the wok: dark iron rim and bowl, and oil whose level and colour show how much is left
-            const W = TOFU_WOK;
-            const rim = x.createLinearGradient(W.x - W.rx, W.y - W.ry, W.x + W.rx, W.y + W.ry);
-            rim.addColorStop(0, '#5b5550'); rim.addColorStop(0.5, '#2a2624'); rim.addColorStop(1, '#4a4440');
-            x.fillStyle = rim; x.beginPath(); x.ellipse(W.x, W.y, W.rx, W.ry, 0, 0, Math.PI * 2); x.fill();
-            x.fillStyle = '#1a1614'; x.beginPath(); x.ellipse(W.x, W.y + 4, W.rx - 10, W.ry - 9, 0, 0, Math.PI * 2); x.fill();
-            // long wooden handle on the left
-            x.fillStyle = '#7a4a24'; tofuRR(x, 2, W.y - 9, 30, 18, 8); x.fill();
-            const lv = 0.55 + 0.45 * TG.oilLv;
-            const og = x.createRadialGradient(W.x - 20, W.y - 18, 10, W.x, W.y, W.rx * lv);
-            og.addColorStop(0, '#f6cf66'); og.addColorStop(0.6, '#d99a2e'); og.addColorStop(1, '#8a5a18');
-            x.fillStyle = og; x.beginPath(); x.ellipse(W.x, W.y + 6, (W.rx - 14) * lv, (W.ry - 12) * lv, 0, 0, Math.PI * 2); x.fill();
-            x.fillStyle = 'rgba(255,255,255,0.18)'; x.beginPath(); x.ellipse(W.x - 34, W.y - 24, 34 * lv, 10 * lv, -0.3, 0, Math.PI * 2); x.fill();
-            // tofu in the oil
-            TOFU_SLOTS.forEach((s, i) => {
-                const cur = TG.slots[i]; if (!cur) return;
-                const wob = Math.sin(now / 130 + i) * 1.4;
-                x.save(); x.translate(s.x, s.y + wob); x.rotate(0.25 * Math.sin(i * 2.3));
-                x.fillStyle = 'rgba(0,0,0,0.25)'; x.fillRect(-17, -13, 36, 30);
-                x.fillStyle = tofuColor(cur.t); x.fillRect(-18, -16, 36, 30);
-                x.fillStyle = 'rgba(255,255,255,0.18)'; x.fillRect(-18, -16, 36, 6);
-                for (let k = 0; k < 6; k++) { x.fillStyle = 'rgba(60,30,10,0.25)'; x.fillRect(-12 + (k * 11) % 24, -8 + (k * 7) % 18, 3, 3); }
-                x.restore();
-                const tot = TOFU_COOK.burnt, a0 = -Math.PI / 2;
-                x.lineWidth = 3.5;
-                x.strokeStyle = 'rgba(255,255,255,0.18)'; x.beginPath(); x.arc(s.x, s.y, 25, 0, Math.PI * 2); x.stroke();
-                x.strokeStyle = 'rgba(74,222,128,0.9)'; x.beginPath(); x.arc(s.x, s.y, 25, a0 + TOFU_COOK.ready / tot * Math.PI * 2, a0 + TOFU_COOK.perfect / tot * Math.PI * 2); x.stroke();
-                x.strokeStyle = cur.t > TOFU_COOK.over ? '#f87171' : '#fff7d6'; x.beginPath(); x.arc(s.x, s.y, 25, a0, a0 + Math.min(1, cur.t / tot) * Math.PI * 2); x.stroke();
-            });
-            TG.bubbles.forEach(b => { x.strokeStyle = `rgba(255,250,220,${0.7 * (1 - b.t / 0.8)})`; x.lineWidth = 1.2; x.beginPath(); x.arc(b.x, b.y - b.t * 6, 2 + b.t * 4, 0, Math.PI * 2); x.stroke(); });
-            // rising steam
-            for (let k = 0; k < 5; k++) { const p = ((now / 1600 + k / 5) % 1); x.fillStyle = `rgba(255,255,255,${0.08 * (1 - p)})`; x.beginPath(); x.arc(W.x - 50 + k * 25 + Math.sin(now / 500 + k) * 8, W.y - 20 - p * 110, 16 + p * 18, 0, Math.PI * 2); x.fill(); }
-            // oil gauge
-            x.fillStyle = 'rgba(0,0,0,0.35)'; tofuRR(x, 10, 300, 70, 10, 5); x.fill();
-            x.fillStyle = TG.oilLv < 0.3 ? '#f87171' : '#facc15'; tofuRR(x, 10, 300, 70 * TG.oilLv, 10, 5); x.fill();
-            x.fillStyle = '#fef3c7'; x.font = '11px "Noto Sans TC",sans-serif'; x.textAlign = 'left'; x.fillText('油量', 10, 292);
-            // plate (bottom right)
-            x.fillStyle = '#f5f0e6'; x.beginPath(); x.ellipse(250, 305, 72, 18, 0, 0, Math.PI * 2); x.fill();
-            x.strokeStyle = '#c2410c'; x.lineWidth = 2; x.beginPath(); x.ellipse(250, 305, 66, 15, 0, 0, Math.PI * 2); x.stroke();
-            TG.plate.forEach((q, k) => { x.fillStyle = q.q === 'perfect' ? '#c87d28' : q.q === 'raw' ? '#e8d6a8' : q.q === 'good' ? '#b06a24' : '#7a4a1e'; x.fillRect(200 + k * 17, 294, 15, 15); });
-            [...TG.sea].forEach((k, n) => { x.font = '13px serif'; x.textAlign = 'center'; x.fillText((TOFU_SEA.find(s => s.k === k) || {}).icon || '', 205 + n * 22, 280); });
-            // HUD
-            x.fillStyle = 'rgba(0,0,0,0.45)'; tofuRR(x, 6, 6, 328, 26, 13); x.fill();
-            x.fillStyle = '#fde68a'; x.font = '700 14px "Noto Sans TC",sans-serif'; x.textAlign = 'left'; x.fillText(`⏱ ${Math.max(0, Math.ceil(TG.time))}`, 16, 19);
-            x.textAlign = 'right'; x.fillText(`分數 ${TG.score}`, 324, 19);
-            if (TG.combo > 1) { x.textAlign = 'center'; x.fillStyle = '#facc15'; x.fillText(`完美連擊 ×${TG.combo}`, 170, 19); }
-            // customers along the top with their orders
-            TG.queue.forEach((c, i) => {
-                const cx = 24 + i * 106, cy = 58;
-                x.globalAlpha = i === 0 ? 1 : 0.55;
-                x.fillStyle = '#fff7ed'; tofuRR(x, cx - 18, cy - 18, 98, 40, 10); x.fill();
-                x.font = '24px serif'; x.textAlign = 'center'; x.fillText(c.face, cx, cy + 2);
-                x.fillStyle = '#7a1814'; x.font = '700 12px "Noto Sans TC",sans-serif'; x.textAlign = 'left'; x.fillText(`${c.n} 塊`, cx + 16, cy - 7);
-                x.font = '12px serif'; x.fillText([...c.want].map(k => (TOFU_SEA.find(s => s.k === k) || {}).icon).join(''), cx + 16, cy + 9);
-                const kk = Math.max(0, c.pat / c.max);
-                x.fillStyle = 'rgba(0,0,0,0.12)'; x.fillRect(cx - 14, cy + 16, 90, 3);
-                x.fillStyle = kk > 0.5 ? '#16a34a' : kk > 0.25 ? '#ca8a04' : '#dc2626'; x.fillRect(cx - 14, cy + 16, 90 * kk, 3);
-                x.globalAlpha = 1;
-            });
-            // floating texts
-            TG.fx.forEach(f => { x.globalAlpha = Math.max(0, 1 - f.t / 1.2); x.fillStyle = f.col; x.font = '800 15px "Noto Sans TC",sans-serif'; x.textAlign = 'center'; x.fillText(f.text, f.x, f.y - f.t * 30); x.globalAlpha = 1; });
-            // menu / game over
-            if (TG.mode !== 'play') {
-                x.fillStyle = 'rgba(20,10,6,0.84)'; x.fillRect(0, 0, TG.W, TG.H);
-                x.textAlign = 'center'; x.fillStyle = '#fde68a';
-                const btn = label => { const b = TB.start; x.fillStyle = '#ea580c'; tofuRR(x, b.x, b.y, b.w, b.h, 12); x.fill(); x.fillStyle = '#fff'; x.font = '800 16px "Noto Sans TC",sans-serif'; x.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 1); };
-                if (TG.mode === 'menu') {
-                    x.font = '900 26px "LXGW WenKai TC","Noto Serif TC",serif'; x.fillText('🍢 炸臭豆腐', 170, 50);
-                    x.font = '13px "Noto Sans TC",sans-serif'; x.fillStyle = '#fef3c7';
-                    ['下方「食材」點臭豆腐下鍋', '綠色區間時點鍋裡的豆腐撈起（金黃酥脆）', '火力大炸得快、火力小比較好控制', '油量不夠會炸焦，記得「添油」', '「調味」照客人點的勾選，湊齊份數按「起鍋！」', '限時 60 秒！'].forEach((l, i) => x.fillText(l, 170, 88 + i * 22));
-                    btn('開始營業');
-                    x.fillStyle = '#fde68a'; x.font = '12px "Noto Sans TC",sans-serif'; x.fillText(`我的最高分：${tofuBest()}`, 170, 316);
-                } else {
-                    x.font = '900 24px "LXGW WenKai TC","Noto Serif TC",serif'; x.fillText('收攤囉！', 170, 60);
-                    x.font = '800 38px "Noto Sans TC",sans-serif'; x.fillStyle = '#facc15'; x.fillText(String(TG.score), 170, 115);
-                    x.font = '14px "Noto Sans TC",sans-serif'; x.fillStyle = '#fef3c7';
-                    x.fillText(`賣出 ${TG.served} 份`, 170, 160);
-                    x.fillText(TG.newBest && TG.score > 0 ? '🎉 刷新個人最高分！' : `個人最高分 ${TG.best}`, 170, 186);
-                    if (TG.rank) x.fillText(`排行榜第 ${TG.rank} 名`, 170, 212);
-                    btn('再炸一鍋');
-                }
-            }
+                <div style="font-size:10px;color:rgba(254,243,199,0.8);margin-top:4px;padding:0 4px">${TG.tab === 'food' ? '點「臭豆腐」下鍋；點鍋裡的豆腐翻面，拖到盤子撈起，湊齊份數再「起鍋！」' : '照客人點的調味勾選，再按「起鍋！」'}</div>`;
         }
         function renderTofuLeaders() {
             const list = tofuLeaders();
