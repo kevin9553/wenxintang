@@ -238,6 +238,17 @@
             }
           }
         },
+        "games": {
+          "tofu": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 99999"
+          },
+          "nm": {
+            ".validate": "newData.isString() && newData.val().length <= 10"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
         "$other": {
           ".validate": false
         }

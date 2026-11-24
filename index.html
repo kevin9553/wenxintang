@@ -189,6 +189,7 @@
             <button onclick="moveCameraPreset('xiaoren')" id="camBtn-xiaoren" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">👡 打小人</button>
             <button onclick="moveCameraPreset('miaozhu')" id="camBtn-miaozhu" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏠 廟祝的窩</button>
             <button onclick="openShengdanModal()" id="camBtn-shengdan" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🍑 神明聖誕</button>
+            <button onclick="moveCameraPreset('tofu')" id="camBtn-tofu" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🍢 臭豆腐攤</button>
             <button onclick="goMyHome()" id="camBtn-myhome" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏠 我的家</button>
             <button onclick="moveCameraPreset('zhaitang')" id="camBtn-zhaitang" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🍚 齋堂</button>
             <button onclick="moveCameraPreset('yufo')" id="camBtn-yufo" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🪷 浴佛檯</button>
@@ -595,6 +596,24 @@
                     <div class="text-[11px] text-amber-200 mb-1">🌳 樹上的許願牌（<span id="wishAllCount">0</span>）</div>
                     <div id="wishAll" class="text-[11px] max-h-44 overflow-y-auto pr-1"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 村口臭豆腐攤：炸臭豆腐小遊戲 -->
+    <div id="tofuModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2">
+        <div class="xinxiang-modal max-w-md w-full p-3 relative max-h-[96vh] overflow-y-auto">
+            <button onclick="closeTofuGame()" class="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-bold z-10">✕</button>
+            <h3 class="text-base font-bold text-amber-300 tracking-wider mb-2 pl-1">🍢 村口臭豆腐攤</h3>
+            <div class="relative mx-auto" style="max-width:340px">
+                <canvas id="tofuCanvas" class="block w-full rounded-xl touch-none select-none" style="aspect-ratio:340/330"></canvas>
+                <div id="tofuHeat" style="position:absolute;right:8px;top:24%;display:flex;flex-direction:column;gap:6px;padding:6px;border-radius:16px;background:rgba(0,0,0,0.35)"></div>
+            </div>
+            <div id="tofuPanel" class="mx-auto mt-2" style="max-width:340px"></div>
+            <div class="mt-2 bg-black/30 border border-amber-300/25 rounded-xl p-2.5">
+                <div class="text-[11px] text-amber-200 mb-1">🏆 炸豆腐排行榜</div>
+                <div id="tofuLeaders" class="text-[12px] max-h-40 overflow-y-auto"></div>
+                <div id="tofuNote" class="text-[10px] text-stone-400 mt-1"></div>
             </div>
         </div>
     </div>
@@ -12129,7 +12148,7 @@
         const NET_ACT_TEXT = {
             bell: '敲響了祈福鐘 🔔', drum: '擊響了鼓樓大鼓 🥁', fireworks: '施放了煙火 🎆', firecracker: '點燃了鞭炮 🧨',
             incense: '插香參拜 🙏', bow: '合掌參拜 🙏', kowtow: '行三跪九叩大禮 🙇', meditate: '盤腿打坐 🪷', chant: '念經持咒 📖',
-            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', lqdrink: '喝了一口龍泉水 🥤', vhome: '在問心村蓋好了自己的家 🏡', vdecor: '把自己的家布置得更漂亮了 🪴', vmsg: '在鄰居的信箱留了言 📮', shengdan: '獻上壽桃為神明祝壽 🍑', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
+            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', lqdrink: '喝了一口龍泉水 🥤', vhome: '在問心村蓋好了自己的家 🏡', vdecor: '把自己的家布置得更漂亮了 🪴', vmsg: '在鄰居的信箱留了言 📮', shengdan: '獻上壽桃為神明祝壽 🍑', tofu: '在村口炸臭豆腐 🍢', tofubest: '炸臭豆腐刷新了最高分 🏆', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
         };
         function onNetAct(msg) {
             if (!msg || msg.sameTab || msg.kind !== 'viewer') return;
@@ -12175,6 +12194,7 @@
                     renderNetTotals();
                     refreshWishTreePlaques();
                     refreshVillage();
+                    if (typeof refreshTofuBoard === 'function') refreshTofuBoard();
                 }, () => { clearTimeout(loading); NET.db = null; renderBlessingWall(); });
             }).catch(() => {});
         }
@@ -14422,6 +14442,7 @@
             buildYufoArea(goldMat);
             buildLongquan(goldMat);
             buildVillage(goldMat);
+            buildTofuStall();
             try { buildShengdan(); } catch (err) { console.warn('shengdan', err); }
             refreshLqChip();
             RESERVE_PLOTS.filter(pl => pl.key !== 'right').forEach(buildReservePlot);   // the right plot now holds the 龍泉 rockery   // the left plot now holds the 地藏殿
@@ -16853,6 +16874,397 @@
         }
 
         // =====================================================================
+        // 村口臭豆腐攤：紅白帆布攤車、大油鍋、招牌與排行榜看板。點攤位玩「炸臭豆腐」小遊戲：
+        // 點空油位下豆腐、看顏色在金黃時撈起，湊滿客人要的份數、照客人要不要泡菜再上菜。60 秒比分數。
+        // 最高分存在自己的 pilgrims/<id>.games（tofu, nm），所有人共讀成排行榜。
+        // =====================================================================
+        const TOFU_POS = { x: 12.0, z: 54.0, rot: -Math.PI / 2 };   // at the village entrance, east of the 山門 (clear of its pillars), front faces -x (the street)
+        const TOFU = { group: null, board: null, boardTex: null, boardKey: '' };
+        function tofuBest() {
+            let b = 0; try { b = +localStorage.getItem('temple.tofuBest') || 0; } catch (e) {}
+            if (NET.db && NET.myId) { const g = myNetDoc().games; if (g && typeof g.tofu === 'number') b = Math.max(b, g.tofu); }
+            return b;
+        }
+        function tofuSaveBest(score) {
+            try { localStorage.setItem('temple.tofuBest', String(score)); } catch (e) {}
+            if (!(NET.db && NET.myId)) return;
+            const doc = myNetDoc();
+            doc.games = { tofu: Math.min(99999, Math.round(score)), nm: (getNick() || '香客').slice(0, 10) };
+            const mine = NET.docs.find(d => d.id === NET.myId);
+            if (mine) mine.data = JSON.parse(JSON.stringify(doc)); else NET.docs.push({ id: NET.myId, data: JSON.parse(JSON.stringify(doc)) });
+            scheduleNetWrite();
+        }
+        function tofuLeaders() {
+            const out = [];
+            if (NET.db && NET.myId) NET.docs.forEach(d => { const g = d.data && d.data.games; if (g && typeof g.tofu === 'number' && g.tofu > 0) out.push({ name: String(g.nm || '香客').slice(0, 10), score: g.tofu, mine: d.id === NET.myId }); });
+            else { const b = tofuBest(); if (b > 0) out.push({ name: getNick() || '我', score: b, mine: true }); }
+            return out.sort((a, b) => b.score - a.score).slice(0, 20);
+        }
+        function buildTofuStall() {
+            const P = TOFU_POS, M = propMats();
+            const g = new THREE.Group(); g.position.set(P.x, 0, P.z); g.rotation.y = P.rot; templeGroup.add(g); TOFU.group = g;
+            const click = { interactType: 'tofu', label: '🍢 村口臭豆腐攤（點擊炸臭豆腐小遊戲）' };
+            const add = (geo, mat, x, y, z, parent = g) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); m.userData = { ...click }; clickableMeshes.push(m); return m; };
+            const red = new THREE.MeshStandardMaterial({ color: 0xc0261e, roughness: 0.6 });
+            const white = new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.7 });
+            const steel = new THREE.MeshStandardMaterial({ color: 0xb9bec4, metalness: 0.7, roughness: 0.35 });
+            const wood = new THREE.MeshStandardMaterial({ color: 0x8a5a32, roughness: 0.7 });
+            // cart: steel counter on a wooden base with two wheels at the back
+            add(new THREE.BoxGeometry(2.4, 0.85, 1.1), wood, 0, 0.45, 0);
+            add(new THREE.BoxGeometry(2.5, 0.06, 1.2), steel, 0, 0.9, 0);
+            [-1, 1].forEach(s => { const w = add(new THREE.CylinderGeometry(0.28, 0.28, 0.08, 18), new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.8 }), s * 1.28, 0.28, -0.25); w.rotation.z = Math.PI / 2; });
+            // striped canopy on four poles
+            [[-1.15, -0.5], [1.15, -0.5], [-1.15, 0.5], [1.15, 0.5]].forEach(([x, z]) => add(new THREE.CylinderGeometry(0.035, 0.035, 2.4, 8), steel, x, 1.2, z));
+            for (let k = 0; k < 8; k++) { const st = add(new THREE.BoxGeometry(0.34, 0.05, 1.5), k % 2 ? white : red, -1.19 + k * 0.34, 2.42, 0.05); st.rotation.x = 0.12; }
+            for (let k = 0; k < 8; k++) add(new THREE.BoxGeometry(0.34, 0.22, 0.03), k % 2 ? white : red, -1.19 + k * 0.34, 2.28, 0.8);
+            // the big wok of oil with tofu floating, and a stack of fried tofu on a plate
+            const wok = add(new THREE.LatheGeometry([[0, 0], [0.2, 0.01], [0.36, 0.08], [0.44, 0.18], [0.46, 0.2], [0.44, 0.2], [0.34, 0.1], [0, 0.06]].map(([r, y]) => new THREE.Vector2(r, y)), 28), new THREE.MeshStandardMaterial({ color: 0x2a2624, metalness: 0.6, roughness: 0.5, side: THREE.DoubleSide }), -0.45, 0.93, 0.05);
+            const oilMat = new THREE.MeshStandardMaterial({ color: 0xc99a2e, roughness: 0.1, metalness: 0.3, emissive: 0x4a2a00, emissiveIntensity: 0.4 });
+            const oil = add(new THREE.CircleGeometry(0.4, 24), oilMat, -0.45, 1.1, 0.05); oil.rotation.x = -Math.PI / 2; oil.castShadow = false;
+            const tofuMat = new THREE.MeshStandardMaterial({ color: 0xc98a3a, roughness: 0.75 });
+            [[-0.55, 0.0], [-0.35, 0.12], [-0.4, -0.12], [-0.6, 0.18]].forEach(([x, z], k) => { const t = add(new THREE.BoxGeometry(0.11, 0.07, 0.11), tofuMat, x, 1.12, z); t.rotation.y = k * 0.6; });
+            add(new THREE.CylinderGeometry(0.22, 0.18, 0.03, 18), white, 0.45, 0.95, 0.1);
+            [[0.4, 0.05], [0.5, 0.12], [0.44, 0.17], [0.46, 0.08]].forEach(([x, z], k) => add(new THREE.BoxGeometry(0.1, 0.07, 0.1), tofuMat, x, 1.0 + (k > 2 ? 0.06 : 0), z).rotation.y = k);
+            add(new THREE.CylinderGeometry(0.12, 0.1, 0.14, 14), new THREE.MeshStandardMaterial({ color: 0xd9ecd0, roughness: 0.6 }), 0.9, 0.99, -0.2);   // a jar of 泡菜
+            addSmokeEmitter(...localToWorld(TOFU_POS, 0.05, 0, 0.45).toArray().map((v, i) => i === 1 ? 1.25 : v), 6, 0.35, 1.2, 0xf1f5f9, 0.22);
+            // signboards: 臭豆腐 on the canopy front, a vertical banner on the pole
+            const sign = add(new THREE.PlaneGeometry(1.4, 0.42), new THREE.MeshStandardMaterial({ map: createSignboardTexture('酥炸臭豆腐', 420, 126, '#7a1814', '#facc15', '#fde68a', false, 62), roughness: 0.5 }), 0, 1.98, 0.82);
+            sign.castShadow = false;
+            const ban = add(new THREE.PlaneGeometry(0.3, 1.1), new THREE.MeshStandardMaterial({ map: createSignboardTexture('外酥內嫩', 64, 240, '#facc15', '#b91c1c', '#7a1814', true, 40), roughness: 0.5, side: THREE.DoubleSide }), 1.32, 1.6, 0.5);
+            ban.castShadow = false;
+            // leaderboard: a chalkboard on an easel beside the stall
+            const c = document.createElement('canvas'); c.width = 256; c.height = 320;
+            TOFU.boardCanvas = c; TOFU.boardTex = new THREE.CanvasTexture(c);
+            const bd = add(new THREE.BoxGeometry(0.9, 1.12, 0.05), [wood, wood, wood, wood, new THREE.MeshStandardMaterial({ map: TOFU.boardTex, roughness: 0.9 }), wood], 1.75, 1.2, 0.35);
+            bd.rotation.y = -0.35;
+            [[-0.35, -0.45], [0.35, -0.45]].forEach(([x]) => { const l = add(new THREE.BoxGeometry(0.05, 1.3, 0.05), wood, 1.75 + x * 0.94, 0.62, 0.35 + x * 0.34); l.rotation.y = -0.35; });
+            refreshTofuBoard();
+            const anchor = new THREE.Object3D(); anchor.position.set(0, 3.0, 0); g.add(anchor);
+            register3DLabel(anchor, 0, '🍢 臭豆腐攤', '#fb923c', () => moveCameraPreset('tofu'));
+            // night: a string of bulbs under the canopy
+            const bulbMat = new THREE.MeshStandardMaterial({ color: 0xfff3c4, emissive: 0xffd27a, emissiveIntensity: 0.3 });
+            registerNightEmissive(bulbMat, 0.3, 1.8);
+            for (let k = 0; k < 6; k++) { const bb = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), bulbMat); bb.position.set(-1.0 + k * 0.4, 2.15, 0.78); g.add(bb); }
+            addNightGlow(g, new THREE.Vector3(0, 2.0, 0.5), 0xffc070, 2.4);
+            addLightPool(...[localToWorld(TOFU_POS, 0, 0, 0.8)].map(v => [v.x, v.z])[0], 3.5, 0.9);
+            const cw = localToWorld(TOFU_POS, 0, 0, 0);
+            colliders.push({ x: cw.x, z: cw.z, r: 1.3 });
+            const bw = localToWorld(TOFU_POS, 1.75, 0, 0.35);
+            colliders.push({ x: bw.x, z: bw.z, r: 0.5 });
+        }
+        function refreshTofuBoard() {
+            if (!TOFU.boardCanvas) return;
+            const list = tofuLeaders().slice(0, 6);
+            const key = JSON.stringify(list);
+            if (key === TOFU.boardKey) return;
+            TOFU.boardKey = key;
+            const x = TOFU.boardCanvas.getContext('2d');
+            x.fillStyle = '#1f3a2c'; x.fillRect(0, 0, 256, 320);
+            x.strokeStyle = '#8a5a32'; x.lineWidth = 10; x.strokeRect(5, 5, 246, 310);
+            x.fillStyle = '#fde68a'; x.textAlign = 'center'; x.font = '900 34px "LXGW WenKai TC","Noto Serif TC",serif'; x.fillText('炸豆腐高手', 128, 50);
+            x.font = '700 24px "LXGW WenKai TC","Noto Serif TC",serif';
+            if (!list.length) { x.fillStyle = '#e8f0e0'; x.fillText('等你來挑戰！', 128, 170); }
+            list.forEach((r, i) => {
+                const y = 96 + i * 36;
+                x.textAlign = 'left'; x.fillStyle = i < 3 ? ['#facc15', '#e5e7eb', '#f59e0b'][i] : '#e8f0e0';
+                x.fillText(`${i + 1}. ${r.name}`, 22, y);
+                x.textAlign = 'right'; x.fillText(String(r.score), 234, y);
+            });
+            TOFU.boardTex.needsUpdate = true;
+        }
+
+        // ---------------------------------------------------------------- the game
+        const TG = { on: false, raf: 0, cv: null, ctx: null, dpr: 1, W: 340, H: 330, tab: 'food' };
+        function tofuSizzle(strength = 1) {
+            const ctx = ensureAudioCtx(); if (!ctx) return;
+            const n = ctx.createBufferSource(), len = 0.35;
+            const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * len), ctx.sampleRate), d = buf.getChannelData(0);
+            for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2) * (Math.random() < 0.3 ? 1 : 0.4);
+            n.buffer = buf;
+            const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 2500;
+            const gn = ctx.createGain(); gn.gain.value = 0.18 * strength;
+            n.connect(f); f.connect(gn); gn.connect(ctx.destination); n.start();
+        }
+        // ingredient / seasoning cards shown under the wok
+        const TOFU_FOOD = [
+            { k: 'tofu', name: '臭豆腐', icon: 'tofu' },
+            { k: 'oil', name: '添油', icon: '🫗' }
+        ];
+        const TOFU_SEA = [
+            { k: 'pao', name: '泡菜', icon: '🥬' }, { k: 'chili', name: '辣醬', icon: '🌶️' }, { k: 'garlic', name: '蒜泥', icon: '🧄' },
+            { k: 'soy', name: '醬油膏', icon: '🫙' }, { k: 'cilantro', name: '香菜', icon: '🌿' }
+        ];
+        const TOFU_SEA_NAME = Object.fromEntries(TOFU_SEA.map(s => [s.k, s.name]));
+        const TOFU_HEAT = { big: { name: '大', mul: 1.6 }, mid: { name: '中', mul: 1.0 }, small: { name: '小', mul: 0.6 } };
+        function openTofuGame() {
+            emitAct('tofu');
+            document.getElementById('tofuModal').classList.remove('hidden');
+            const cv = document.getElementById('tofuCanvas');
+            TG.cv = cv; TG.ctx = cv.getContext('2d');
+            TG.dpr = Math.min(2, window.devicePixelRatio || 1);
+            cv.width = TG.W * TG.dpr; cv.height = TG.H * TG.dpr;
+            if (!cv.dataset.bound) {
+                cv.dataset.bound = '1';
+                cv.addEventListener('pointerdown', e => { const r = cv.getBoundingClientRect(); tofuTap((e.clientX - r.left) * TG.W / r.width, (e.clientY - r.top) * TG.H / r.height); e.preventDefault(); });
+            }
+            tofuReset('menu');
+            renderTofuPanel();
+            renderTofuLeaders();
+            cancelAnimationFrame(TG.raf);
+            TG.on = true; TG.last = performance.now();
+            const loop = now => { if (!TG.on) return; const dt = Math.min(0.05, (now - TG.last) / 1000); TG.last = now; tofuUpdate(dt); tofuDraw(); TG.raf = requestAnimationFrame(loop); };
+            TG.raf = requestAnimationFrame(loop);
+        }
+        function closeTofuGame() {
+            TG.on = false; cancelAnimationFrame(TG.raf);
+            document.getElementById('tofuModal').classList.add('hidden');
+        }
+        const TOFU_COOK = { ready: 5.0, perfect: 7.2, over: 9.0, burnt: 11.0 };   // seconds in the oil at medium heat
+        const TOFU_WOK = { x: 150, y: 205, rx: 128, ry: 100 };
+        const TOFU_SLOTS = Array.from({ length: 6 }, (_, i) => { const a = -Math.PI / 2 + i / 6 * Math.PI * 2; return { x: TOFU_WOK.x + Math.cos(a) * 62, y: TOFU_WOK.y + Math.sin(a) * 46 }; });
+        const TOFU_FACES = ['🧑', '👩', '👴', '👵', '👦', '👧', '🧔', '👨‍🦱'];
+        function tofuReset(mode) {
+            Object.assign(TG, { mode, time: 60, score: 0, combo: 0, served: 0, slots: TOFU_SLOTS.map(() => null), plate: [], sea: new Set(), queue: [], spawnT: 0.5, fx: [], heat: 'mid', oilLv: 1, bubbles: [] });
+            if (document.getElementById('tofuPanel')) renderTofuPanel();
+        }
+        function tofuNewCustomer() {
+            const hard = Math.min(1, (60 - TG.time) / 60);
+            const pool = TOFU_SEA.map(s => s.k).sort(() => Math.random() - 0.5);
+            const want = new Set(pool.slice(0, 1 + ((Math.random() * (1.4 + hard * 1.6)) | 0)));
+            if (Math.random() < 0.55) want.add('pao');
+            TG.queue.push({ face: TOFU_FACES[(Math.random() * TOFU_FACES.length) | 0], n: 2 + ((Math.random() * (2 + hard * 2)) | 0), want, pat: 26 - hard * 8, max: 26 - hard * 8 });
+        }
+        function tofuQuality(t) {
+            if (t < TOFU_COOK.ready) return { q: 'raw', pts: 3, label: '還沒熟' };
+            if (t < TOFU_COOK.perfect) return { q: 'perfect', pts: 30, label: '金黃酥脆！' };
+            if (t < TOFU_COOK.over) return { q: 'good', pts: 15, label: '有點老' };
+            if (t < TOFU_COOK.burnt) return { q: 'over', pts: 5, label: '炸太久' };
+            return { q: 'burnt', pts: -10, label: '焦掉了' };
+        }
+        function tofuToast(text, x, y, col) { TG.fx.push({ text, x, y, col: col || '#fde68a', t: 0 }); }
+        const TB = { start: { x: 95, y: 250, w: 150, h: 48 } };
+        const tInside = (b, x, y) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
+        // tap in the canvas: start / restart, or lift a tofu out of the oil onto the plate
+        function tofuTap(x, y) {
+            ensureAudioCtx();
+            if (TG.mode !== 'play') { if (tInside(TB.start, x, y)) { tofuReset('play'); playWoodenFishSound(); } return; }
+            for (let i = 0; i < TG.slots.length; i++) {
+                const s = TOFU_SLOTS[i], cur = TG.slots[i];
+                if (!cur || Math.hypot(x - s.x, y - s.y) > 28) continue;
+                const q = tofuQuality(cur.t);
+                TG.slots[i] = null;
+                if (q.q === 'burnt') { TG.score = Math.max(0, TG.score - 10); TG.combo = 0; tofuToast('焦掉了 −10', s.x, s.y - 20, '#f87171'); tofuSizzle(0.4); return; }
+                if (TG.plate.length >= 6) { TG.slots[i] = cur; tofuToast('盤子滿了', s.x, s.y - 20, '#f87171'); return; }
+                TG.plate.push(q);
+                tofuToast(q.label, s.x, s.y - 20, q.q === 'perfect' ? '#facc15' : q.q === 'raw' ? '#fca5a5' : '#fdba74');
+                tofuSizzle(0.5);
+                renderTofuPanel();
+                return;
+            }
+        }
+        // the HTML panel: heat, tabs, ingredient / seasoning cards, 起鍋
+        function tofuHeat(h) { TG.heat = h; playWoodenFishSound(); renderTofuPanel(); }
+        function tofuTab(t) { TG.tab = t; renderTofuPanel(); }
+        function tofuCard(k) {
+            ensureAudioCtx();
+            if (TG.mode !== 'play') return;
+            if (k === 'tofu') {
+                if (TG.oilLv < 0.15) { tofuToast('油不夠了，先添油！', 150, 205, '#fca5a5'); return; }
+                const i = TG.slots.findIndex(s => !s);
+                if (i < 0) { tofuToast('油鍋滿了', 150, 205, '#fca5a5'); return; }
+                TG.slots[i] = { t: 0 }; TG.oilLv = Math.max(0, TG.oilLv - 0.06); tofuSizzle(1);
+                for (let n = 0; n < 6; n++) TG.bubbles.push({ x: TOFU_SLOTS[i].x + (Math.random() - 0.5) * 40, y: TOFU_SLOTS[i].y + (Math.random() - 0.5) * 30, t: 0 });
+                return;
+            }
+            if (k === 'oil') { TG.oilLv = 1; tofuSizzle(0.6); tofuToast('油添滿了', 150, 205); return; }
+            if (TOFU_SEA_NAME[k]) { if (TG.sea.has(k)) TG.sea.delete(k); else TG.sea.add(k); playWoodenFishSound(); renderTofuPanel(); }
+        }
+        function tofuServe() {
+            if (TG.mode !== 'play') return;
+            const c = TG.queue[0];
+            if (!c || !TG.plate.length) { tofuToast('盤子上還沒有豆腐', 150, 300, '#fca5a5'); return; }
+            if (TG.plate.length !== c.n) { tofuToast(`客人要 ${c.n} 塊`, 150, 300, '#fca5a5'); return; }
+            let pts = TG.plate.reduce((s, q) => s + q.pts, 0);
+            const allPerfect = TG.plate.every(q => q.q === 'perfect');
+            let right = 0, wrong = 0;
+            c.want.forEach(k => { if (TG.sea.has(k)) right++; else wrong++; });
+            TG.sea.forEach(k => { if (!c.want.has(k)) wrong++; });
+            pts += right * 8 - wrong * 12;
+            if (wrong) tofuToast(`調味不對 −${wrong * 12}`, 150, 90, '#fca5a5');
+            pts += 20 + Math.round(10 * c.pat / c.max);
+            if (allPerfect && !wrong) { TG.combo++; pts += 10 * TG.combo; } else TG.combo = 0;
+            TG.score = Math.max(0, TG.score + pts);
+            TG.served++;
+            tofuToast(`+${pts}${allPerfect && !wrong && TG.combo > 1 ? `　完美 ×${TG.combo}` : ''}`, 150, 120, '#facc15');
+            playTempleBellSound(880);
+            TG.queue.shift(); TG.plate = []; TG.sea = new Set();
+            renderTofuPanel();
+        }
+        function tofuDump() { if (TG.mode !== 'play' || (!TG.plate.length && !TG.sea.size)) return; TG.plate = []; TG.sea = new Set(); TG.combo = 0; tofuToast('倒掉重來', 150, 300, '#fca5a5'); renderTofuPanel(); }
+        function tofuIcon(icon) {
+            if (icon !== 'tofu') return `<span class="text-2xl leading-none">${icon}</span>`;
+            return '<svg width="30" height="26" viewBox="0 0 30 26"><path d="M4 9 L15 4 L26 9 L26 19 L15 24 L4 19 Z" fill="#c98a3a"/><path d="M4 9 L15 14 L26 9 L15 4 Z" fill="#dda34f"/><path d="M15 14 L15 24" stroke="#8a5a20" stroke-width="1"/><circle cx="9" cy="15" r="1" fill="#7a4a18"/><circle cx="20" cy="17" r="1" fill="#7a4a18"/><circle cx="14" cy="9" r="1" fill="#a8702a"/></svg>';
+        }
+        function renderTofuPanel() {
+            const el = document.getElementById('tofuPanel'); if (!el) return;
+            const H = TOFU_HEAT;
+            const hb = h => { const on = TG.heat === h; return `<button onclick="tofuHeat('${h}')" style="width:40px;height:40px;border-radius:12px;font-weight:900;font-size:15px;border:1.5px solid ${on ? '#f59e0b' : '#fde9c8'};background:${on ? '#fde68a' : 'rgba(255,255,255,0.88)'};color:#92400e;box-shadow:${on ? '0 0 0 3px rgba(245,158,11,0.35)' : 'none'}">${H[h].name}</button>`; };
+            document.getElementById('tofuHeat').innerHTML = '<div style="font-size:11px;color:#fde68a;text-align:center;margin-bottom:2px">火力</div>' + ['big', 'mid', 'small'].map(hb).join('');
+            document.getElementById('tofuHeat').style.display = TG.mode === 'play' ? 'flex' : 'none';
+            const tabs = [['food', '🧺 食材'], ['sea', '🫙 調味']];
+            const list = TG.tab === 'food' ? TOFU_FOOD : TOFU_SEA;
+            const card = (onclick, icon, name, on) => `<button onclick="${onclick}" style="position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:64px;border-radius:12px;border:1.5px solid ${on ? '#f59e0b' : 'rgba(120,80,30,0.12)'};background:${on ? '#fef3c7' : '#ffffff'};box-shadow:0 1px 2px rgba(0,0,0,0.12)">${icon}<span style="font-size:11px;font-weight:700;color:#44403c">${name}</span>${on ? '<span style="position:absolute;top:2px;right:5px;font-size:11px;color:#d97706">✔</span>' : ''}</button>`;
+            const cards = list.map(c => card(`tofuCard('${c.k}')`, tofuIcon(c.icon), c.name, TG.tab === 'sea' && TG.sea.has(c.k))).join('') + (TG.tab === 'food' ? card('tofuDump()', '<span style="font-size:24px;line-height:1">🗑️</span>', '倒掉', false) : '');
+            el.innerHTML = `
+                <div style="display:flex;align-items:flex-end;justify-content:space-between">
+                    <div style="display:flex;gap:4px">${tabs.map(([k, l]) => `<button onclick="tofuTab('${k}')" style="padding:6px 16px;border-radius:12px 12px 0 0;font-size:12px;font-weight:700;color:#78350f;background:${TG.tab === k ? '#fbf5e9' : '#e2d3b8'};opacity:${TG.tab === k ? 1 : 0.75}">${l}</button>`).join('')}</div>
+                    <button onclick="tofuServe()" style="margin-bottom:4px;padding:6px 16px;border-radius:12px;font-size:14px;font-weight:900;color:#fff;background:linear-gradient(135deg,#f97316,#dc2626);box-shadow:0 2px 6px rgba(220,38,38,0.4)">起鍋！</button>
+                </div>
+                <div style="background:#fbf5e9;border-radius:0 12px 12px 12px;padding:8px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px">${cards}</div>
+                <div style="font-size:10px;color:rgba(254,243,199,0.8);margin-top:4px;padding:0 4px">${TG.tab === 'food' ? '點「臭豆腐」下鍋，點鍋裡金黃的豆腐撈到盤子，湊齊份數再「起鍋！」上菜' : '照客人點的調味勾選，再按「起鍋！」'}</div>`;
+        }
+        function tofuUpdate(dt) {
+            TG.fx.forEach(f => f.t += dt); TG.fx = TG.fx.filter(f => f.t < 1.2);
+            TG.bubbles.forEach(b => b.t += dt); TG.bubbles = TG.bubbles.filter(b => b.t < 0.8);
+            if (TG.mode !== 'play') return;
+            TG.time -= dt;
+            const mul = TOFU_HEAT[TG.heat].mul * (TG.oilLv < 0.3 ? 1.35 : 1);   // too little oil burns faster
+            TG.slots.forEach(s => { if (s) s.t += dt * mul; });
+            if (TG.slots.some(s => s)) TG.oilLv = Math.max(0, TG.oilLv - dt * 0.004 * mul);
+            if (Math.random() < dt * 8 * mul) { const s = TG.slots.findIndex(x => x); if (s >= 0) TG.bubbles.push({ x: TOFU_SLOTS[s].x + (Math.random() - 0.5) * 44, y: TOFU_SLOTS[s].y + (Math.random() - 0.5) * 34, t: 0 }); }
+            TG.spawnT -= dt;
+            if (TG.spawnT <= 0 && TG.queue.length < 3) { tofuNewCustomer(); TG.spawnT = 6 + Math.random() * 4; }
+            TG.queue.forEach(c => c.pat -= dt);
+            if (TG.queue.length && TG.queue[0].pat <= 0) { TG.queue.shift(); TG.score = Math.max(0, TG.score - 15); TG.combo = 0; tofuToast('客人等太久走了 −15', 150, 90, '#f87171'); }
+            TG.queue = TG.queue.filter(c => c.pat > 0);
+            if (TG.time <= 0) tofuEnd();
+        }
+        function tofuEnd() {
+            TG.mode = 'over';
+            renderTofuPanel();
+            const prev = tofuBest();
+            TG.newBest = TG.score > prev;
+            if (TG.newBest) tofuSaveBest(TG.score);
+            TG.best = Math.max(prev, TG.score);
+            const list = tofuLeaders();
+            TG.rank = list.findIndex(r => r.mine) + 1;
+            renderTofuLeaders(); refreshTofuBoard();
+            playTempleBellSound(TG.newBest ? 1046 : 659);
+            if (TG.newBest && TG.score > 0) emitAct('tofubest');
+        }
+        function tofuColor(t) {
+            const stops = [[0, [242, 232, 205]], [TOFU_COOK.ready, [222, 170, 80]], [TOFU_COOK.perfect, [200, 125, 40]], [TOFU_COOK.over, [140, 80, 30]], [TOFU_COOK.burnt, [40, 28, 22]]];
+            for (let i = 0; i < stops.length - 1; i++) {
+                const [a, ca] = stops[i], [b, cb] = stops[i + 1];
+                if (t <= b) { const k = Math.max(0, (t - a) / (b - a)); return `rgb(${ca.map((v, j) => Math.round(v + (cb[j] - v) * k)).join(',')})`; }
+            }
+            return 'rgb(40,28,22)';
+        }
+        function tofuRR(x, X, Y, W, H, r) { x.beginPath(); if (x.roundRect) x.roundRect(X, Y, W, H, r); else x.rect(X, Y, W, H); }
+        function tofuDraw() {
+            const x = TG.ctx; if (!x) return;
+            const now = performance.now();
+            x.setTransform(TG.dpr, 0, 0, TG.dpr, 0, 0);
+            // stove top: dark steel with warm light from the flame
+            const bg = x.createRadialGradient(TOFU_WOK.x, TOFU_WOK.y + 30, 30, TOFU_WOK.x, TOFU_WOK.y, 260);
+            bg.addColorStop(0, '#5a3a24'); bg.addColorStop(0.55, '#2e2018'); bg.addColorStop(1, '#17110d');
+            x.fillStyle = bg; x.fillRect(0, 0, TG.W, TG.H);
+            x.textBaseline = 'middle';
+            // flame glow around the wok, stronger with more heat
+            const hm = TOFU_HEAT[TG.heat].mul, flick = 0.85 + 0.15 * Math.sin(now / 90) + 0.08 * Math.sin(now / 37);
+            const fg = x.createRadialGradient(TOFU_WOK.x, TOFU_WOK.y + 20, TOFU_WOK.rx * 0.8, TOFU_WOK.x, TOFU_WOK.y + 20, TOFU_WOK.rx * (1.12 + hm * 0.12));
+            fg.addColorStop(0, `rgba(255,140,40,${0.55 * flick * Math.min(1, hm)})`); fg.addColorStop(1, 'rgba(255,90,20,0)');
+            x.fillStyle = fg; x.beginPath(); x.ellipse(TOFU_WOK.x, TOFU_WOK.y + 20, TOFU_WOK.rx * 1.35, TOFU_WOK.ry * 1.35, 0, 0, Math.PI * 2); x.fill();
+            // the wok: dark iron rim and bowl, and oil whose level and colour show how much is left
+            const W = TOFU_WOK;
+            const rim = x.createLinearGradient(W.x - W.rx, W.y - W.ry, W.x + W.rx, W.y + W.ry);
+            rim.addColorStop(0, '#5b5550'); rim.addColorStop(0.5, '#2a2624'); rim.addColorStop(1, '#4a4440');
+            x.fillStyle = rim; x.beginPath(); x.ellipse(W.x, W.y, W.rx, W.ry, 0, 0, Math.PI * 2); x.fill();
+            x.fillStyle = '#1a1614'; x.beginPath(); x.ellipse(W.x, W.y + 4, W.rx - 10, W.ry - 9, 0, 0, Math.PI * 2); x.fill();
+            // long wooden handle on the left
+            x.fillStyle = '#7a4a24'; tofuRR(x, 2, W.y - 9, 30, 18, 8); x.fill();
+            const lv = 0.55 + 0.45 * TG.oilLv;
+            const og = x.createRadialGradient(W.x - 20, W.y - 18, 10, W.x, W.y, W.rx * lv);
+            og.addColorStop(0, '#f6cf66'); og.addColorStop(0.6, '#d99a2e'); og.addColorStop(1, '#8a5a18');
+            x.fillStyle = og; x.beginPath(); x.ellipse(W.x, W.y + 6, (W.rx - 14) * lv, (W.ry - 12) * lv, 0, 0, Math.PI * 2); x.fill();
+            x.fillStyle = 'rgba(255,255,255,0.18)'; x.beginPath(); x.ellipse(W.x - 34, W.y - 24, 34 * lv, 10 * lv, -0.3, 0, Math.PI * 2); x.fill();
+            // tofu in the oil
+            TOFU_SLOTS.forEach((s, i) => {
+                const cur = TG.slots[i]; if (!cur) return;
+                const wob = Math.sin(now / 130 + i) * 1.4;
+                x.save(); x.translate(s.x, s.y + wob); x.rotate(0.25 * Math.sin(i * 2.3));
+                x.fillStyle = 'rgba(0,0,0,0.25)'; x.fillRect(-17, -13, 36, 30);
+                x.fillStyle = tofuColor(cur.t); x.fillRect(-18, -16, 36, 30);
+                x.fillStyle = 'rgba(255,255,255,0.18)'; x.fillRect(-18, -16, 36, 6);
+                for (let k = 0; k < 6; k++) { x.fillStyle = 'rgba(60,30,10,0.25)'; x.fillRect(-12 + (k * 11) % 24, -8 + (k * 7) % 18, 3, 3); }
+                x.restore();
+                const tot = TOFU_COOK.burnt, a0 = -Math.PI / 2;
+                x.lineWidth = 3.5;
+                x.strokeStyle = 'rgba(255,255,255,0.18)'; x.beginPath(); x.arc(s.x, s.y, 25, 0, Math.PI * 2); x.stroke();
+                x.strokeStyle = 'rgba(74,222,128,0.9)'; x.beginPath(); x.arc(s.x, s.y, 25, a0 + TOFU_COOK.ready / tot * Math.PI * 2, a0 + TOFU_COOK.perfect / tot * Math.PI * 2); x.stroke();
+                x.strokeStyle = cur.t > TOFU_COOK.over ? '#f87171' : '#fff7d6'; x.beginPath(); x.arc(s.x, s.y, 25, a0, a0 + Math.min(1, cur.t / tot) * Math.PI * 2); x.stroke();
+            });
+            TG.bubbles.forEach(b => { x.strokeStyle = `rgba(255,250,220,${0.7 * (1 - b.t / 0.8)})`; x.lineWidth = 1.2; x.beginPath(); x.arc(b.x, b.y - b.t * 6, 2 + b.t * 4, 0, Math.PI * 2); x.stroke(); });
+            // rising steam
+            for (let k = 0; k < 5; k++) { const p = ((now / 1600 + k / 5) % 1); x.fillStyle = `rgba(255,255,255,${0.08 * (1 - p)})`; x.beginPath(); x.arc(W.x - 50 + k * 25 + Math.sin(now / 500 + k) * 8, W.y - 20 - p * 110, 16 + p * 18, 0, Math.PI * 2); x.fill(); }
+            // oil gauge
+            x.fillStyle = 'rgba(0,0,0,0.35)'; tofuRR(x, 10, 300, 70, 10, 5); x.fill();
+            x.fillStyle = TG.oilLv < 0.3 ? '#f87171' : '#facc15'; tofuRR(x, 10, 300, 70 * TG.oilLv, 10, 5); x.fill();
+            x.fillStyle = '#fef3c7'; x.font = '11px "Noto Sans TC",sans-serif'; x.textAlign = 'left'; x.fillText('油量', 10, 292);
+            // plate (bottom right)
+            x.fillStyle = '#f5f0e6'; x.beginPath(); x.ellipse(250, 305, 72, 18, 0, 0, Math.PI * 2); x.fill();
+            x.strokeStyle = '#c2410c'; x.lineWidth = 2; x.beginPath(); x.ellipse(250, 305, 66, 15, 0, 0, Math.PI * 2); x.stroke();
+            TG.plate.forEach((q, k) => { x.fillStyle = q.q === 'perfect' ? '#c87d28' : q.q === 'raw' ? '#e8d6a8' : q.q === 'good' ? '#b06a24' : '#7a4a1e'; x.fillRect(200 + k * 17, 294, 15, 15); });
+            [...TG.sea].forEach((k, n) => { x.font = '13px serif'; x.textAlign = 'center'; x.fillText((TOFU_SEA.find(s => s.k === k) || {}).icon || '', 205 + n * 22, 280); });
+            // HUD
+            x.fillStyle = 'rgba(0,0,0,0.45)'; tofuRR(x, 6, 6, 328, 26, 13); x.fill();
+            x.fillStyle = '#fde68a'; x.font = '700 14px "Noto Sans TC",sans-serif'; x.textAlign = 'left'; x.fillText(`⏱ ${Math.max(0, Math.ceil(TG.time))}`, 16, 19);
+            x.textAlign = 'right'; x.fillText(`分數 ${TG.score}`, 324, 19);
+            if (TG.combo > 1) { x.textAlign = 'center'; x.fillStyle = '#facc15'; x.fillText(`完美連擊 ×${TG.combo}`, 170, 19); }
+            // customers along the top with their orders
+            TG.queue.forEach((c, i) => {
+                const cx = 24 + i * 106, cy = 58;
+                x.globalAlpha = i === 0 ? 1 : 0.55;
+                x.fillStyle = '#fff7ed'; tofuRR(x, cx - 18, cy - 18, 98, 40, 10); x.fill();
+                x.font = '24px serif'; x.textAlign = 'center'; x.fillText(c.face, cx, cy + 2);
+                x.fillStyle = '#7a1814'; x.font = '700 12px "Noto Sans TC",sans-serif'; x.textAlign = 'left'; x.fillText(`${c.n} 塊`, cx + 16, cy - 7);
+                x.font = '12px serif'; x.fillText([...c.want].map(k => (TOFU_SEA.find(s => s.k === k) || {}).icon).join(''), cx + 16, cy + 9);
+                const kk = Math.max(0, c.pat / c.max);
+                x.fillStyle = 'rgba(0,0,0,0.12)'; x.fillRect(cx - 14, cy + 16, 90, 3);
+                x.fillStyle = kk > 0.5 ? '#16a34a' : kk > 0.25 ? '#ca8a04' : '#dc2626'; x.fillRect(cx - 14, cy + 16, 90 * kk, 3);
+                x.globalAlpha = 1;
+            });
+            // floating texts
+            TG.fx.forEach(f => { x.globalAlpha = Math.max(0, 1 - f.t / 1.2); x.fillStyle = f.col; x.font = '800 15px "Noto Sans TC",sans-serif'; x.textAlign = 'center'; x.fillText(f.text, f.x, f.y - f.t * 30); x.globalAlpha = 1; });
+            // menu / game over
+            if (TG.mode !== 'play') {
+                x.fillStyle = 'rgba(20,10,6,0.84)'; x.fillRect(0, 0, TG.W, TG.H);
+                x.textAlign = 'center'; x.fillStyle = '#fde68a';
+                const btn = label => { const b = TB.start; x.fillStyle = '#ea580c'; tofuRR(x, b.x, b.y, b.w, b.h, 12); x.fill(); x.fillStyle = '#fff'; x.font = '800 16px "Noto Sans TC",sans-serif'; x.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 1); };
+                if (TG.mode === 'menu') {
+                    x.font = '900 26px "LXGW WenKai TC","Noto Serif TC",serif'; x.fillText('🍢 炸臭豆腐', 170, 50);
+                    x.font = '13px "Noto Sans TC",sans-serif'; x.fillStyle = '#fef3c7';
+                    ['下方「食材」點臭豆腐下鍋', '綠色區間時點鍋裡的豆腐撈起（金黃酥脆）', '火力大炸得快、火力小比較好控制', '油量不夠會炸焦，記得「添油」', '「調味」照客人點的勾選，湊齊份數按「起鍋！」', '限時 60 秒！'].forEach((l, i) => x.fillText(l, 170, 88 + i * 22));
+                    btn('開始營業');
+                    x.fillStyle = '#fde68a'; x.font = '12px "Noto Sans TC",sans-serif'; x.fillText(`我的最高分：${tofuBest()}`, 170, 316);
+                } else {
+                    x.font = '900 24px "LXGW WenKai TC","Noto Serif TC",serif'; x.fillText('收攤囉！', 170, 60);
+                    x.font = '800 38px "Noto Sans TC",sans-serif'; x.fillStyle = '#facc15'; x.fillText(String(TG.score), 170, 115);
+                    x.font = '14px "Noto Sans TC",sans-serif'; x.fillStyle = '#fef3c7';
+                    x.fillText(`賣出 ${TG.served} 份`, 170, 160);
+                    x.fillText(TG.newBest && TG.score > 0 ? '🎉 刷新個人最高分！' : `個人最高分 ${TG.best}`, 170, 186);
+                    if (TG.rank) x.fillText(`排行榜第 ${TG.rank} 名`, 170, 212);
+                    btn('再炸一鍋');
+                }
+            }
+        }
+        function renderTofuLeaders() {
+            const list = tofuLeaders();
+            document.getElementById('tofuLeaders').innerHTML = list.length ? list.slice(0, 10).map((r, i) => `<div class="flex justify-between py-0.5 ${r.mine ? 'text-amber-300 font-bold' : 'text-stone-200'}"><span>${i + 1}. ${escapeHtmlLite(r.name)}${r.mine ? '（我）' : ''}</span><span>${r.score}</span></div>`).join('') : '<div class="text-stone-400">還沒有人上榜，來當第一名！</div>';
+            document.getElementById('tofuNote').textContent = NET.db ? '排行榜所有香客都看得到。' : '目前未連線，分數只記在這台裝置。';
+        }
+
+        // =====================================================================
         // 浴佛檯：大雄寶殿前廟埕（大香爐西側）——八角浴佛亭，亭中青銅浴佛盆盛香湯，蓮台上立金身太子像（右手指天、左手指地）
         // 點擊：信眾立於盆前，以長柄竹勺舀香湯，自太子像肩上灌沐三次；農曆四月初八浴佛節另有花雨
         // =====================================================================
@@ -18977,7 +19389,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             ['偏殿', ['tudigong', 'light', 'lampwall_gm', 'lampwall_ts', 'side_left', 'side_right', 'side_wing_left', 'side_wing_right', 'tigercave', 'side_dizang']],
             ['後殿', ['rearhall', 'guandi', 'tianshi', 'xuantian', 'yuhuang', 'sanqing']],
             ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'wishtree', 'puppet', 'longquan', 'village', 'guanyinpond', 'grounds']],
-            ['活動', ['shengdan', 'myhome', 'fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'yufo', 'cat', 'monk', 'fireworks', 'festival']]
+            ['活動', ['shengdan', 'myhome', 'tofu', 'fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'yufo', 'cat', 'monk', 'fireworks', 'festival']]
         ];
         let camGroupActive = 0;
         function showCamGroup(i) {
@@ -19042,6 +19454,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             presets.fudecenser = { r: 7.5, theta: 0.15, phi: 1.3, tx: FUDE_CENSER_POS.x, ty: 1.4, tz: FUDE_CENSER_POS.z - 1 };
             presets.wishtree = { r: 13, theta: -0.95, phi: 1.12, tx: WISHTREE.x - 2, ty: 2.0, tz: WISHTREE.z + 0.5 };
             if (TIGER_CAVE.cam) presets.tigercave = TIGER_CAVE.cam;
+            presets.tofu = { r: 7.5, theta: -Math.PI / 2 + 0.45, phi: 1.22, tx: TOFU_POS.x, ty: 1.3, tz: TOFU_POS.z };
             presets.village = { r: 72, theta: 0.35, phi: 0.95, tx: VILLAGE.axisX, ty: 0, tz: VILLAGE.crossZ };
             { const mh = myHome(), pl = mh && VILLAGE.plots[mh.p]; presets.myhome = pl ? { r: 15, theta: pl.rot + 0.4, phi: 1.2, tx: pl.x, ty: 1.4, tz: pl.z } : presets.village; }
             presets.longquan = { r: 24, theta: -Math.PI / 2 - 0.25, phi: 1.3, tx: 57, ty: 4.5, tz: LONGQUAN.z + 3 };
@@ -19226,6 +19639,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             else if (type === 'longquan') longquanInteract();
             else if (type === 'vhome') villageInteract(ud);
             else if (type === 'shengdan') shengdanBow(ud);
+            else if (type === 'tofu') openTofuGame();
             else if (type === 'xiaoren') openXiaorenModal();
             else if (type && type.startsWith('miaozhu')) miaozhuInteract(type, ud);
             else if (type && type.startsWith('zhaitang')) zhaitangInteract(type);
