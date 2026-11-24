@@ -190,6 +190,9 @@
             <button onclick="moveCameraPreset('miaozhu')" id="camBtn-miaozhu" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏠 廟祝的窩</button>
             <button onclick="openShengdanModal()" id="camBtn-shengdan" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🍑 神明聖誕</button>
             <button onclick="moveCameraPreset('tofu')" id="camBtn-tofu" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🍢 臭豆腐攤</button>
+            <button onclick="moveCameraPreset('mg_fish')" id="camBtn-mg_fish" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🐟 撈金魚</button>
+            <button onclick="moveCameraPreset('mg_balloon')" id="camBtn-mg_balloon" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🎯 射氣球</button>
+            <button onclick="moveCameraPreset('mg_ring')" id="camBtn-mg_ring" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">⭕ 套圈圈</button>
             <button onclick="goMyHome()" id="camBtn-myhome" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🏠 我的家</button>
             <button onclick="moveCameraPreset('zhaitang')" id="camBtn-zhaitang" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🍚 齋堂</button>
             <button onclick="moveCameraPreset('yufo')" id="camBtn-yufo" class="cam-pill px-2.5 py-1 rounded-full text-[11px] font-semibold palace-pill text-stone-200 hover:text-amber-200">🪷 浴佛檯</button>
@@ -614,6 +617,20 @@
                 <div class="text-[11px] text-amber-200 mb-1">🏆 炸豆腐排行榜</div>
                 <div id="tofuLeaders" class="text-[12px] max-h-40 overflow-y-auto"></div>
                 <div id="tofuNote" class="text-[10px] text-stone-400 mt-1"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 村口夜市：撈金魚、射氣球、套圈圈（共用一個畫布視窗） -->
+    <div id="mgModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2">
+        <div class="xinxiang-modal max-w-md w-full p-3 relative max-h-[96vh] overflow-y-auto">
+            <button onclick="closeMiniGame()" class="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-bold z-10">✕</button>
+            <h3 id="mgTitle" class="text-base font-bold text-amber-300 tracking-wider mb-2 pl-1"></h3>
+            <canvas id="mgCanvas" class="block mx-auto w-full rounded-xl touch-none select-none" style="max-width:340px;aspect-ratio:340/440"></canvas>
+            <div class="mt-2 bg-black/30 border border-amber-300/25 rounded-xl p-2.5">
+                <div id="mgBoardTitle" class="text-[11px] text-amber-200 mb-1"></div>
+                <div id="mgLeaders" class="text-[12px] max-h-40 overflow-y-auto"></div>
+                <div id="mgNote" class="text-[10px] text-stone-400 mt-1"></div>
             </div>
         </div>
     </div>
@@ -12148,7 +12165,7 @@
         const NET_ACT_TEXT = {
             bell: '敲響了祈福鐘 🔔', drum: '擊響了鼓樓大鼓 🥁', fireworks: '施放了煙火 🎆', firecracker: '點燃了鞭炮 🧨',
             incense: '插香參拜 🙏', bow: '合掌參拜 🙏', kowtow: '行三跪九叩大禮 🙇', meditate: '盤腿打坐 🪷', chant: '念經持咒 📖',
-            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', lqdrink: '喝了一口龍泉水 🥤', vhome: '在問心村蓋好了自己的家 🏡', vdecor: '把自己的家布置得更漂亮了 🪴', vmsg: '在鄰居的信箱留了言 📮', shengdan: '獻上壽桃為神明祝壽 🍑', tofu: '在村口炸臭豆腐 🍢', tofubest: '炸臭豆腐刷新了最高分 🏆', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
+            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', lqdrink: '喝了一口龍泉水 🥤', vhome: '在問心村蓋好了自己的家 🏡', vdecor: '把自己的家布置得更漂亮了 🪴', vmsg: '在鄰居的信箱留了言 📮', shengdan: '獻上壽桃為神明祝壽 🍑', tofu: '在村口炸臭豆腐 🍢', tofubest: '炸臭豆腐刷新了最高分 🏆', mg_fish: '在夜市撈金魚 🐟', mg_balloon: '在夜市射氣球 🎯', mg_ring: '在夜市套圈圈 ⭕', mgbest: '在夜市小遊戲刷新了最高分 🏆', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
         };
         function onNetAct(msg) {
             if (!msg || msg.sameTab || msg.kind !== 'viewer') return;
@@ -12195,6 +12212,7 @@
                     refreshWishTreePlaques();
                     refreshVillage();
                     if (typeof refreshTofuBoard === 'function') refreshTofuBoard();
+                    if (typeof refreshGameBoards === 'function') refreshGameBoards();
                 }, () => { clearTimeout(loading); NET.db = null; renderBlessingWall(); });
             }).catch(() => {});
         }
@@ -14443,6 +14461,7 @@
             buildLongquan(goldMat);
             buildVillage(goldMat);
             buildTofuStall();
+            Object.keys(MG_INFO).forEach(buildGameStall);
             try { buildShengdan(); } catch (err) { console.warn('shengdan', err); }
             refreshLqChip();
             RESERVE_PLOTS.filter(pl => pl.key !== 'right').forEach(buildReservePlot);   // the right plot now holds the 龍泉 rockery   // the left plot now holds the 地藏殿
@@ -16889,7 +16908,7 @@
             try { localStorage.setItem('temple.tofuBest', String(score)); } catch (e) {}
             if (!(NET.db && NET.myId)) return;
             const doc = myNetDoc();
-            doc.games = { tofu: Math.min(99999, Math.round(score)), nm: (getNick() || '香客').slice(0, 10) };
+            doc.games = Object.assign({}, doc.games && typeof doc.games === 'object' ? doc.games : {}, { tofu: Math.min(99999, Math.round(score)), nm: (getNick() || '香客').slice(0, 10) });
             const mine = NET.docs.find(d => d.id === NET.myId);
             if (mine) mine.data = JSON.parse(JSON.stringify(doc)); else NET.docs.push({ id: NET.myId, data: JSON.parse(JSON.stringify(doc)) });
             scheduleNetWrite();
@@ -16939,6 +16958,7 @@
             bd.rotation.y = -0.35;
             [[-0.35, -0.45], [0.35, -0.45]].forEach(([x]) => { const l = add(new THREE.BoxGeometry(0.05, 1.3, 0.05), wood, 1.75 + x * 0.94, 0.62, 0.35 + x * 0.34); l.rotation.y = -0.35; });
             refreshTofuBoard();
+            addNightMarketDetails(g, 'tofu', 0xc0261e);
             const anchor = new THREE.Object3D(); anchor.position.set(0, 3.0, 0); g.add(anchor);
             register3DLabel(anchor, 0, '🍢 臭豆腐攤', '#fb923c', () => moveCameraPreset('tofu'));
             // night: a string of bulbs under the canopy
@@ -17262,6 +17282,708 @@
             const list = tofuLeaders();
             document.getElementById('tofuLeaders').innerHTML = list.length ? list.slice(0, 10).map((r, i) => `<div class="flex justify-between py-0.5 ${r.mine ? 'text-amber-300 font-bold' : 'text-stone-200'}"><span>${i + 1}. ${escapeHtmlLite(r.name)}${r.mine ? '（我）' : ''}</span><span>${r.score}</span></div>`).join('') : '<div class="text-stone-400">還沒有人上榜，來當第一名！</div>';
             document.getElementById('tofuNote').textContent = NET.db ? '排行榜所有香客都看得到。' : '目前未連線，分數只記在這台裝置。';
+        }
+
+        // =====================================================================
+        // 村口夜市街：撈金魚、射氣球、套圈圈三攤（與臭豆腐攤並排在山門外）。
+        // 每攤一個畫布小遊戲，最高分存在自己的 pilgrims/<id>.games.<key>，大家共讀成各攤排行榜。
+        // =====================================================================
+        const MG_INFO = {
+            fish: { name: '撈金魚', icon: '🐟', title: '撈金魚高手', pos: { x: 19.5, z: 54.3, rot: 0 }, color: 0x1d4ed8, sign: '夜市撈金魚', banner: '一網打盡' },
+            balloon: { name: '射氣球', icon: '🎯', title: '神射手', pos: { x: -11.5, z: 54.3, rot: 0 }, color: 0x15803d, sign: '射氣球', banner: '百發百中' },
+            ring: { name: '套圈圈', icon: '⭕', title: '套圈圈達人', pos: { x: -19.5, z: 54.3, rot: 0 }, color: 0x7c3aed, sign: '套圈圈', banner: '圈圈有獎' }
+        };
+        const MG_STALLS = {};
+
+        // 台灣夜市攤位細節：帆布波浪邊、手寫價目牌、顧攤老闆、紅色塑膠矮凳、藍色塑膠籃、地上的延長線
+        const NM_PRICE = { tofu: ['臭豆腐', '小份 50', '大份 80', '加辣免費'], fish: ['撈金魚', '一網 30', '三網 80', '撈到可帶走'], balloon: ['射氣球', '10 鏢 50', '20 鏢 90', '全中送大獎'], ring: ['套圈圈', '10 圈 100', '20 圈 180', '套中就送'] };
+        const NM_VENDOR = { tofu: { shirt: 0xf5f5f4, hair: 0x2b1a12, style: 'short', gender: 'm', age: 'middle', hat: 'cap' }, fish: { shirt: 0x2563eb, hair: 0x1c140d, style: 'bun', gender: 'f', age: 'middle' }, balloon: { shirt: 0x16a34a, hair: 0x1c140d, style: 'short', gender: 'm', age: 'young' }, ring: { shirt: 0xb91c1c, hair: 0xb9b2a6, style: 'bun', gender: 'f', age: 'old' } };
+        function addNightMarketDetails(g, key, colHex) {
+            const add = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; m.receiveShadow = true; g.add(m); return m; };
+            const colA = new THREE.MeshStandardMaterial({ color: colHex, roughness: 0.6, side: THREE.DoubleSide }), colB = new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.7, side: THREE.DoubleSide });
+            // scalloped valance under the canopy front
+            const half = new THREE.CircleGeometry(0.11, 10, Math.PI, Math.PI);
+            for (let k = 0; k < 13; k++) add(half, k % 2 ? colB : colA, -1.32 + k * 0.22, 2.17, 0.76);
+            // drooping string of bulbs along the front
+            const pts = []; for (let k = 0; k <= 12; k++) { const u = k / 12; pts.push(new THREE.Vector3(-1.3 + u * 2.6, 2.1 - Math.sin(u * Math.PI) * 0.16, 0.8)); }
+            add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.006, 4), new THREE.MeshStandardMaterial({ color: 0x111111 }), 0, 0, 0);
+            // handwritten price board hanging on a pole
+            const c = document.createElement('canvas'); c.width = 160; c.height = 220;
+            const x = c.getContext('2d');
+            x.fillStyle = '#fbfaf5'; x.fillRect(0, 0, 160, 220); x.strokeStyle = '#334155'; x.lineWidth = 6; x.strokeRect(3, 3, 154, 214);
+            const L = NM_PRICE[key];
+            x.textAlign = 'center'; x.fillStyle = '#b91c1c'; x.font = '900 30px "LXGW WenKai TC","Noto Serif TC",serif'; x.fillText(L[0], 80, 42);
+            x.fillStyle = '#1e3a8a'; x.font = '700 26px "LXGW WenKai TC","Noto Serif TC",serif'; x.fillText(L[1] + ' 元', 80, 96); x.fillText(L[2] + ' 元', 80, 136);
+            x.fillStyle = '#15803d'; x.font = '700 20px "LXGW WenKai TC","Noto Serif TC",serif'; x.fillText(L[3], 80, 186);
+            add(new THREE.PlaneGeometry(0.38, 0.52), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(c), roughness: 0.8, side: THREE.DoubleSide }), 1.27, 1.45, 0.52, 0, -0.25, 0.04).castShadow = false;
+            // the stall keeper behind the counter
+            try {
+                const v = createLookDoll(Object.assign({ skin: 0xf1c9a5, mood: 'smile', sash: 0x7c2d12, pants: 0x1f2937, hat: 'none', acc: 'none', beard: 'none', skirt: false }, NM_VENDOR[key]));
+                v.position.set(-0.45, 0, -0.85); v.rotation.y = 0.15; g.add(v);
+                v.traverse(o => { if (o.isMesh) o.castShadow = true; });
+                const ud = v.userData; if (ud && ud.rightArm) { ud.rightArm.rotation.x = -0.9; ud.leftArm.rotation.x = -0.5; }
+                MG_VENDORS.push({ v, ph: Math.random() * 6 });
+            } catch (e) {}
+            // red plastic stools in front and a blue plastic crate beside the cart
+            const red = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.45 }), blue = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.5 });
+            [[-0.8, 1.45, 0.2], [0.15, 1.55, -0.3], [0.95, 1.4, 0.5]].forEach(([sx, sz, r]) => {
+                add(new THREE.CylinderGeometry(0.17, 0.2, 0.04, 14), red, sx, 0.42, sz);
+                for (let k = 0; k < 4; k++) { const a = r + k * Math.PI / 2 + Math.PI / 4; add(new THREE.BoxGeometry(0.04, 0.4, 0.04), red, sx + Math.cos(a) * 0.14, 0.2, sz + Math.sin(a) * 0.14, Math.sin(a) * 0.12, 0, -Math.cos(a) * 0.12); }
+            });
+            const crate = add(new THREE.BoxGeometry(0.55, 0.32, 0.4), blue, -1.7, 0.16, -0.3, 0, 0.3, 0);
+            for (let k = 0; k < 3; k++) add(new THREE.BoxGeometry(0.5, 0.03, 0.02), new THREE.MeshStandardMaterial({ color: 0x0b2a6b }), -1.7 + Math.sin(0.3) * 0.21, 0.07 + k * 0.09, -0.3 + Math.cos(0.3) * 0.21, 0, 0.3, 0).castShadow = false;
+            // power cord snaking from the back of the stall along the ground
+            const cp = [new THREE.Vector3(1.2, 2.0, -0.48), new THREE.Vector3(1.3, 0.6, -0.6), new THREE.Vector3(1.6, 0.02, -0.9), new THREE.Vector3(2.4, 0.02, -1.1), new THREE.Vector3(3.2, 0.02, -0.8)];
+            add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cp), 30, 0.015, 5), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.6 }), 0, 0, 0);
+            const pw = localToWorldGroup(g, 0, 1.5);
+            colliders.push({ x: pw.x, z: pw.z, r: 0.5 });
+        }
+        const MG_VENDORS = [];
+        function localToWorldGroup(g, lx, lz) { g.updateMatrixWorld(true); return new THREE.Vector3(lx, 0, lz).applyMatrix4(g.matrixWorld); }
+        function gameBest(key) {
+            let b = 0; try { b = +localStorage.getItem('temple.best.' + key) || 0; } catch (e) {}
+            if (NET.db && NET.myId) { const g = myNetDoc().games; if (g && typeof g[key] === 'number') b = Math.max(b, g[key]); }
+            return b;
+        }
+        function gameSaveBest(key, score) {
+            try { localStorage.setItem('temple.best.' + key, String(score)); } catch (e) {}
+            if (!(NET.db && NET.myId)) return;
+            const doc = myNetDoc();
+            doc.games = Object.assign({}, doc.games && typeof doc.games === 'object' ? doc.games : {}, { [key]: Math.min(99999, Math.round(score)), nm: (getNick() || '香客').slice(0, 10) });
+            const mine = NET.docs.find(d => d.id === NET.myId);
+            if (mine) mine.data = JSON.parse(JSON.stringify(doc)); else NET.docs.push({ id: NET.myId, data: JSON.parse(JSON.stringify(doc)) });
+            scheduleNetWrite();
+        }
+        function gameLeaders(key) {
+            const out = [];
+            if (NET.db && NET.myId) NET.docs.forEach(d => { const g = d.data && d.data.games; if (g && typeof g[key] === 'number' && g[key] > 0) out.push({ name: String(g.nm || '香客').slice(0, 10), score: g[key], mine: d.id === NET.myId }); });
+            else { const b = gameBest(key); if (b > 0) out.push({ name: getNick() || '我', score: b, mine: true }); }
+            return out.sort((a, b) => b.score - a.score).slice(0, 20);
+        }
+
+        // ---------------------------------------------------------------- the three stalls (cart, canopy, sign, prize display, leaderboard)
+        function buildGameStall(key) {
+            const I = MG_INFO[key], P = I.pos;
+            const g = new THREE.Group(); g.position.set(P.x, 0, P.z); g.rotation.y = P.rot; templeGroup.add(g);
+            const click = { interactType: 'minigame', game: key, label: `${I.icon} ${I.name}攤（點擊開始玩）` };
+            const add = (geo, mat, x, y, z, parent = g) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); m.userData = { ...click }; clickableMeshes.push(m); return m; };
+            const col = new THREE.MeshStandardMaterial({ color: I.color, roughness: 0.6 });
+            const white = new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.7 });
+            const steel = new THREE.MeshStandardMaterial({ color: 0xb9bec4, metalness: 0.7, roughness: 0.35 });
+            const wood = new THREE.MeshStandardMaterial({ color: 0x8a5a32, roughness: 0.7 });
+            // counter and canopy (front of the stall faces +z, toward the village)
+            add(new THREE.BoxGeometry(2.6, 0.85, 1.0), wood, 0, 0.43, 0);
+            add(new THREE.BoxGeometry(2.7, 0.06, 1.1), steel, 0, 0.88, 0);
+            [[-1.25, -0.48], [1.25, -0.48], [-1.25, 0.48], [1.25, 0.48]].forEach(([x, z]) => add(new THREE.CylinderGeometry(0.035, 0.035, 2.4, 8), steel, x, 1.2, z));
+            for (let k = 0; k < 8; k++) { const st = add(new THREE.BoxGeometry(0.36, 0.05, 1.45), k % 2 ? white : col, -1.26 + k * 0.36, 2.42, 0); st.rotation.x = -0.1; }
+            for (let k = 0; k < 8; k++) add(new THREE.BoxGeometry(0.36, 0.22, 0.03), k % 2 ? white : col, -1.26 + k * 0.36, 2.28, 0.74);
+            const sign = add(new THREE.PlaneGeometry(1.5, 0.42), new THREE.MeshStandardMaterial({ map: createSignboardTexture(I.sign, 420, 120, '#7a1814', '#facc15', '#fde68a', false, 58), roughness: 0.5 }), 0, 1.98, 0.76);
+            sign.castShadow = false;
+            const ban = add(new THREE.PlaneGeometry(0.28, 1.0), new THREE.MeshStandardMaterial({ map: createSignboardTexture(I.banner, 64, 230, '#facc15', '#b91c1c', '#7a1814', true, 40), roughness: 0.5, side: THREE.DoubleSide }), -1.42, 1.55, 0.5);
+            ban.castShadow = false;
+            // what is on the counter
+            if (key === 'fish') {
+                const tank = add(new THREE.BoxGeometry(2.3, 0.3, 0.85), new THREE.MeshStandardMaterial({ color: 0x3b82f6, roughness: 0.3 }), 0, 1.04, 0);
+                const water = add(new THREE.PlaneGeometry(2.2, 0.76), new THREE.MeshStandardMaterial({ color: 0x7dd3fc, roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.85 }), 0, 1.195, 0); water.rotation.x = -Math.PI / 2; water.castShadow = false;
+                const fc = [0xff6a3d, 0xff9a2e, 0xe11d48, 0xfacc15, 0x222222];
+                const fish = [];
+                for (let i = 0; i < 12; i++) { const f = add(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshStandardMaterial({ color: fc[i % 5], roughness: 0.4 }), (Math.random() - 0.5) * 2, 1.18, (Math.random() - 0.5) * 0.6); f.scale.set(1.6, 0.5, 0.9); f.castShadow = false; f.userData.ph = Math.random() * 6; fish.push(f); }
+                MG_STALLS[key] = { fish };
+                [-0.9, -0.7].forEach((x, k) => { const pp = add(new THREE.TorusGeometry(0.08, 0.012, 6, 16), white, x, 1.25, 0.5); pp.rotation.x = -1.2; add(new THREE.CylinderGeometry(0.01, 0.01, 0.2, 5), white, x, 1.25, 0.6).rotation.x = 1.5; });
+            } else if (key === 'balloon') {
+                const wall = add(new THREE.BoxGeometry(2.4, 1.15, 0.06), new THREE.MeshStandardMaterial({ color: 0x3f2a1a, roughness: 0.8 }), 0, 1.5, -0.45);
+                const bc = [0xef4444, 0xf59e0b, 0x22c55e, 0x3b82f6, 0xa855f7, 0xec4899];
+                for (let r = 0; r < 4; r++) for (let c = 0; c < 9; c++) { const bl = add(new THREE.SphereGeometry(0.085, 10, 8), new THREE.MeshStandardMaterial({ color: bc[(r * 9 + c) % 6], roughness: 0.35 }), -1.04 + c * 0.26, 1.12 + r * 0.25, -0.38); bl.scale.y = 1.2; bl.castShadow = false; }
+                add(new THREE.BoxGeometry(0.5, 0.06, 0.08), new THREE.MeshStandardMaterial({ color: 0x374151, metalness: 0.5, roughness: 0.4 }), 0.7, 0.98, 0.35).rotation.y = 0.4;
+            } else {
+                const mat = add(new THREE.BoxGeometry(2.4, 0.02, 0.9), new THREE.MeshStandardMaterial({ color: 0x166534, roughness: 0.9 }), 0, 0.92, 0);
+                const pc = [0xfacc15, 0xef4444, 0x60a5fa, 0xf472b6, 0xf5f5f4, 0x22c55e];
+                for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) { const kind = (r * 6 + c) % 3; const geo = kind === 0 ? new THREE.CylinderGeometry(0.04, 0.05, 0.22, 10) : kind === 1 ? new THREE.SphereGeometry(0.08, 10, 8) : new THREE.BoxGeometry(0.12, 0.14, 0.12); add(geo, new THREE.MeshStandardMaterial({ color: pc[(r + c) % 6], roughness: 0.4 }), -1.0 + c * 0.4, 1.02, -0.3 + r * 0.3); }
+                [0.5, 0.8, 1.1].forEach(x => { const rg = add(new THREE.TorusGeometry(0.1, 0.012, 6, 18), new THREE.MeshStandardMaterial({ color: 0xd9b46a, roughness: 0.6 }), x, 0.95, 0.42); rg.rotation.x = Math.PI / 2; });
+            }
+            // leaderboard chalkboard beside the stall
+            const c = document.createElement('canvas'); c.width = 256; c.height = 320;
+            const tex = new THREE.CanvasTexture(c);
+            const bd = add(new THREE.BoxGeometry(0.85, 1.05, 0.05), [wood, wood, wood, wood, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 }), wood], 1.85, 1.15, 0.2);
+            bd.rotation.y = -0.4;
+            [-0.32, 0.32].forEach(dx => { const l = add(new THREE.BoxGeometry(0.05, 1.25, 0.05), wood, 1.85 + dx * Math.cos(0.4), 0.6, 0.2 + dx * Math.sin(0.4)); l.rotation.y = -0.4; });
+            MG_STALLS[key] = Object.assign(MG_STALLS[key] || {}, { canvas: c, tex, boardKey: '' });
+            refreshGameBoard(key);
+            addNightMarketDetails(g, key, I.color);
+            const anchor = new THREE.Object3D(); anchor.position.set(0, 3.0, 0); g.add(anchor);
+            register3DLabel(anchor, 0, `${I.icon} ${I.name}`, '#fb923c', () => moveCameraPreset('mg_' + key));
+            const bulbMat = new THREE.MeshStandardMaterial({ color: 0xfff3c4, emissive: 0xffd27a, emissiveIntensity: 0.3 });
+            registerNightEmissive(bulbMat, 0.3, 1.8);
+            for (let k = 0; k < 6; k++) { const bb = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), bulbMat); bb.position.set(-1.0 + k * 0.4, 2.15, 0.72); g.add(bb); }
+            addNightGlow(g, new THREE.Vector3(0, 2.0, 0.4), 0xffc070, 2.4);
+            const lp = localToWorld(P, 0, 0, 0.9); addLightPool(lp.x, lp.z, 3.5, 0.9);
+            const cw = localToWorld(P, 0, 0, 0); colliders.push({ x: cw.x - 0.7, z: cw.z, r: 0.75 }, { x: cw.x + 0.7, z: cw.z, r: 0.75 });
+            const bw = localToWorld(P, 1.85, 0, 0.2); colliders.push({ x: bw.x, z: bw.z, r: 0.45 });
+        }
+        function refreshGameBoard(key) {
+            const S = MG_STALLS[key]; if (!S || !S.canvas) return;
+            const list = gameLeaders(key).slice(0, 6), k = JSON.stringify(list);
+            if (k === S.boardKey) return;
+            S.boardKey = k;
+            const x = S.canvas.getContext('2d');
+            x.fillStyle = '#1f3a2c'; x.fillRect(0, 0, 256, 320);
+            x.strokeStyle = '#8a5a32'; x.lineWidth = 10; x.strokeRect(5, 5, 246, 310);
+            x.fillStyle = '#fde68a'; x.textAlign = 'center'; x.font = '900 32px "LXGW WenKai TC","Noto Serif TC",serif'; x.fillText(MG_INFO[key].title, 128, 50);
+            x.font = '700 24px "LXGW WenKai TC","Noto Serif TC",serif';
+            if (!list.length) { x.fillStyle = '#e8f0e0'; x.fillText('等你來挑戰！', 128, 170); }
+            list.forEach((r, i) => { const y = 96 + i * 36; x.textAlign = 'left'; x.fillStyle = i < 3 ? ['#facc15', '#e5e7eb', '#f59e0b'][i] : '#e8f0e0'; x.fillText(`${i + 1}. ${r.name}`, 22, y); x.textAlign = 'right'; x.fillText(String(r.score), 234, y); });
+            S.tex.needsUpdate = true;
+        }
+        function refreshGameBoards() { Object.keys(MG_INFO).forEach(refreshGameBoard); }
+        function updateGameStalls(t) {
+            MG_VENDORS.forEach(o => { const ud = o.v.userData; if (ud && ud.rightArm) ud.rightArm.rotation.x = -0.9 + Math.sin(t * 2.2 + o.ph) * 0.35; if (ud && ud.headGroup) ud.headGroup.rotation.y = Math.sin(t * 0.5 + o.ph) * 0.4; });
+            const S = MG_STALLS.fish; if (!S || !S.fish) return;
+            S.fish.forEach((f, i) => { const a = t * 0.6 + f.userData.ph; f.position.x = Math.sin(a) * 0.95; f.position.z = Math.cos(a * 1.3 + i) * 0.28; f.rotation.y = Math.atan2(Math.cos(a) * 0.95, -Math.sin(a * 1.3 + i) * 0.36) + Math.PI / 2; });
+        }
+
+        // ---------------------------------------------------------------- shared game modal
+        const MG = { on: false, key: '', raf: 0, cv: null, ctx: null, dpr: 1, W: 340, H: 440, mode: 'menu' };
+        function openMiniGame(key) {
+            const I = MG_INFO[key]; if (!I) return;
+            emitAct('mg_' + key);
+            MG.key = key;
+            document.getElementById('mgTitle').textContent = `${I.icon} ${I.name}攤`;
+            document.getElementById('mgBoardTitle').textContent = `🏆 ${I.name}排行榜`;
+            document.getElementById('mgModal').classList.remove('hidden');
+            const cv = document.getElementById('mgCanvas');
+            MG.cv = cv; MG.ctx = cv.getContext('2d'); MG.dpr = Math.min(2, window.devicePixelRatio || 1);
+            cv.width = MG.W * MG.dpr; cv.height = MG.H * MG.dpr;
+            if (!cv.dataset.bound) {
+                cv.dataset.bound = '1';
+                const pt = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * MG.W / r.width, (e.clientY - r.top) * MG.H / r.height]; };
+                cv.addEventListener('pointerdown', e => { ensureAudioCtx(); const [x, y] = pt(e); MG.px = x; MG.py = y; try { cv.setPointerCapture(e.pointerId); } catch (err) {} mgDown(x, y); e.preventDefault(); });
+                cv.addEventListener('pointermove', e => { const [x, y] = pt(e); MG.px = x; MG.py = y; });
+                ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => cv.addEventListener(ev, () => { if (MG.mode === 'play' && MG.key === 'fish') fishUp(); }));
+            }
+            MG.mode = 'menu'; MG.px = MG.W / 2; MG.py = MG.H / 2;
+            renderMgLeaders();
+            cancelAnimationFrame(MG.raf);
+            MG.on = true; MG.last = performance.now();
+            const loop = now => { if (!MG.on) return; const dt = Math.min(0.05, (now - MG.last) / 1000); MG.last = now; mgUpdate(dt); mgDraw(); MG.raf = requestAnimationFrame(loop); };
+            MG.raf = requestAnimationFrame(loop);
+        }
+        function closeMiniGame() { MG.on = false; cancelAnimationFrame(MG.raf); document.getElementById('mgModal').classList.add('hidden'); }
+        function renderMgLeaders() {
+            const list = gameLeaders(MG.key);
+            document.getElementById('mgLeaders').innerHTML = list.length ? list.slice(0, 10).map((r, i) => `<div class="flex justify-between py-0.5 ${r.mine ? 'text-amber-300 font-bold' : 'text-stone-200'}"><span>${i + 1}. ${escapeHtmlLite(r.name)}${r.mine ? '（我）' : ''}</span><span>${r.score}</span></div>`).join('') : '<div class="text-stone-400">還沒有人上榜，來當第一名！</div>';
+            document.getElementById('mgNote').textContent = NET.db ? '排行榜所有香客都看得到。' : '目前未連線，分數只記在這台裝置。';
+        }
+        const MG_START = { x: 95, y: 330, w: 150, h: 50 };
+        const mgIn = (b, x, y) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
+        function mgFx(text, x, y, col) { MG.fx.push({ text, x, y, col: col || '#fde68a', t: 0 }); }
+        function mgStart() {
+            Object.assign(MG, { mode: 'play', score: 0, fx: [], combo: 0 });
+            if (MG.key === 'fish') fishInit(); else if (MG.key === 'balloon') balloonInit(); else ringInit();
+            playWoodenFishSound();
+        }
+        function mgEnd() {
+            MG.mode = 'over';
+            const prev = gameBest(MG.key);
+            MG.newBest = MG.score > prev;
+            if (MG.newBest) gameSaveBest(MG.key, MG.score);
+            MG.best = Math.max(prev, MG.score);
+            MG.rank = gameLeaders(MG.key).findIndex(r => r.mine) + 1;
+            renderMgLeaders(); refreshGameBoard(MG.key);
+            playTempleBellSound(MG.newBest ? 1046 : 659);
+            if (MG.newBest && MG.score > 0) emitAct('mgbest', { mode: MG.key });
+        }
+        function mgDown(x, y) {
+            if (MG.mode !== 'play') { if (mgIn(MG_START, x, y)) mgStart(); return; }
+            if (MG.key === 'fish') fishDown(x, y); else if (MG.key === 'balloon') balloonDown(x, y); else ringDown(x, y);
+        }
+        function mgUpdate(dt) {
+            if (MG.fx) { MG.fx.forEach(f => f.t += dt); MG.fx = MG.fx.filter(f => f.t < 1.2); }
+            if (MG.mode !== 'play') return;
+            if (MG.key === 'fish') fishUpdate(dt); else if (MG.key === 'balloon') balloonUpdate(dt); else ringUpdate(dt);
+        }
+        function mgRR(x, X, Y, W, H, r) { x.beginPath(); if (x.roundRect) x.roundRect(X, Y, W, H, r); else x.rect(X, Y, W, H); }
+        function mgDraw() {
+            const x = MG.ctx; if (!x) return;
+            x.setTransform(MG.dpr, 0, 0, MG.dpr, 0, 0);
+            x.textBaseline = 'middle';
+            if (MG.key === 'fish') fishDraw(x); else if (MG.key === 'balloon') balloonDraw(x); else ringDraw(x);
+            if (MG.mode === 'play') {
+                x.fillStyle = 'rgba(0,0,0,0.45)'; mgRR(x, 6, 6, 328, 26, 13); x.fill();
+                x.fillStyle = '#fde68a'; x.font = '700 14px "Noto Sans TC",sans-serif'; x.textAlign = 'left'; x.fillText(MG.hudL || '', 16, 19);
+                x.textAlign = 'right'; x.fillText(`分數 ${MG.score}`, 324, 19);
+                if (MG.hudC) { x.textAlign = 'center'; x.fillStyle = '#facc15'; x.fillText(MG.hudC, 170, 19); }
+            }
+            (MG.fx || []).forEach(f => { x.globalAlpha = Math.max(0, 1 - f.t / 1.2); x.fillStyle = f.col; x.font = '800 16px "Noto Sans TC",sans-serif'; x.textAlign = 'center'; x.fillText(f.text, f.x, f.y - f.t * 30); x.globalAlpha = 1; });
+            if (MG.mode !== 'play') {
+                const I = MG_INFO[MG.key];
+                x.fillStyle = 'rgba(20,10,6,0.84)'; x.fillRect(0, 0, MG.W, MG.H);
+                x.textAlign = 'center'; x.fillStyle = '#fde68a';
+                const btn = label => { const b = MG_START; x.fillStyle = '#ea580c'; mgRR(x, b.x, b.y, b.w, b.h, 12); x.fill(); x.fillStyle = '#fff'; x.font = '800 16px "Noto Sans TC",sans-serif'; x.fillText(label, b.x + b.w / 2, b.y + b.h / 2 + 1); };
+                if (MG.mode === 'menu') {
+                    x.font = '900 28px "LXGW WenKai TC","Noto Serif TC",serif'; x.fillText(`${I.icon} ${I.name}`, 170, 70);
+                    x.font = '13px "Noto Sans TC",sans-serif'; x.fillStyle = '#fef3c7';
+                    ({ fish: ['按住把紙網放進水裡，移到魚下方', '放開就撈起來（魚在網緣容易滑掉）', '紙網泡越久、拖越快越容易破', '大魚太重會撐破網，金魚分數最高', '3 張紙網，網破光或 45 秒到結束'],
+                       balloon: ['點哪裡就往哪裡射飛鏢', '飛鏢會被風吹偏、稍微往下掉', '看下方風向提前修正瞄準', '連擊加分、金氣球 +3 秒、小氣球高分', '限時 30 秒！'],
+                       ring: ['第一下：鎖定左右方向（看準移動的箭頭）', '第二下：鎖定力道（決定拋多遠）', '打到獎品邊緣會彈開，或卡在邊上不算', '越遠的獎品越小、分數越高', '共 10 個竹圈'] })[MG.key].forEach((l, i) => x.fillText(l, 170, 122 + i * 26));
+                    btn('開始');
+                    x.fillStyle = '#fde68a'; x.font = '12px "Noto Sans TC",sans-serif'; x.fillText(`我的最高分：${gameBest(MG.key)}`, 170, 400);
+                } else {
+                    x.font = '900 26px "LXGW WenKai TC","Noto Serif TC",serif'; x.fillText('遊戲結束！', 170, 90);
+                    x.font = '800 40px "Noto Sans TC",sans-serif'; x.fillStyle = '#facc15'; x.fillText(String(MG.score), 170, 150);
+                    x.font = '15px "Noto Sans TC",sans-serif'; x.fillStyle = '#fef3c7';
+                    if (MG.summary) x.fillText(MG.summary, 170, 200);
+                    x.fillText(MG.newBest && MG.score > 0 ? '🎉 刷新個人最高分！' : `個人最高分 ${MG.best}`, 170, 228);
+                    if (MG.rank) x.fillText(`排行榜第 ${MG.rank} 名`, 170, 256);
+                    btn('再玩一次');
+                }
+            }
+        }
+
+        // ---------------------------------------------------------------- 撈金魚（實景風）：按住把紙網放進水裡、拖到魚下方、放開撈起
+        // 紙網泡在水裡越久、拖得越快越容易破；魚停在網緣容易滑掉；太重的魚會把網撐破
+        const FISH_KINDS = [
+            { k: 'red', body: ['#ff7a45', '#e63b12'], belly: '#ffd2b8', fin: 'rgba(255,140,90,0.55)', len: 26, pts: 10, wt: 0.16, spd: 50, n: 7 },
+            { k: 'calico', body: ['#fff4e8', '#f2a07a'], belly: '#ffffff', fin: 'rgba(255,240,230,0.55)', len: 27, pts: 15, wt: 0.18, spd: 48, n: 3, spots: true },
+            { k: 'black', body: ['#3a3a3a', '#111111'], belly: '#5a5a5a', fin: 'rgba(60,60,60,0.55)', len: 28, pts: 15, wt: 0.2, spd: 46, n: 2, popeye: true },
+            { k: 'big', body: ['#ff9a3c', '#d9480f'], belly: '#ffe0c0', fin: 'rgba(255,160,80,0.5)', len: 44, pts: 30, wt: 0.42, spd: 36, n: 2 },
+            { k: 'gold', body: ['#fff3a0', '#e8b400'], belly: '#fffbe0', fin: 'rgba(255,236,140,0.6)', len: 24, pts: 60, wt: 0.18, spd: 80, n: 1 }
+        ];
+        const POOL = { x: 22, y: 46, w: 296, h: 360 };
+        const NET_R = 30;
+        function fishSpawn(kind) {
+            const K = FISH_KINDS.find(f => f.k === kind);
+            return { K, x: POOL.x + 30 + Math.random() * (POOL.w - 60), y: POOL.y + 30 + Math.random() * (POOL.h - 60), a: Math.random() * Math.PI * 2, turn: 0, ph: Math.random() * 6, scared: 0, seed: Math.random() * 1000 };
+        }
+        function fishInit() {
+            MG.fish = []; FISH_KINDS.forEach(K => { for (let i = 0; i < K.n; i++) MG.fish.push(fishSpawn(K.k)); });
+            Object.assign(MG, { time: 45, nets: 3, dur: 1, net: { in: false, x: 170, y: 220, vx: 0, vy: 0 }, caught: 0, bowl: [], ripples: [], drops: [] });
+            MG.pebbles = Array.from({ length: 70 }, () => ({ x: POOL.x + 8 + Math.random() * (POOL.w - 16), y: POOL.y + 8 + Math.random() * (POOL.h - 16), r: 2 + Math.random() * 4, c: ['#c9b89a', '#a8977a', '#8d8f8a', '#d8cbb0', '#b0a28a'][(Math.random() * 5) | 0] }));
+        }
+        function fishDown(x, y) {
+            if (MG.net.in) return;
+            if (x < POOL.x || x > POOL.x + POOL.w || y < POOL.y || y > POOL.y + POOL.h) return;
+            Object.assign(MG.net, { in: true, x, y, enterT: 0 });
+            MG.ripples.push({ x, y, t: 0, big: true });
+            tofuSizzle(0.25);
+            MG.fish.forEach(o => { if (Math.hypot(o.x - x, o.y - y) < 70) o.scared = 0.7; });
+        }
+        function fishTear(why) {
+            MG.net.in = false;
+            MG.nets--;
+            mgFx(why || (MG.nets > 0 ? `紙網破了！剩 ${MG.nets} 張` : '紙網用完了'), 170, 220, '#f87171');
+            for (let k = 0; k < 10; k++) MG.drops.push({ x: MG.net.x + (Math.random() - 0.5) * 40, y: MG.net.y + (Math.random() - 0.5) * 40, vx: (Math.random() - 0.5) * 60, vy: -40 - Math.random() * 60, t: 0, paper: true });
+            MG.dur = 1;
+            if (MG.nets <= 0) { MG.summary = `撈到 ${MG.caught} 條魚`; setTimeout(() => { if (MG.mode === 'play' && MG.key === 'fish') mgEnd(); }, 600); }
+        }
+        function fishUp() {
+            const N = MG.net;
+            if (!N.in) return;
+            N.in = false;
+            for (let k = 0; k < 8; k++) MG.drops.push({ x: N.x + (Math.random() - 0.5) * 50, y: N.y + (Math.random() - 0.5) * 50, vx: (Math.random() - 0.5) * 30, vy: -20 - Math.random() * 40, t: 0 });
+            const on = MG.fish.filter(f => Math.hypot(f.x - N.x, f.y - N.y) < NET_R + f.K.len * 0.2).sort((a, b) => Math.hypot(a.x - N.x, a.y - N.y) - Math.hypot(b.x - N.x, b.y - N.y));
+            if (!on.length) { MG.dur -= 0.04; return; }
+            let load = 0;
+            const got = [];
+            on.forEach(f => {
+                const edge = Math.hypot(f.x - N.x, f.y - N.y) / NET_R;
+                if (edge > 0.68 && Math.random() < 0.55 + (edge - 0.68)) { mgFx('滑掉了！', f.x, f.y - 16, '#fca5a5'); f.scared = 1; f.a += Math.PI; return; }
+                load += f.K.wt;
+                got.push(f);
+            });
+            if (load > MG.dur * 0.9 + 0.05) { mgFx('太重了！', N.x, N.y - 30, '#f87171'); got.forEach(f => { f.scared = 1.2; }); fishTear(MG.nets > 1 ? `網子被撐破了！剩 ${MG.nets - 1} 張` : '網子被撐破了'); return; }
+            got.forEach(f => {
+                MG.dur -= f.K.wt * 0.55;
+                MG.score += f.K.pts; MG.caught++;
+                MG.bowl.push(f.K);
+                mgFx(`+${f.K.pts}${f.K.k === 'gold' ? ' 金魚！' : ''}`, f.x, f.y - 18, f.K.k === 'gold' ? '#facc15' : '#fde68a');
+                MG.fish.splice(MG.fish.indexOf(f), 1);
+                const kind = f.K.k;
+                setTimeout(() => { if (MG.mode === 'play' && MG.key === 'fish') MG.fish.push(fishSpawn(kind)); }, 1800);
+            });
+            if (got.length) playTempleBellSound(got.some(f => f.K.k === 'gold') ? 1046 : 784);
+            if (got.length > 1) { MG.score += 10 * (got.length - 1); mgFx(`一網 ${got.length} 條！+${10 * (got.length - 1)}`, N.x, N.y - 44, '#facc15'); }
+            if (MG.dur <= 0.02) fishTear();
+        }
+        function fishUpdate(dt) {
+            MG.time -= dt;
+            const N = MG.net;
+            if (N.in) {
+                const tx = Math.max(POOL.x + 10, Math.min(POOL.x + POOL.w - 10, MG.px)), ty = Math.max(POOL.y + 10, Math.min(POOL.y + POOL.h - 10, MG.py));
+                const nx = N.x + (tx - N.x) * Math.min(1, dt * 14), ny = N.y + (ty - N.y) * Math.min(1, dt * 14);
+                const sp = Math.hypot(nx - N.x, ny - N.y) / Math.max(dt, 1e-3);
+                N.x = nx; N.y = ny; N.enterT += dt;
+                // soaking weakens the paper; dragging it fast through the water tears it much quicker
+                MG.dur -= dt * (0.06 + Math.max(0, sp - 60) * 0.0016);
+                if (sp > 40 && Math.random() < dt * 10) MG.ripples.push({ x: N.x, y: N.y, t: 0 });
+                if (MG.dur <= 0) fishTear();
+            }
+            MG.ripples.forEach(r => r.t += dt); MG.ripples = MG.ripples.filter(r => r.t < 0.9);
+            MG.drops.forEach(d => { d.t += dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 220 * dt; }); MG.drops = MG.drops.filter(d => d.t < 0.6);
+            MG.fish.forEach(f => {
+                f.ph += dt;
+                f.turn += (Math.random() - 0.5) * dt * 3; f.turn *= 0.97;
+                if (N.in) {   // fish keep a wary distance from a net in the water, but drift back once it holds still
+                    const d = Math.hypot(f.x - N.x, f.y - N.y);
+                    if (d < 55 && N.enterT < 1.2) f.scared = Math.max(f.scared, 0.3);
+                }
+                if (f.scared > 0) { f.scared -= dt; const d = Math.atan2(f.y - N.y, f.x - N.x); f.a += Math.atan2(Math.sin(d - f.a), Math.cos(d - f.a)) * dt * 4; }
+                f.a += f.turn * dt;
+                const sp = f.K.spd * (f.scared > 0 ? 2.3 : 1) * (0.65 + 0.35 * Math.sin(f.ph * 2));
+                f.x += Math.cos(f.a) * sp * dt; f.y += Math.sin(f.a) * sp * dt;
+                const m = 18;
+                if (f.x < POOL.x + m || f.x > POOL.x + POOL.w - m) { f.a = Math.PI - f.a; f.x = Math.max(POOL.x + m, Math.min(POOL.x + POOL.w - m, f.x)); }
+                if (f.y < POOL.y + m || f.y > POOL.y + POOL.h - m) { f.a = -f.a; f.y = Math.max(POOL.y + m, Math.min(POOL.y + POOL.h - m, f.y)); }
+            });
+            MG.hudL = `⏱ ${Math.max(0, Math.ceil(MG.time))}`;
+            MG.hudC = `紙網 ${'●'.repeat(Math.max(0, MG.nets))}${'○'.repeat(Math.max(0, 3 - MG.nets))}`;
+            if (MG.time <= 0) { MG.summary = `撈到 ${MG.caught} 條魚`; mgEnd(); }
+        }
+        function drawGoldfish(x, f, scale, alpha) {
+            const K = f.K, L = K.len * (scale || 1), wag = Math.sin(f.ph * (f.scared > 0 ? 22 : 11)) * 0.45;
+            x.save(); x.globalAlpha = alpha == null ? 1 : alpha;
+            // tail: two translucent lobes with ray lines
+            x.fillStyle = K.fin;
+            [-1, 1].forEach(s => { x.beginPath(); x.moveTo(-L * 0.38, 0); x.quadraticCurveTo(-L * 0.7, s * L * 0.1 + wag * 5, -L * 0.98, s * L * 0.36 + wag * 9); x.quadraticCurveTo(-L * 0.72, s * L * 0.05, -L * 0.38, 0); x.fill(); });
+            x.strokeStyle = 'rgba(255,255,255,0.25)'; x.lineWidth = 0.6;
+            for (let k = -2; k <= 2; k++) { x.beginPath(); x.moveTo(-L * 0.42, 0); x.lineTo(-L * 0.9, k * L * 0.13 + wag * 7); x.stroke(); }
+            // pectoral fins
+            x.fillStyle = K.fin;
+            [-1, 1].forEach(s => { x.beginPath(); x.ellipse(L * 0.08, s * L * 0.2, L * 0.14, L * 0.06, s * (0.6 + wag * 0.4), 0, Math.PI * 2); x.fill(); });
+            // body with a lit back and pale belly
+            const g = x.createLinearGradient(0, -L * 0.25, 0, L * 0.25);
+            g.addColorStop(0, K.body[1]); g.addColorStop(0.45, K.body[0]); g.addColorStop(1, K.belly);
+            x.fillStyle = g; x.beginPath(); x.ellipse(0, 0, L * 0.5, L * 0.23, 0, 0, Math.PI * 2); x.fill();
+            if (K.spots) { x.fillStyle = 'rgba(230,70,30,0.75)'; [[0.1, -0.08, 0.1], [-0.15, 0.06, 0.08], [0.25, 0.05, 0.06]].forEach(([a, b, r]) => { x.beginPath(); x.ellipse(a * L, b * L, r * L, r * L * 0.7, 0, 0, Math.PI * 2); x.fill(); }); }
+            // scale shimmer
+            x.save(); x.beginPath(); x.ellipse(0, 0, L * 0.5, L * 0.23, 0, 0, Math.PI * 2); x.clip();
+            x.strokeStyle = 'rgba(255,255,255,0.22)'; x.lineWidth = 0.7;
+            for (let i = -3; i <= 3; i++) for (let j = -1; j <= 1; j++) { x.beginPath(); x.arc(i * L * 0.11 + (j % 2) * L * 0.05, j * L * 0.11, L * 0.07, -1.2, 1.2); x.stroke(); }
+            const sh = x.createLinearGradient(-L * 0.4, -L * 0.2, L * 0.3, L * 0.1);
+            sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.5 + 0.2 * Math.sin(f.ph * 2 + f.seed), 'rgba(255,255,255,0.35)'); sh.addColorStop(1, 'rgba(255,255,255,0)');
+            x.fillStyle = sh; x.fillRect(-L * 0.5, -L * 0.25, L, L * 0.5);
+            x.restore();
+            // dorsal fin along the back
+            x.fillStyle = K.fin; x.beginPath(); x.moveTo(-L * 0.15, -L * 0.05); x.quadraticCurveTo(0, -L * 0.02 + wag * 2, L * 0.15, -L * 0.04); x.lineTo(0, 0); x.fill();
+            // head and eyes (bulging for the black moor)
+            const eR = K.popeye ? 3.6 : 2.4;
+            [-1, 1].forEach(s => { x.fillStyle = '#fff'; x.beginPath(); x.arc(L * 0.3, s * L * 0.1, eR * (scale || 1), 0, Math.PI * 2); x.fill(); x.fillStyle = '#111'; x.beginPath(); x.arc(L * 0.32, s * L * 0.1, eR * 0.55 * (scale || 1), 0, Math.PI * 2); x.fill(); });
+            if (K.k === 'gold') { x.strokeStyle = 'rgba(255,250,200,0.65)'; x.lineWidth = 1.5; x.beginPath(); x.ellipse(0, 0, L * 0.62, L * 0.34, 0, 0, Math.PI * 2); x.stroke(); }
+            x.restore();
+        }
+        function fishDraw(x) {
+            const now = performance.now();
+            // wooden counter top around the tub
+            x.fillStyle = '#6b4526'; x.fillRect(0, 0, MG.W, MG.H);
+            for (let i = 0; i < 12; i++) { x.fillStyle = i % 2 ? 'rgba(255,220,170,0.05)' : 'rgba(0,0,0,0.06)'; x.fillRect(0, i * 38, MG.W, 38); }
+            // blue plastic tub: thick rounded rim with a highlight, inner wall shading
+            const rim = x.createLinearGradient(0, POOL.y - 14, 0, POOL.y + POOL.h + 14);
+            rim.addColorStop(0, '#5aa7e8'); rim.addColorStop(0.5, '#1f6fc2'); rim.addColorStop(1, '#174f91');
+            x.fillStyle = 'rgba(0,0,0,0.35)'; mgRR(x, POOL.x - 10, POOL.y - 6, POOL.w + 22, POOL.h + 22, 22); x.fill();
+            x.fillStyle = rim; mgRR(x, POOL.x - 14, POOL.y - 14, POOL.w + 28, POOL.h + 28, 22); x.fill();
+            x.strokeStyle = 'rgba(255,255,255,0.45)'; x.lineWidth = 2; mgRR(x, POOL.x - 11, POOL.y - 11, POOL.w + 22, POOL.h + 22, 20); x.stroke();
+            // the floor of the tub: pale blue plastic with pebbles, then water over it
+            x.save(); mgRR(x, POOL.x, POOL.y, POOL.w, POOL.h, 12); x.clip();
+            x.fillStyle = '#8cc8ee'; x.fillRect(POOL.x, POOL.y, POOL.w, POOL.h);
+            (MG.pebbles || []).forEach(p => { x.fillStyle = p.c; x.beginPath(); x.ellipse(p.x, p.y, p.r, p.r * 0.75, p.r, 0, Math.PI * 2); x.fill(); x.fillStyle = 'rgba(255,255,255,0.25)'; x.beginPath(); x.arc(p.x - p.r * 0.3, p.y - p.r * 0.3, p.r * 0.35, 0, Math.PI * 2); x.fill(); });
+            // fish shadows on the floor, then the fish themselves (slightly higher, so the shadow is offset)
+            (MG.fish || []).forEach(f => { x.save(); x.translate(f.x + 7, f.y + 9); x.rotate(f.a); x.fillStyle = 'rgba(10,40,70,0.22)'; x.beginPath(); x.ellipse(0, 0, f.K.len * 0.5, f.K.len * 0.2, 0, 0, Math.PI * 2); x.fill(); x.restore(); });
+            // water tint and moving caustics
+            const wg = x.createLinearGradient(0, POOL.y, 0, POOL.y + POOL.h); wg.addColorStop(0, 'rgba(60,150,210,0.28)'); wg.addColorStop(1, 'rgba(20,90,160,0.42)');
+            x.fillStyle = wg; x.fillRect(POOL.x, POOL.y, POOL.w, POOL.h);
+            x.globalCompositeOperation = 'lighter';
+            for (let i = 0; i < 16; i++) {   // soft moving light patches (caustics)
+                const cx = POOL.x + ((i * 61 + now / 60 * (i % 3 + 1)) % (POOL.w + 60)) - 30, cy = POOL.y + ((i * 97 + now / 80) % (POOL.h + 40)) - 20;
+                const cg = x.createRadialGradient(cx, cy, 2, cx, cy, 26 + (i % 4) * 6);
+                cg.addColorStop(0, 'rgba(200,240,255,0.10)'); cg.addColorStop(1, 'rgba(200,240,255,0)');
+                x.fillStyle = cg; x.beginPath(); x.ellipse(cx, cy, 30 + (i % 4) * 6, 16 + (i % 3) * 4, Math.sin(now / 2000 + i), 0, Math.PI * 2); x.fill();
+            }
+            x.globalCompositeOperation = 'source-over';
+            (MG.fish || []).forEach(f => { x.save(); x.translate(f.x, f.y); x.rotate(f.a); drawGoldfish(x, f, 1, 0.97); x.restore(); });
+            // surface: soft reflection streak of the stall lights
+            const rf = x.createLinearGradient(POOL.x, POOL.y, POOL.x + POOL.w, POOL.y + POOL.h);
+            rf.addColorStop(0, 'rgba(255,255,255,0)'); rf.addColorStop(0.35, 'rgba(255,250,230,0.16)'); rf.addColorStop(0.42, 'rgba(255,255,255,0)'); rf.addColorStop(1, 'rgba(255,255,255,0)');
+            x.fillStyle = rf; x.fillRect(POOL.x, POOL.y, POOL.w, POOL.h);
+            (MG.ripples || []).forEach(r => { x.strokeStyle = `rgba(255,255,255,${0.6 * (1 - r.t / 0.9)})`; x.lineWidth = r.big ? 2.5 : 1.5; x.beginPath(); x.ellipse(r.x, r.y, (r.big ? 16 : 8) + r.t * 60, ((r.big ? 16 : 8) + r.t * 60) * 0.9, 0, 0, Math.PI * 2); x.stroke(); });
+            x.restore();
+            // the paper net (poi): red plastic frame and handle; under water the paper looks darker and wet
+            if (MG.mode === 'play') {
+                const N = MG.net, nx = N.in ? N.x : MG.px, ny = N.in ? N.y : MG.py;
+                x.save(); x.translate(nx, ny);
+                if (!N.in) { x.fillStyle = 'rgba(0,0,0,0.25)'; x.beginPath(); x.ellipse(8, 12, NET_R, NET_R * 0.9, 0, 0, Math.PI * 2); x.fill(); }
+                const paper = N.in ? `rgba(230,240,245,${0.18 + 0.25 * MG.dur})` : `rgba(255,255,255,${0.55 + 0.35 * MG.dur})`;
+                x.fillStyle = paper; x.beginPath(); x.arc(0, 0, NET_R, 0, Math.PI * 2); x.fill();
+                if (MG.dur < 0.75) { x.fillStyle = 'rgba(160,190,210,0.25)'; [[-8, -6, 8], [10, 8, 6], [-4, 12, 5]].forEach(([a, b, r]) => { x.beginPath(); x.arc(a, b, r * (1.6 - MG.dur), 0, Math.PI * 2); x.fill(); }); }
+                x.strokeStyle = 'rgba(90,110,120,0.8)'; x.lineWidth = 1.2;
+                if (MG.dur < 0.55) { x.beginPath(); x.moveTo(-12, -14); x.lineTo(-2, -2); x.lineTo(-8, 10); x.stroke(); }
+                if (MG.dur < 0.3) { x.beginPath(); x.moveTo(6, -18); x.lineTo(14, -4); x.lineTo(20, 2); x.stroke(); }
+                const fr = x.createLinearGradient(-NET_R, -NET_R, NET_R, NET_R); fr.addColorStop(0, '#ff6b6b'); fr.addColorStop(1, '#b91c1c');
+                x.strokeStyle = fr; x.lineWidth = 5; x.beginPath(); x.arc(0, 0, NET_R, 0, Math.PI * 2); x.stroke();
+                x.fillStyle = fr; x.save(); x.rotate(0.6); mgRR(x, NET_R - 2, -5, 58, 10, 5); x.fill(); x.restore();
+                x.restore();
+                // durability gauge
+                x.fillStyle = 'rgba(0,0,0,0.35)'; mgRR(x, 14, 414, 96, 10, 5); x.fill();
+                x.fillStyle = MG.dur < 0.3 ? '#f87171' : '#fde68a'; mgRR(x, 14, 414, 96 * Math.max(0, MG.dur), 10, 5); x.fill();
+                x.fillStyle = '#fef3c7'; x.font = '11px "Noto Sans TC",sans-serif'; x.textAlign = 'left'; x.fillText(MG.net.in ? '紙網泡水中…放開撈起' : '紙網耐久', 116, 419);
+                // the catch bowl
+                x.fillStyle = 'rgba(255,255,255,0.15)'; x.beginPath(); x.ellipse(292, 418, 30, 12, 0, 0, Math.PI * 2); x.fill();
+                x.strokeStyle = 'rgba(255,255,255,0.45)'; x.lineWidth = 1.5; x.stroke();
+                (MG.bowl || []).slice(-5).forEach((K, i) => { x.save(); x.translate(274 + i * 9, 418 + (i % 2) * 3); x.rotate(0.4 * (i % 2 ? 1 : -1)); drawGoldfish(x, { K, ph: now / 1000 + i, scared: 0, seed: i }, 0.35, 1); x.restore(); });
+            }
+            (MG.drops || []).forEach(d => { x.fillStyle = d.paper ? `rgba(245,245,240,${1 - d.t / 0.6})` : `rgba(200,235,255,${0.9 - d.t})`; x.beginPath(); if (d.paper) x.rect(d.x, d.y, 5, 4); else x.arc(d.x, d.y, 2, 0, Math.PI * 2); x.fill(); });
+        }
+
+        // ---------------------------------------------------------------- 射氣球（實景風）：飛鏢有飛行時間、重力下墜與風向偏移
+        const BAL_COLS = [['#ff6b6b', '#c81e1e'], ['#ffc04d', '#d97706'], ['#5be08a', '#15803d'], ['#6aa8ff', '#1d4ed8'], ['#c08bff', '#7e22ce'], ['#ff7ac0', '#be185d']];
+        function balloonNew(r, c) {
+            const gold = Math.random() < 0.05, small = !gold && Math.random() < 0.18;
+            return { r, c, col: gold ? ['#fff3a0', '#d4a20a'] : BAL_COLS[(Math.random() * 6) | 0], gold, small, pop: 0, alive: true, regrow: 0, ph: Math.random() * 6 };
+        }
+        function balloonInit() {
+            MG.bal = []; for (let r = 0; r < 5; r++) for (let c = 0; c < 6; c++) MG.bal.push(balloonNew(r, c));
+            Object.assign(MG, { time: 30, shots: 0, hits: 0, flying: [], stuck: [], wind: 0, windT: 0, frags: [] });
+            balloonNewWind();
+        }
+        function balloonNewWind() { MG.wind = Math.round((Math.random() * 2 - 1) * 3); MG.windT = 5 + Math.random() * 4; }
+        function balloonPos(b, now) {
+            const dir = b.r % 2 ? 1 : -1, sway = Math.sin(now / 900 * (1 + b.r * 0.15) + b.r) * 20 * dir;
+            return { x: 45 + b.c * 50 + sway, y: 82 + b.r * 58 + Math.sin(now / 420 + b.ph) * 3, R: b.small ? 13 : 19 };
+        }
+        function balloonDown(x, y) {
+            if (y > 400) return;
+            MG.shots++;
+            // the dart arrives a moment later, drifted by the wind and dropped a little by gravity (more for far, high targets)
+            const dist = Math.hypot(x - 170, 430 - y);
+            const land = { x: x + MG.wind * 6 * (dist / 300), y: y + 3 + dist * 0.015 };
+            MG.flying.push({ sx: Math.max(90, Math.min(250, MG.px)), sy: 440, tx: land.x, ty: land.y, t: 0, dur: 0.18 + dist / 2000 });
+            tofuSizzle(0.15);
+        }
+        function balloonLand(d) {
+            const now = performance.now();
+            let hit = null;
+            MG.bal.forEach(b => { if (!b.alive) return; const p = balloonPos(b, now); if (Math.hypot(p.x - d.tx, (p.y - d.ty) * 0.85) < p.R + 1) hit = b; });
+            if (!hit) { MG.combo = 0; MG.stuck.push({ x: d.tx, y: d.ty, a: Math.atan2(d.ty - d.sy, d.tx - d.sx), t: 0 }); playWoodenFishSound(); mgFx('沒中', d.tx, d.ty - 16, '#fca5a5'); return; }
+            const p = balloonPos(hit, now);
+            hit.alive = false; hit.pop = 0.4; hit.regrow = 2.2 + Math.random() * 2;
+            for (let k = 0; k < 9; k++) { const a = Math.random() * Math.PI * 2; MG.frags.push({ x: p.x, y: p.y, vx: Math.cos(a) * (80 + Math.random() * 80), vy: Math.sin(a) * 80 - 40, rot: Math.random() * 6, col: hit.col[0], t: 0 }); }
+            MG.stuck.push({ x: d.tx, y: d.ty, a: Math.atan2(d.ty - d.sy, d.tx - d.sx), t: 0 });
+            MG.hits++; MG.combo++;
+            const base = hit.small ? 20 : 10, pts = base + Math.min(5, MG.combo - 1) * 4;
+            MG.score += pts;
+            if (hit.gold) { MG.time += 3; mgFx(`+${pts}　+3 秒！`, p.x, p.y - 22, '#facc15'); } else mgFx(`+${pts}`, p.x, p.y - 22);
+            balloonPopSound(); playTempleBellSound(700 + Math.min(10, MG.combo) * 40);
+        }
+        function balloonPopSound() {
+            const ctx = ensureAudioCtx(); if (!ctx) return;
+            const n = ctx.createBufferSource(), buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.12), ctx.sampleRate), d = buf.getChannelData(0);
+            for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 6);
+            n.buffer = buf; const gn = ctx.createGain(); gn.gain.value = 0.5; n.connect(gn); gn.connect(ctx.destination); n.start();
+        }
+        function balloonUpdate(dt) {
+            MG.time -= dt;
+            MG.windT -= dt; if (MG.windT <= 0) balloonNewWind();
+            MG.bal.forEach((b, i) => { b.pop = Math.max(0, b.pop - dt); if (!b.alive) { b.regrow -= dt; if (b.regrow <= 0) MG.bal[i] = balloonNew(b.r, b.c); } });
+            MG.flying.forEach(d => d.t += dt / d.dur);
+            MG.flying.filter(d => d.t >= 1).forEach(balloonLand);
+            MG.flying = MG.flying.filter(d => d.t < 1);
+            MG.stuck.forEach(s => s.t += dt); MG.stuck = MG.stuck.filter(s => s.t < 2.2);
+            MG.frags.forEach(f => { f.t += dt; f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 300 * dt; f.rot += dt * 8; }); MG.frags = MG.frags.filter(f => f.t < 0.8);
+            MG.hudL = `⏱ ${Math.max(0, Math.ceil(MG.time))}`;
+            MG.hudC = MG.combo > 1 ? `連擊 ×${MG.combo}` : '';
+            if (MG.time <= 0) { MG.summary = `命中 ${MG.hits} / ${MG.shots}`; mgEnd(); }
+        }
+        function drawDart(x, len) {
+            x.fillStyle = '#d1d5db'; x.fillRect(0, -1, len * 0.35, 2);
+            const g = x.createLinearGradient(len * 0.3, -3, len * 0.3, 3); g.addColorStop(0, '#1f2937'); g.addColorStop(0.5, '#6b7280'); g.addColorStop(1, '#111827');
+            x.fillStyle = g; mgRR(x, len * 0.3, -3, len * 0.35, 6, 3); x.fill();
+            x.fillStyle = '#ef4444'; x.beginPath(); x.moveTo(len * 0.62, 0); x.lineTo(len, -7); x.lineTo(len * 0.92, 0); x.lineTo(len, 7); x.closePath(); x.fill();
+        }
+        function balloonDraw(x) {
+            const now = performance.now();
+            // weathered plank board in a frame
+            x.fillStyle = '#4a2f1a'; x.fillRect(0, 0, MG.W, MG.H);
+            for (let i = 0; i < 9; i++) {
+                const g = x.createLinearGradient(i * 38, 0, i * 38 + 38, 0); g.addColorStop(0, '#6e4a2c'); g.addColorStop(0.5, '#7d5535'); g.addColorStop(1, '#5e3e23');
+                x.fillStyle = g; x.fillRect(i * 38 + 1, 40, 36, 380);
+                x.strokeStyle = 'rgba(40,20,8,0.35)'; x.lineWidth = 1;
+                for (let k = 0; k < 4; k++) { x.beginPath(); x.moveTo(i * 38 + 6 + k * 8, 40); x.bezierCurveTo(i * 38 + 10 + k * 8, 160, i * 38 + 2 + k * 8, 300, i * 38 + 7 + k * 8, 420); x.stroke(); }
+                [70, 390].forEach(y => { x.fillStyle = '#c0c4c8'; x.beginPath(); x.arc(i * 38 + 19, y, 2, 0, Math.PI * 2); x.fill(); });
+            }
+            x.strokeStyle = '#2e1a0c'; x.lineWidth = 8; x.strokeRect(4, 38, MG.W - 8, 386);
+            const list = MG.bal || (MG.mode !== 'play' ? (MG.balDemo = MG.balDemo || Array.from({ length: 30 }, (_, i) => balloonNew((i / 6) | 0, i % 6))) : []);
+            // darts stuck in the board
+            (MG.stuck || []).forEach(s => { x.save(); x.translate(s.x, s.y); x.rotate(s.a + Math.PI); x.globalAlpha = Math.min(1, (2.2 - s.t) * 2); x.translate(-4, 0); drawDart(x, 30); x.restore(); x.globalAlpha = 1; });
+            list.forEach(b => {
+                const p = balloonPos(b, now);
+                if (!b.alive) return;
+                // string down to a pin on the board, knot, then the balloon with a glossy highlight
+                x.strokeStyle = 'rgba(240,240,240,0.7)'; x.lineWidth = 1; x.beginPath(); x.moveTo(p.x, p.y + p.R * 1.18 + 4); x.quadraticCurveTo(p.x + 5, p.y + p.R + 14, p.x + 1, p.y + p.R + 24); x.stroke();
+                x.fillStyle = '#9ca3af'; x.beginPath(); x.arc(p.x + 1, p.y + p.R + 25, 2.2, 0, Math.PI * 2); x.fill();
+                x.fillStyle = 'rgba(0,0,0,0.25)'; x.beginPath(); x.ellipse(p.x + 5, p.y + 6, p.R, p.R * 1.15, 0, 0, Math.PI * 2); x.fill();
+                const g = x.createRadialGradient(p.x - p.R * 0.35, p.y - p.R * 0.45, 1, p.x, p.y, p.R * 1.25);
+                g.addColorStop(0, '#ffffff'); g.addColorStop(0.18, b.col[0]); g.addColorStop(0.85, b.col[1]); g.addColorStop(1, b.col[1]);
+                x.fillStyle = g; x.beginPath(); x.ellipse(p.x, p.y, p.R, p.R * 1.18, 0, 0, Math.PI * 2); x.fill();
+                x.fillStyle = 'rgba(255,255,255,0.55)'; x.beginPath(); x.ellipse(p.x - p.R * 0.38, p.y - p.R * 0.5, p.R * 0.18, p.R * 0.32, -0.5, 0, Math.PI * 2); x.fill();
+                x.fillStyle = b.col[1]; x.beginPath(); x.moveTo(p.x - 3, p.y + p.R * 1.15); x.lineTo(p.x + 3, p.y + p.R * 1.15); x.lineTo(p.x + 2, p.y + p.R * 1.15 + 5); x.lineTo(p.x - 2, p.y + p.R * 1.15 + 5); x.fill();
+                if (b.gold) { x.fillStyle = '#7a4a0c'; x.font = '700 11px sans-serif'; x.textAlign = 'center'; x.fillText('+3s', p.x, p.y + 2); }
+            });
+            (MG.frags || []).forEach(f => { x.save(); x.translate(f.x, f.y); x.rotate(f.rot); x.globalAlpha = 1 - f.t / 0.8; x.fillStyle = f.col; x.beginPath(); x.moveTo(-4, -2); x.lineTo(5, -3); x.lineTo(2, 4); x.closePath(); x.fill(); x.restore(); x.globalAlpha = 1; });
+            // darts in flight (shrink as they fly away), and the dart in hand
+            (MG.flying || []).forEach(d => { const t = d.t, px = d.sx + (d.tx - d.sx) * t, py = d.sy + (d.ty - d.sy) * t - Math.sin(t * Math.PI) * 18; x.save(); x.translate(px, py); x.rotate(Math.atan2(d.ty - d.sy, d.tx - d.sx) + Math.PI); x.scale(1.6 - t * 0.6, 1.6 - t * 0.6); drawDart(x, 30); x.restore(); });
+            if (MG.mode === 'play') {
+                const cx = MG.px, cy = Math.min(400, MG.py);
+                x.strokeStyle = 'rgba(255,90,90,0.85)'; x.lineWidth = 1.5; x.beginPath(); x.arc(cx, cy, 11, 0, Math.PI * 2); x.moveTo(cx - 17, cy); x.lineTo(cx - 6, cy); x.moveTo(cx + 6, cy); x.lineTo(cx + 17, cy); x.moveTo(cx, cy - 17); x.lineTo(cx, cy - 6); x.moveTo(cx, cy + 6); x.lineTo(cx, cy + 17); x.stroke();
+                // wind flag
+                x.fillStyle = 'rgba(0,0,0,0.45)'; mgRR(x, 120, 404, 100, 28, 14); x.fill();
+                x.fillStyle = '#fef3c7'; x.font = '700 12px "Noto Sans TC",sans-serif'; x.textAlign = 'center';
+                x.fillText(MG.wind === 0 ? '無風' : `風 ${MG.wind < 0 ? '←' : '→'} ${Math.abs(MG.wind)}`, 170, 418);
+            }
+        }
+
+        // ---------------------------------------------------------------- 套圈圈（實景風）：竹圈會打到獎品邊緣彈開、或卡在邊上不算
+        const RING_ROWS = [{ y: 150, sc: 0.55, pts: 50 }, { y: 225, sc: 0.75, pts: 25 }, { y: 300, sc: 1.0, pts: 10 }];
+        const RING_TYPES = ['bottle', 'cat', 'box', 'doll', 'can', 'pig'];
+        function ringInit() {
+            MG.prizes = [];
+            RING_ROWS.forEach((R, ri) => { for (let i = 0; i < 4; i++) MG.prizes.push({ x: 62 + i * 72 + (ri % 2) * 16, y: R.y, sc: R.sc, pts: R.pts, type: RING_TYPES[(Math.random() * RING_TYPES.length) | 0], hue: (Math.random() * 360) | 0, won: false }); });
+            Object.assign(MG, { rings: 10, phase: 'aim', aimT: 0, powT: 0, aimX: 170, pow: 0, fly: null, won: 0, landed: [] });
+        }
+        const ringScaleAt = y => 0.4 + (y - 100) / 300 * 0.75;
+        function ringDown() {
+            if (MG.fly) return;
+            if (MG.phase === 'aim') { MG.phase = 'power'; MG.powT = 0; playWoodenFishSound(); return; }
+            if (MG.phase === 'power') {
+                // a little human wobble on top of the aim
+                const ty = 380 - MG.pow * 270 + (Math.random() - 0.5) * 8, tx = 170 + (MG.aimX - 170) * (380 - ty) / 300 + (Math.random() - 0.5) * 8;
+                MG.fly = { t: 0, sx: 170, sy: 405, tx, ty, dur: 0.75, h: 120, spin: Math.random() * 6 };
+                MG.rings--; MG.phase = 'fly'; tofuSizzle(0.2);
+            }
+        }
+        function ringResolve(tx, ty, bounces) {
+            const sc = ringScaleAt(ty), ringR = 21 * sc;
+            let best = null, bd = 1e9;
+            MG.prizes.forEach(p => { if (p.won) return; const d = Math.hypot(p.x - tx, (p.y - ty) * 1.7); if (d < bd) { bd = d; best = p; } });
+            const pr = best ? 10 * best.sc : 0;
+            if (best && bd < ringR - pr) {
+                best.won = true; MG.won++; MG.score += best.pts;
+                mgFx(bounces ? `彈進去了！+${best.pts}` : `套中！+${best.pts}`, best.x, best.y - 34, '#facc15');
+                playTempleBellSound(980);
+                MG.landed.push({ x: best.x, y: best.y, sc: best.sc, on: true });
+                return;
+            }
+            if (best && bd < ringR + pr && bounces < 1) {
+                if (Math.random() < 0.45) {   // leaning on the prize's edge: does not count
+                    MG.landed.push({ x: (tx + best.x) / 2, y: (ty + best.y) / 2, sc, lean: Math.atan2(best.y - ty, best.x - tx) });
+                    mgFx('卡在邊上，不算！', best.x, best.y - 34, '#fdba74'); playWoodenFishSound(); return;
+                }
+                // bounce off the rim and skid on
+                const a = Math.atan2(ty - best.y, tx - best.x) + (Math.random() - 0.5) * 1.2, dd = ringR + pr + 8 + Math.random() * 18;
+                const nx = Math.max(16, Math.min(MG.W - 16, best.x + Math.cos(a) * dd)), ny = Math.max(110, Math.min(380, best.y + Math.sin(a) * dd / 1.7));
+                mgFx('叩！彈開了', tx, ty - 24, '#fdba74'); playWoodenFishSound();
+                MG.fly = { t: 0, sx: tx, sy: ty, tx: nx, ty: ny, dur: 0.32, h: 18, spin: Math.random() * 6, bounce: true };
+                return;
+            }
+            MG.landed.push({ x: tx, y: ty, sc });
+            mgFx('差一點！', tx, ty - 20, '#fca5a5'); playWoodenFishSound();
+        }
+        function ringUpdate(dt) {
+            if (MG.phase === 'aim') { MG.aimT += dt; MG.aimX = 170 + Math.sin(MG.aimT * 2.2) * 140; }
+            if (MG.phase === 'power') { MG.powT += dt; MG.pow = 0.5 - 0.5 * Math.cos(MG.powT * 2.6); }
+            if (MG.fly) {
+                MG.fly.t += dt / MG.fly.dur;
+                if (MG.fly.t >= 1) {
+                    const f = MG.fly; MG.fly = null;
+                    ringResolve(f.tx, f.ty, f.bounce ? 1 : 0);
+                    if (!MG.fly) {
+                        if (MG.rings <= 0 || MG.prizes.every(p => p.won)) { MG.phase = 'done'; setTimeout(() => { if (MG.mode === 'play') { MG.summary = `套中 ${MG.won} 個獎品`; mgEnd(); } }, 800); }
+                        else MG.phase = 'aim';
+                    }
+                }
+            }
+            MG.hudL = `竹圈 ${MG.rings}`;
+            MG.hudC = MG.phase === 'aim' ? '點一下：鎖定方向' : MG.phase === 'power' ? '再點一下：鎖定力道' : '';
+        }
+        function drawBambooRing(x, cx, cy, s, tilt) {
+            x.save(); x.translate(cx, cy); x.rotate(tilt || 0);
+            x.lineWidth = 6 * s;
+            const g = x.createLinearGradient(-22 * s, 0, 22 * s, 0); g.addColorStop(0, '#b8893f'); g.addColorStop(0.5, '#f0d48a'); g.addColorStop(1, '#a87a34');
+            x.strokeStyle = 'rgba(0,0,0,0.25)'; x.beginPath(); x.ellipse(2 * s, 3 * s, 21 * s, 8 * s, 0, 0, Math.PI * 2); x.stroke();
+            x.strokeStyle = g; x.beginPath(); x.ellipse(0, 0, 21 * s, 8 * s, 0, 0, Math.PI * 2); x.stroke();
+            x.strokeStyle = 'rgba(120,80,30,0.7)'; x.lineWidth = 1;
+            for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; x.beginPath(); x.moveTo(Math.cos(a) * 18 * s, Math.sin(a) * 6 * s); x.lineTo(Math.cos(a) * 24 * s, Math.sin(a) * 10 * s); x.stroke(); }
+            x.restore();
+        }
+        function drawPrize(x, p) {
+            const s = p.sc * 1.25, X = p.x, Y = p.y;
+            x.fillStyle = 'rgba(0,0,0,0.28)'; x.beginPath(); x.ellipse(X + 3 * s, Y + 2, 14 * s, 5 * s, 0, 0, Math.PI * 2); x.fill();
+            x.save(); x.translate(X, Y); x.scale(s, s);
+            const shade = (c1, c2, w) => { const g = x.createLinearGradient(-w, 0, w, 0); g.addColorStop(0, c2); g.addColorStop(0.35, c1); g.addColorStop(1, c2); return g; };
+            if (p.type === 'bottle') {
+                const c = `hsl(${p.hue % 3 === 0 ? 130 : p.hue % 3 === 1 ? 30 : 200},55%,35%)`, c2 = `hsl(${p.hue % 3 === 0 ? 130 : p.hue % 3 === 1 ? 30 : 200},55%,18%)`;
+                x.fillStyle = shade(c, c2, 9); mgRR(x, -9, -30, 18, 30, 4); x.fill(); mgRR(x, -4, -44, 8, 16, 2); x.fill();
+                x.fillStyle = '#f5f0e6'; x.fillRect(-9, -22, 18, 10); x.fillStyle = '#b91c1c'; x.font = '700 7px sans-serif'; x.textAlign = 'center'; x.fillText('彈珠', 0, -17);
+                x.fillStyle = 'rgba(255,255,255,0.45)'; x.fillRect(-6, -40, 2, 34);
+            } else if (p.type === 'can') {
+                x.fillStyle = shade(`hsl(${p.hue},70%,50%)`, `hsl(${p.hue},70%,28%)`, 10); mgRR(x, -10, -26, 20, 26, 3); x.fill();
+                x.fillStyle = '#d1d5db'; x.beginPath(); x.ellipse(0, -26, 10, 3, 0, 0, Math.PI * 2); x.fill();
+                x.fillStyle = 'rgba(255,255,255,0.35)'; x.fillRect(-6, -24, 3, 22);
+            } else if (p.type === 'box') {
+                x.fillStyle = `hsl(${p.hue},65%,48%)`; x.fillRect(-12, -22, 24, 22);
+                x.fillStyle = `hsl(${p.hue},65%,62%)`; x.beginPath(); x.moveTo(-12, -22); x.lineTo(-6, -28); x.lineTo(18, -28); x.lineTo(12, -22); x.fill();
+                x.fillStyle = `hsl(${p.hue},65%,32%)`; x.beginPath(); x.moveTo(12, -22); x.lineTo(18, -28); x.lineTo(18, -6); x.lineTo(12, 0); x.fill();
+                x.fillStyle = '#facc15'; x.fillRect(-2, -22, 4, 22); x.fillRect(-12, -13, 24, 3);
+                x.beginPath(); x.ellipse(-4, -30, 5, 3, -0.5, 0, Math.PI * 2); x.ellipse(4, -30, 5, 3, 0.5, 0, Math.PI * 2); x.fill();
+            } else if (p.type === 'cat') {
+                x.fillStyle = shade('#ffffff', '#cfcfcf', 12); x.beginPath(); x.ellipse(0, -12, 12, 13, 0, 0, Math.PI * 2); x.fill();
+                x.beginPath(); x.arc(0, -30, 10, 0, Math.PI * 2); x.fill();
+                x.beginPath(); x.moveTo(-9, -36); x.lineTo(-6, -44); x.lineTo(-2, -38); x.fill(); x.beginPath(); x.moveTo(9, -36); x.lineTo(6, -44); x.lineTo(2, -38); x.fill();
+                x.fillStyle = '#dc2626'; x.fillRect(-9, -22, 18, 3); x.fillStyle = '#facc15'; x.beginPath(); x.arc(0, -18, 2.5, 0, Math.PI * 2); x.fill();
+                x.fillStyle = '#222'; x.beginPath(); x.arc(-4, -31, 1.2, 0, Math.PI * 2); x.arc(4, -31, 1.2, 0, Math.PI * 2); x.fill();
+                x.fillStyle = '#fff'; x.beginPath(); x.ellipse(10, -36, 3, 7, 0.3, 0, Math.PI * 2); x.fill();
+            } else if (p.type === 'doll') {
+                x.fillStyle = shade(`hsl(${p.hue},60%,45%)`, `hsl(${p.hue},60%,25%)`, 9); mgRR(x, -9, -26, 18, 26, 8); x.fill();
+                x.fillStyle = '#f1d4b0'; x.beginPath(); x.arc(0, -32, 8, 0, Math.PI * 2); x.fill();
+                x.fillStyle = '#1f1f1f'; x.beginPath(); x.arc(0, -35, 8.5, Math.PI, 0); x.fill();
+                x.fillStyle = '#facc15'; x.fillRect(-9, -16, 18, 3);
+            } else {
+                x.fillStyle = shade('#f9a8d4', '#db2777', 14); x.beginPath(); x.ellipse(0, -12, 14, 11, 0, 0, Math.PI * 2); x.fill();
+                x.fillStyle = '#f472b6'; x.beginPath(); x.ellipse(13, -12, 4, 5, 0, 0, Math.PI * 2); x.fill();
+                x.fillStyle = '#7c2d12'; x.fillRect(-3, -24, 6, 2);
+                x.fillStyle = '#222'; x.beginPath(); x.arc(6, -15, 1.2, 0, Math.PI * 2); x.fill();
+            }
+            x.restore();
+        }
+        function ringDraw(x) {
+            // red plywood floor in perspective with planks, plus a pole fence at the back
+            const g = x.createLinearGradient(0, 40, 0, MG.H); g.addColorStop(0, '#5b1e14'); g.addColorStop(1, '#a8402a');
+            x.fillStyle = g; x.fillRect(0, 0, MG.W, MG.H);
+            x.strokeStyle = 'rgba(40,10,5,0.35)'; x.lineWidth = 1;
+            for (let i = -8; i <= 8; i++) { x.beginPath(); x.moveTo(170 + i * 13, 90); x.lineTo(170 + i * 64, 440); x.stroke(); }
+            for (let y = 100, k = 0; y < 440; y += 14 + k * 3, k++) { x.strokeStyle = 'rgba(255,200,170,0.06)'; x.beginPath(); x.moveTo(0, y); x.lineTo(MG.W, y); x.stroke(); }
+            x.fillStyle = '#2b1a10'; x.fillRect(0, 40, MG.W, 52);
+            for (let i = 0; i < 18; i++) { x.fillStyle = i % 2 ? '#fde68a' : '#dc2626'; x.fillRect(i * 20, 40, 20, 8); }
+            x.fillStyle = '#fef3c7'; x.font = '700 13px "Noto Sans TC",sans-serif'; x.textAlign = 'center'; x.fillText('套中就送！遠排 50・中排 25・近排 10', 170, 72);
+            RING_ROWS.forEach(R => { x.fillStyle = 'rgba(255,240,220,0.6)'; x.font = '700 11px "Noto Sans TC",sans-serif'; x.textAlign = 'left'; x.fillText(`${R.pts} 分`, 6, R.y - 30); });
+            // rings already on the floor (behind prizes at the same depth are drawn first)
+            const items = [...(MG.prizes || []).map(p => ({ y: p.y, draw: () => drawPrize(x, p) })), ...(MG.landed || []).map(L => ({ y: L.y + 0.1, draw: () => drawBambooRing(x, L.x, L.on ? L.y - 2 : L.y, (L.sc || 1) * (L.on ? 1.05 : 1), L.lean ? Math.sin(L.lean) * 0.5 : 0) }))];
+            if (!MG.prizes && MG.mode !== 'play') { MG.prizeDemo = MG.prizeDemo || (() => { const save = MG.prizes; ringInit(); const d = MG.prizes; MG.prizes = save; return d; })(); MG.prizeDemo.forEach(p => items.push({ y: p.y, draw: () => drawPrize(x, p) })); }
+            items.sort((a, b) => a.y - b.y).forEach(i => i.draw());
+            if (MG.mode !== 'play') return;
+            if (MG.phase === 'aim' || MG.phase === 'power') {
+                x.strokeStyle = 'rgba(253,230,138,0.85)'; x.lineWidth = 3; x.setLineDash([6, 6]);
+                x.beginPath(); x.moveTo(170, 400); x.lineTo(MG.aimX, 96); x.stroke(); x.setLineDash([]);
+                x.fillStyle = '#fde68a'; x.beginPath(); x.arc(MG.aimX, 96, 6, 0, Math.PI * 2); x.fill();
+            }
+            if (MG.phase === 'power') {
+                x.fillStyle = 'rgba(0,0,0,0.4)'; mgRR(x, 306, 120, 18, 260, 9); x.fill();
+                const pg = x.createLinearGradient(0, 380, 0, 120); pg.addColorStop(0, '#22c55e'); pg.addColorStop(0.6, '#facc15'); pg.addColorStop(1, '#ef4444');
+                x.fillStyle = pg; mgRR(x, 306, 380 - 260 * MG.pow, 18, 260 * MG.pow, 9); x.fill();
+                x.fillStyle = '#fff'; x.font = '11px "Noto Sans TC",sans-serif'; x.textAlign = 'center'; x.fillText('力道', 315, 395);
+            }
+            if (MG.fly) {
+                const f = MG.fly, t = f.t, px = f.sx + (f.tx - f.sx) * t, py = f.sy + (f.ty - f.sy) * t - Math.sin(t * Math.PI) * f.h;
+                const s = (f.bounce ? ringScaleAt(f.ty) : 1.2 + (ringScaleAt(f.ty) - 1.2) * t);
+                drawBambooRing(x, px, py, s, Math.sin(t * 10 + f.spin) * 0.6);
+            } else if (MG.rings > 0 && MG.phase !== 'done') drawBambooRing(x, 170, 408, 1.2, 0);
         }
 
         // =====================================================================
@@ -19389,7 +20111,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             ['偏殿', ['tudigong', 'light', 'lampwall_gm', 'lampwall_ts', 'side_left', 'side_right', 'side_wing_left', 'side_wing_right', 'tigercave', 'side_dizang']],
             ['後殿', ['rearhall', 'guandi', 'tianshi', 'xuantian', 'yuhuang', 'sanqing']],
             ['廟埕', ['gate', 'belltower', 'drumtower', 'futian', 'jinlu', 'shoujing', 'fivecamp', 'shitou', 'wishtree', 'puppet', 'longquan', 'village', 'guanyinpond', 'grounds']],
-            ['活動', ['shengdan', 'myhome', 'tofu', 'fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'yufo', 'cat', 'monk', 'fireworks', 'festival']]
+            ['活動', ['shengdan', 'myhome', 'tofu', 'mg_fish', 'mg_balloon', 'mg_ring', 'fortune', 'xiaoren', 'miaozhu', 'zhaitang', 'yufo', 'cat', 'monk', 'fireworks', 'festival']]
         ];
         let camGroupActive = 0;
         function showCamGroup(i) {
@@ -19454,6 +20176,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             presets.fudecenser = { r: 7.5, theta: 0.15, phi: 1.3, tx: FUDE_CENSER_POS.x, ty: 1.4, tz: FUDE_CENSER_POS.z - 1 };
             presets.wishtree = { r: 13, theta: -0.95, phi: 1.12, tx: WISHTREE.x - 2, ty: 2.0, tz: WISHTREE.z + 0.5 };
             if (TIGER_CAVE.cam) presets.tigercave = TIGER_CAVE.cam;
+            Object.entries(MG_INFO).forEach(([k, I]) => { presets['mg_' + k] = { r: 7, theta: I.pos.rot + 0.35, phi: 1.22, tx: I.pos.x, ty: 1.3, tz: I.pos.z }; });
             presets.tofu = { r: 7.5, theta: -Math.PI / 2 + 0.45, phi: 1.22, tx: TOFU_POS.x, ty: 1.3, tz: TOFU_POS.z };
             presets.village = { r: 72, theta: 0.35, phi: 0.95, tx: VILLAGE.axisX, ty: 0, tz: VILLAGE.crossZ };
             { const mh = myHome(), pl = mh && VILLAGE.plots[mh.p]; presets.myhome = pl ? { r: 15, theta: pl.rot + 0.4, phi: 1.2, tx: pl.x, ty: 1.4, tz: pl.z } : presets.village; }
@@ -19640,6 +20363,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             else if (type === 'vhome') villageInteract(ud);
             else if (type === 'shengdan') shengdanBow(ud);
             else if (type === 'tofu') openTofuGame();
+            else if (type === 'minigame') openMiniGame(ud.game);
             else if (type === 'xiaoren') openXiaorenModal();
             else if (type && type.startsWith('miaozhu')) miaozhuInteract(type, ud);
             else if (type && type.startsWith('zhaitang')) zhaitangInteract(type);
@@ -20090,6 +20814,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             updateLongquan(t, dt, performance.now());
             updateLongquanDrink(performance.now());
             updateVillage(t, dt);
+            updateGameStalls(t);
             if (!MONK.mesh && DAXIONG.lotus.length && typeof towerAnim !== 'undefined') buildResidentMonk();
             updateResidentMonk(t, dt);
             renderer.render(scene, camera);

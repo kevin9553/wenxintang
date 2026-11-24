@@ -245,6 +245,15 @@
           "nm": {
             ".validate": "newData.isString() && newData.val().length <= 10"
           },
+          "fish": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 99999"
+          },
+          "balloon": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 99999"
+          },
+          "ring": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 99999"
+          },
           "$other": {
             ".validate": false
           }
