@@ -12165,7 +12165,7 @@
         const NET_ACT_TEXT = {
             bell: '敲響了祈福鐘 🔔', drum: '擊響了鼓樓大鼓 🥁', fireworks: '施放了煙火 🎆', firecracker: '點燃了鞭炮 🧨',
             incense: '插香參拜 🙏', bow: '合掌參拜 🙏', kowtow: '行三跪九叩大禮 🙇', meditate: '盤腿打坐 🪷', chant: '念經持咒 📖',
-            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', lqdrink: '喝了一口龍泉水 🥤', vhome: '在問心村蓋好了自己的家 🏡', vdecor: '把自己的家布置得更漂亮了 🪴', vmsg: '在鄰居的信箱留了言 📮', shengdan: '獻上壽桃為神明祝壽 🍑', tofu: '在村口炸臭豆腐 🍢', tofubest: '炸臭豆腐刷新了最高分 🏆', mg_fish: '在夜市撈金魚 🐟', mg_balloon: '在夜市射氣球 🎯', mg_ring: '在夜市套圈圈 ⭕', mgbest: '在夜市小遊戲刷新了最高分 🏆', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
+            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', lqdrink: '喝了一口龍泉水 🥤', vhome: '在問心村蓋好了自己的家 🏡', vdecor: '把自己的家布置得更漂亮了 🪴', vmsg: '在鄰居的信箱留了言 📮', shengdan: '獻上壽桃為神明祝壽 🍑', tofu: '在村口炸臭豆腐 🍢', tofubest: '炸臭豆腐刷新了最高分 🏆', mg_fish: '在夜市撈金魚 🐟', mg_balloon: '在夜市射氣球 🎯', mg_ring: '在夜市套圈圈 ⭕', mgbest: '在夜市小遊戲刷新了最高分 🏆', jiao: '在大殿擲筊請示 🌙', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
         };
         function onNetAct(msg) {
             if (!msg || msg.sameTab || msg.kind !== 'viewer') return;
@@ -18630,6 +18630,149 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             return g;
         }
 
+
+        // 筊杯 geometry: a crescent in plan, flat on one side, domed on the other (they share the outline, so the solid is closed)
+        function moonBlockGeometry() {
+            if (moonBlockGeometry.g) return moonBlockGeometry.g;
+            const NU = 32, NV = 14, Rc = 0.15, a0 = -1.2, a1 = 1.2, W = 0.085, H = 0.07;
+            const pos = [], idx = [], groups = [];
+            const at = (u, v, dome) => {
+                const a = a0 + (a1 - a0) * u, w = W * Math.pow(Math.sin(Math.PI * u), 0.55);
+                const cx = Math.sin(a) * Rc, cz = Math.cos(a) * Rc - Rc * 0.75;       // centre line of the crescent
+                const nx = Math.sin(a), nz = Math.cos(a);
+                const r = v * w;
+                const y = dome ? -H * Math.sqrt(Math.max(0, 1 - v * v)) * Math.pow(Math.sin(Math.PI * u), 0.6) : 0;
+                return [cx + nx * r, y, cz + nz * r];
+            };
+            [false, true].forEach(dome => {
+                const base = pos.length / 3, start = idx.length;
+                for (let i = 0; i <= NU; i++) for (let j = 0; j <= NV; j++) pos.push(...at(i / NU, -1 + 2 * j / NV, dome));
+                for (let i = 0; i < NU; i++) for (let j = 0; j < NV; j++) {
+                    const a = base + i * (NV + 1) + j, b = a + NV + 1;
+                    if (dome) idx.push(a, b, a + 1, b, b + 1, a + 1); else idx.push(a, a + 1, b, b, a + 1, b + 1);
+                }
+                groups.push([start, idx.length - start]);
+            });
+            const g = new THREE.BufferGeometry();
+            g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            g.setIndex(idx);
+            g.addGroup(groups[0][0], groups[0][1], 0);   // flat face
+            g.addGroup(groups[1][0], groups[1][1], 1);   // rounded back
+            g.computeVertexNormals();
+            g.translate(0, 0, 0);
+            moonBlockGeometry.H = H;
+            return (moonBlockGeometry.g = g);
+        }
+        function buildMoonBlock() {
+            const flat = new THREE.MeshStandardMaterial({ color: 0xb8321a, roughness: 0.55 });
+            const round = new THREE.MeshPhysicalMaterial({ color: 0xe8552e, roughness: 0.32, clearcoat: 0.6, clearcoatRoughness: 0.25 });
+            const inner = new THREE.Mesh(moonBlockGeometry(), [flat, round]);
+            inner.castShadow = true; inner.receiveShadow = true;
+            const g = new THREE.Group(); g.add(inner);
+            g.userData.inner = inner;
+            inner.userData = { interactType: 'divination', label: '🌙 紅木筊杯（點擊擲筊請示）' };
+            clickableMeshes.push(inner);
+            return g;
+        }
+        // lay a block down showing 'flat' (平面朝上: the dome rests on the table) or 'round' (凸面朝上)
+        function setMoonBlockFace(b, face) {
+            const H = moonBlockGeometry.H, inner = b.userData.inner;
+            if (face === 'flat') { inner.rotation.set(0, 0, 0); inner.position.y = H * 0.9; }
+            else { inner.rotation.set(Math.PI, 0, 0); inner.position.y = 0.004; }
+            b.rotation.set(face === 'flat' ? 0.06 : 0, b.userData.restRY || 0, face === 'flat' ? -0.05 : 0);   // a domed back rocks a little
+            b.position.y = b.userData.baseY;
+            b.userData.face = face;
+        }
+
+
+        // 筊桶：大殿前地上一只紅漆金箍木桶，插滿成對的筊杯。點桶子：信眾跪在桶前，取一對筊杯往前擲在地上，看落地結果
+        const JIAO = { x: 1.9, z: -0.62, floor: 0.46, busy: false, pair: null, streak: 0, t0: 0, res: '' };
+        function buildJiaoBucket() {
+            const g = new THREE.Group(); g.position.set(JIAO.x, JIAO.floor, JIAO.z); templeGroup.add(g);
+            const click = { interactType: 'jiao', label: '🌙 筊桶（點擊取一對筊杯擲筊）' };
+            const tag = m => { m.userData = { ...click }; clickableMeshes.push(m); m.castShadow = true; m.receiveShadow = true; return m; };
+            const lac = new THREE.MeshPhysicalMaterial({ color: 0x9b1c16, roughness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.25 });
+            const gold = new THREE.MeshStandardMaterial({ color: 0xd9a520, metalness: 0.75, roughness: 0.28 });
+            const prof = [[0, 0], [0.2, 0], [0.21, 0.02], [0.2, 0.06], [0.22, 1.0], [0.235, 1.02], [0.225, 1.04], [0.2, 1.03], [0.19, 0.08], [0, 0.08]].map(([r, y]) => new THREE.Vector2(r, y));
+            g.add(tag(new THREE.Mesh(new THREE.LatheGeometry(prof, 32), new THREE.MeshPhysicalMaterial({ color: 0x9b1c16, roughness: 0.35, clearcoat: 0.6, side: THREE.DoubleSide }))));
+            [0.06, 0.53, 0.98].forEach(y => { const b = new THREE.Mesh(new THREE.TorusGeometry(0.203 + (y - 0.06) * 0.021, 0.009, 6, 36), gold); b.rotation.x = Math.PI / 2; b.position.y = y; g.add(b); });
+            const c = document.createElement('canvas'); c.width = c.height = 128;
+            const x = c.getContext('2d'); x.fillStyle = '#facc15'; x.beginPath(); x.arc(64, 64, 58, 0, Math.PI * 2); x.fill();
+            x.fillStyle = '#7a1814'; x.beginPath(); x.arc(64, 64, 50, 0, Math.PI * 2); x.fill();
+            x.fillStyle = '#fde68a'; x.font = '900 72px "LXGW WenKai TC","Noto Serif TC",serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('筊', 64, 68);
+            const med = new THREE.Mesh(new THREE.CircleGeometry(0.075, 24), new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(c), roughness: 0.5 }));
+            med.position.set(0, 0.56, 0.214); med.rotation.x = -0.04; g.add(tag(med));
+            // pairs of blocks standing in the bucket, backs touching, fanned around
+            for (let k = 0; k < 7; k++) {
+                const a = k / 7 * Math.PI * 2 + 0.3, r = k ? 0.1 : 0;
+                [0, 1].forEach(side => {
+                    const b = buildMoonBlock();
+                    const inner = b.userData.inner; inner.userData = { ...click };
+                    b.position.set(Math.cos(a) * r, 1.0 + (k ? 0 : 0.03), Math.sin(a) * r);
+                    b.rotation.set(Math.PI / 2 - 0.15, a + (side ? Math.PI : 0), 0);
+                    b.scale.setScalar(0.85);
+                    g.add(b);
+                });
+            }
+            colliders.push({ x: JIAO.x, z: JIAO.z, r: 0.4 });
+            registerMinorLabel(g, 1.4, '筊桶', () => jiaoInteract());
+        }
+        function jiaoInteract() {
+            if (JIAO.busy) return;
+            if (playerAvatarGroup) {
+                if (state.upstairs) { state.upstairs = false; state.followCam = false; updateStairsButton(); }
+                if (state.towerFloor) { state.towerFloor = 0; state.followCam = false; }
+                playerAvatarGroup.userData.kowtowToken = null;
+                setPlayerPose('stand', true);
+                playerAvatarGroup.position.set(JIAO.x - 0.55, JIAO.floor, JIAO.z + 0.85);
+                playerAvatarGroup.rotation.set(0, Math.PI, 0);
+                setPlayerPose('kneel', true);
+            }
+            if (!JIAO.pair) {
+                JIAO.pair = [buildMoonBlock(), buildMoonBlock()];
+                JIAO.pair.forEach(b => { b.userData.inner.userData = { interactType: 'jiao', label: '🌙 筊杯（點擊再擲一次）' }; templeGroup.add(b); b.userData.baseY = JIAO.floor; });
+            }
+            const roll = Math.random();
+            JIAO.res = roll < 0.5 ? 'sheng' : (roll < 0.75 ? 'xiao' : 'yin');
+            const hand = new THREE.Vector3(JIAO.x - 0.55, JIAO.floor + 0.75, JIAO.z + 0.6);
+            JIAO.fly = JIAO.pair.map((b, i) => ({ b, from: hand.clone().add(new THREE.Vector3(i ? 0.08 : -0.08, 0, 0)), to: new THREE.Vector3(JIAO.x - 1.15 + i * 0.45 + (Math.random() - 0.5) * 0.15, JIAO.floor, JIAO.z + 0.1 + (Math.random() - 0.5) * 0.2), spin: (i ? -1 : 1) * (9 + Math.random() * 4), yaw: Math.random() * 6 }));
+            JIAO.busy = true; JIAO.t0 = performance.now();
+            JIAO.pair.forEach(b => { b.visible = true; });
+            playWoodenFishSound();
+            emitAct('jiao');
+        }
+        function updateJiao(nowMs) {
+            if (!JIAO.busy) return;
+            const e = (nowMs - JIAO.t0) / 1000, dur = 0.85;
+            if (e < dur) {
+                const u = e / dur;
+                JIAO.fly.forEach(f => {
+                    f.b.position.lerpVectors(f.from, f.to, u);
+                    f.b.position.y = f.from.y + (f.to.y - f.from.y) * u + Math.sin(u * Math.PI) * 0.55;
+                    f.b.rotation.set(u * f.spin, f.yaw + u * 3, u * f.spin * 0.3);
+                    f.b.userData.inner.rotation.set(0, 0, 0); f.b.userData.inner.position.y = 0;
+                });
+                return;
+            }
+            if (!JIAO.landed) {
+                JIAO.landed = true;
+                const faces = { sheng: ['flat', 'round'], xiao: ['flat', 'flat'], yin: ['round', 'round'] }[JIAO.res];
+                if (Math.random() < 0.5 && faces[0] !== faces[1]) faces.reverse();
+                JIAO.fly.forEach((f, i) => { f.b.position.copy(f.to); f.b.userData.restRY = f.yaw; setMoonBlockFace(f.b, faces[i]); });
+                [0, 140].forEach(d => setTimeout(() => playWoodenFishSound(), d));
+                if (JIAO.res === 'sheng') JIAO.streak++; else JIAO.streak = 0;
+                const msg = {
+                    sheng: JIAO.streak >= 3 ? `🙏 連續三個聖筊！神明大大應允，所求之事吉祥順遂。` : `🌗 聖筊（一平一凸）：神明應允。${JIAO.streak > 1 ? `已連續 ${JIAO.streak} 個聖筊。` : ''}`,
+                    xiao: '😊 笑筊（兩平面朝上）：神明笑而不答，請把問題想得更清楚，再問一次。',
+                    yin: '🌑 陰筊（兩凸面朝上）：神明不認同，或時機未到，請再三思。'
+                }[JIAO.res];
+                showToast(msg);
+                if (JIAO.res === 'sheng' && JIAO.streak >= 3) { playTempleBellSound(1046); JIAO.streak = 0; }
+                else playTempleBellSound(JIAO.res === 'sheng' ? 784 : 523);
+            }
+            if (e > dur + 0.6) { JIAO.busy = false; JIAO.landed = false; }
+        }
+
         function buildDeityShrinesInsideHall(goldMat, crimsonMat, bronzeMat) {
             const altarWoodMat = new THREE.MeshStandardMaterial({ color: 0x5c240e, roughness: 0.45 });
             const pedestalWoodMat = new THREE.MeshStandardMaterial({ color: 0x7c3414, roughness: 0.4 });
@@ -19256,17 +19399,16 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             stickCylinderGroup.position.set(0, CAB.Y0 + CAB.H + 0.087 - 0.5 * 0.9, 0);
             cylinderGroup.add(stickCylinderGroup);
 
-            leftBlockGroup = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.065, 10, 18, Math.PI), crimsonMat);
-            leftBlockGroup.rotation.x = Math.PI / 2;
-            leftBlockGroup.position.set(-0.6, 1.92, -2.95);
-            leftBlockGroup.userData = { interactType: 'divination', label: '🌙 紅木筊杯（點擊擲筊請示）', baseY: 1.92 };
-            clickableMeshes.push(leftBlockGroup);
-            templeGroup.add(leftBlockGroup);
-
-            rightBlockGroup = leftBlockGroup.clone();
-            rightBlockGroup.position.set(-0.15, 1.92, -2.95);
-            clickableMeshes.push(rightBlockGroup);
-            templeGroup.add(rightBlockGroup);
+            // 筊杯: a pair of crescent blocks, one flat face (平面) and one rounded back (凸面)
+            leftBlockGroup = buildMoonBlock();
+            leftBlockGroup.position.set(-0.62, 1.9, -2.95);
+            leftBlockGroup.userData.restRY = 0.35;
+            rightBlockGroup = buildMoonBlock();
+            rightBlockGroup.position.set(-0.17, 1.9, -2.95);
+            rightBlockGroup.userData.restRY = -0.4;
+            [leftBlockGroup, rightBlockGroup].forEach(b => { templeGroup.add(b); b.userData.baseY = 1.9; });
+            setMoonBlockFace(leftBlockGroup, 'flat'); setMoonBlockFace(rightBlockGroup, 'round');
+            buildJiaoBucket();
 
             // 光明燈塔移入右偏殿（斗姥殿）神龕兩側，縮小以符合殿內高度
             const LT = { s: 0.6, y: SIDE_HALL_FLOOR, z: -5.5 - 2.6 };
@@ -20364,6 +20506,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             else if (type === 'shengdan') shengdanBow(ud);
             else if (type === 'tofu') openTofuGame();
             else if (type === 'minigame') openMiniGame(ud.game);
+            else if (type === 'jiao') jiaoInteract();
             else if (type === 'xiaoren') openXiaorenModal();
             else if (type && type.startsWith('miaozhu')) miaozhuInteract(type, ud);
             else if (type && type.startsWith('zhaitang')) zhaitangInteract(type);
@@ -20654,12 +20797,13 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
                     leftBlockGroup.rotation.y += 0.12;
                     rightBlockGroup.rotation.y -= 0.1;
                 } else {
-                    const up = Math.PI / 2, down = -Math.PI / 2;
-                    const faces = { sheng: [up, down], xiao: [down, down], yin: [up, up] }[anim.blockToss.result];
-                    leftBlockGroup.rotation.set(faces[0], 0, 0);
-                    rightBlockGroup.rotation.set(faces[1], 0, 0);
-                    leftBlockGroup.position.y = baseY;
-                    rightBlockGroup.position.y = baseY;
+                    // 聖筊 one flat face up and one rounded; 笑筊 both flat faces up; 陰筊 both rounded backs up
+                    const faces = { sheng: ['flat', 'round'], xiao: ['flat', 'flat'], yin: ['round', 'round'] }[anim.blockToss.result];
+                    if (Math.random() < 0.5 && faces[0] !== faces[1]) faces.reverse();
+                    leftBlockGroup.userData.restRY = (Math.random() - 0.5) * 1.6;
+                    rightBlockGroup.userData.restRY = (Math.random() - 0.5) * 1.6;
+                    setMoonBlockFace(leftBlockGroup, faces[0]);
+                    setMoonBlockFace(rightBlockGroup, faces[1]);
                     anim.blockToss = null;
                 }
             }
@@ -20815,6 +20959,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             updateLongquanDrink(performance.now());
             updateVillage(t, dt);
             updateGameStalls(t);
+            updateJiao(performance.now());
             if (!MONK.mesh && DAXIONG.lotus.length && typeof towerAnim !== 'undefined') buildResidentMonk();
             updateResidentMonk(t, dt);
             renderer.render(scene, camera);
