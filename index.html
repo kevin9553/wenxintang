@@ -607,7 +607,7 @@
     <div id="tofuModal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2">
         <div class="xinxiang-modal max-w-md w-full p-3 relative max-h-[96vh] overflow-y-auto">
             <button onclick="closeTofuGame()" class="absolute top-2.5 right-2.5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-amber-200 text-xs font-bold z-10">✕</button>
-            <h3 class="text-base font-bold text-amber-300 tracking-wider mb-2 pl-1">🍢 村口臭豆腐攤</h3>
+            <h3 class="text-base font-bold text-amber-300 tracking-wider mb-2 pl-1">🍢 夜市臭豆腐攤</h3>
             <div class="relative mx-auto" style="max-width:340px">
                 <canvas id="tofu3d" class="block w-full rounded-xl" style="aspect-ratio:340/330;position:absolute;inset:0;height:auto"></canvas>
                 <canvas id="tofuCanvas" class="block w-full rounded-xl touch-none select-none" style="aspect-ratio:340/330;position:relative"></canvas>
@@ -12166,7 +12166,7 @@
         const NET_ACT_TEXT = {
             bell: '敲響了祈福鐘 🔔', drum: '擊響了鼓樓大鼓 🥁', fireworks: '施放了煙火 🎆', firecracker: '點燃了鞭炮 🧨',
             incense: '插香參拜 🙏', bow: '合掌參拜 🙏', kowtow: '行三跪九叩大禮 🙇', meditate: '盤腿打坐 🪷', chant: '念經持咒 📖',
-            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', lqdrink: '喝了一口龍泉水 🥤', vhome: '在問心村蓋好了自己的家 🏡', vdecor: '把自己的家布置得更漂亮了 🪴', vmsg: '在鄰居的信箱留了言 📮', shengdan: '獻上壽桃為神明祝壽 🍑', tofu: '在村口炸臭豆腐 🍢', tofubest: '炸臭豆腐刷新了最高分 🏆', mg_fish: '在夜市撈金魚 🐟', mg_balloon: '在夜市射氣球 🎯', mg_ring: '在夜市套圈圈 ⭕', mgbest: '在夜市小遊戲刷新了最高分 🏆', jiao: '在大殿擲筊請示 🌙', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
+            futian: '在福田池投幣許願 🪙', fortune: '在算命館問事 🔮', xiaoren: '在打小人區化解是非 👡', lantern: '點亮了一盞光明燈 🏮', jinlu: '在金爐補財庫 🔥', koi: '在觀音蓮池餵錦鯉 🐟', tigercave: '在黑虎將軍洞參拜 🐯', yufo: '在浴佛檯灌沐太子像 🪷', longquan: '在龍泉裝了一瓶龍泉水 🐉', lqdrink: '喝了一口龍泉水 🥤', vhome: '在問心村蓋好了自己的家 🏡', vdecor: '把自己的家布置得更漂亮了 🪴', vmsg: '在鄰居的信箱留了言 📮', shengdan: '獻上壽桃為神明祝壽 🍑', tofu: '在問心夜市炸臭豆腐 🍢', tofubest: '炸臭豆腐刷新了最高分 🏆', mg_fish: '在夜市撈金魚 🐟', mg_balloon: '在夜市射氣球 🎯', mg_ring: '在夜市套圈圈 ⭕', mgbest: '在夜市小遊戲刷新了最高分 🏆', jiao: '在大殿擲筊請示 🌙', chant: '隨法師早晚課共修 🙏', wish: '在許願樹掛上許願牌 🌳', yuelaoshi: '摸了月老石繫紅線 💞', zhai: '在齋堂用齋 🍚'
         };
         function onNetAct(msg) {
             if (!msg || msg.sameTab || msg.kind !== 'viewer') return;
@@ -14463,6 +14463,7 @@
             buildVillage(goldMat);
             buildTofuStall();
             Object.keys(MG_INFO).forEach(buildGameStall);
+            try { buildNightMarketLane(); } catch (err) { console.warn('night market', err); }
             try { buildShengdan(); } catch (err) { console.warn('shengdan', err); }
             refreshLqChip();
             RESERVE_PLOTS.filter(pl => pl.key !== 'right').forEach(buildReservePlot);   // the right plot now holds the 龍泉 rockery   // the left plot now holds the 地藏殿
@@ -16077,7 +16078,7 @@
             if (!h || typeof h.p !== 'number' || h.p < 0 || h.p >= VILLAGE.plots.length) return null;
             const it = (Array.isArray(h.it) ? h.it : (h.it && typeof h.it === 'object' ? Object.values(h.it) : [])).filter(x => x && V_ITEMS[x.t] && isFinite(x.x) && isFinite(x.z)).slice(0, V_MAX_ITEMS);
             return { p: h.p | 0, ty: V_TYPES.some(t => t.k === h.ty) ? h.ty : 'brick', wc: Math.max(0, Math.min(V_WALLS.length - 1, h.wc | 0)), rc: Math.max(0, Math.min(V_ROOFS.length - 1, h.rc | 0)),
-                nm: String(h.nm || '').slice(0, 10), ts: +h.ts || 0, it: it.map(x => ({ t: x.t, x: Math.max(-5.2, Math.min(5.2, +x.x)), z: Math.max(-6.7, Math.min(6.7, +x.z)), r: +x.r || 0 })) };
+                nm: String(h.nm || '').slice(0, 10), gd: V_GODS[h.gd] ? h.gd : 'tudi', ts: +h.ts || 0, it: it.map(x => ({ t: x.t, x: Math.max(-5.2, Math.min(5.2, +x.x)), z: Math.max(-6.7, Math.min(6.7, +x.z)), r: +x.r || 0 })) };
         }
         function computeVillageOwners() {
             const owners = new Map();
@@ -16099,7 +16100,7 @@
                 let o = V.owners.get(i) || null;
                 if (V.draft && V.draft.p === i) o = { uid: NET.myId || 'me', home: V.draft, mine: true };
                 if (V.decor && V.decor.plot === i && o) o = { uid: o.uid, home: Object.assign({}, o.home, { it: V.decor.items }), mine: true };
-                const key = o ? JSON.stringify([o.mine, o.home.ty, o.home.wc, o.home.rc, o.home.nm, o.home.it]) : '';
+                const key = o ? JSON.stringify([o.mine, o.home.ty, o.home.wc, o.home.rc, o.home.nm, o.home.gd, o.home.it]) : '';
                 if (key === V.keyCache[i]) return;
                 V.keyCache[i] = key;
                 if (V.houses[i]) { disposeVillageHouse(V.houses[i]); V.houses[i] = null; }
@@ -16145,114 +16146,769 @@
             return { group: g, empty: true, segs: [] };
         }
 
+        // ---------------------------------------------------------------- 安奉神明: what each household enshrines on its 神明桌
+        const V_GODS = {
+            tudi: { name: '福德正神', short: '土地公', e: '🧓', title: '福德正神', robe: 0xc99a2e, acc: 0x8c1d18, skin: 0xe9c29a, hat: 'official', beard: 'white', prop: 'cane' },
+            guanyin: { name: '觀世音菩薩', short: '觀音', e: '🪷', title: '慈航普渡', robe: 0xf3f0e6, acc: 0xd9a83c, skin: 0xf1d3b0, hat: 'hood', prop: 'vase', halo: 1, lotus: 1 },
+            mazu: { name: '天上聖母', short: '媽祖', e: '🌊', title: '海國安瀾', robe: 0xb8242a, acc: 0xe0b04a, skin: 0xe2b98e, hat: 'crown', prop: 'tablet' },
+            guangong: { name: '關聖帝君', short: '關公', e: '🗡️', title: '義薄雲天', robe: 0x2f7a4a, acc: 0xe0b04a, skin: 0xb8322a, hat: 'green', beard: 'longblack', prop: 'glaive' },
+            caishen: { name: '五路財神', short: '財神', e: '💰', title: '招財進寶', robe: 0xc0261e, acc: 0xe0b04a, skin: 0xefc9a0, hat: 'official', beard: 'black', prop: 'ingot' },
+            nezha: { name: '中壇元帥', short: '三太子', e: '🔥', title: '威靈顯赫', robe: 0xd4302a, acc: 0xe8c04a, skin: 0xf6d6b8, hat: 'buns', prop: 'ring', child: 1 },
+            fozu: { name: '釋迦牟尼佛', short: '佛祖', e: '☸️', title: '佛光普照', robe: 0xd98a2b, acc: 0xb8242a, skin: 0xe0b04a, hat: 'curl', halo: 1, lotus: 1 },
+            jigong: { name: '濟公禪師', short: '濟公', e: '🪭', title: '濟世為懷', robe: 0x8a7a62, acc: 0x5a4a3a, skin: 0xe9c29a, hat: 'monk', prop: 'fan' },
+            yuelao: { name: '月下老人', short: '月老', e: '❤️', title: '天作之合', robe: 0xc8323e, acc: 0xf2c94c, skin: 0xedc8a2, hat: 'official', beard: 'white', prop: 'thread' },
+            xuantian: { name: '玄天上帝', short: '上帝公', e: '⚔️', title: '威鎮北極', robe: 0x23262e, acc: 0xd9a83c, skin: 0xe2b98e, hat: 'loose', beard: 'black', prop: 'sword' },
+            zu: { name: '祖先牌位', short: '祖先', e: '🪧', title: '祖德流芳', tablet: 1 }
+        };
+        const V_GOD_Q = true;   // 家中神尊做成 Q 版：大頭、短身、大眼
+        const V_GOD_ORDER = ['tudi', 'guanyin', 'mazu', 'guangong', 'caishen', 'nezha', 'fozu', 'jigong', 'yuelao', 'xuantian', 'zu'];
+        function vGodMat(c, metal) {
+            const C = vGodMat.c || (vGodMat.c = new Map()), k = c + (metal ? 'm' : '');
+            if (C.has(k)) return C.get(k);
+            const m = new THREE.MeshStandardMaterial({ color: c, roughness: metal ? 0.3 : 0.5, metalness: metal ? 0.75 : 0.05 });
+            villageShared().mats.add(m); C.set(k, m); return m;
+        }
+        function vGodTexMat(key, w, h, draw) {
+            const C = vGodTexMat.c || (vGodTexMat.c = new Map());
+            if (C.has(key)) return C.get(key);
+            const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+            const t = new THREE.CanvasTexture(c); t.anisotropy = 4;
+            const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.7 });
+            const S = villageShared(); S.mats.add(m); S.texs.add(t); C.set(key, m); return m;
+        }
+        const vHex = c => '#' + new THREE.Color(c).getHexString();
+        // 神明彩 painted for the chosen deity
+        function vGodPaintMat(k) {
+            const G = V_GODS[k] || V_GODS.tudi;
+            return vGodTexMat('paint:' + k, 256, 320, (x, w, h) => {
+                x.fillStyle = '#c99a3a'; x.fillRect(0, 0, w, h);
+                const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#f3e5c4'); g.addColorStop(1, '#e2cfa2'); x.fillStyle = g; x.fillRect(12, 12, w - 24, h - 24);
+                x.fillStyle = '#9d1c16'; x.fillRect(12, 12, w - 24, 40); x.fillStyle = '#f6d36b'; x.font = '900 28px "LXGW WenKai TC","Noto Serif TC",serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(G.title, w / 2, 33);
+                for (let i = 0; i < 7; i++) { x.fillStyle = 'rgba(255,255,255,0.65)'; x.beginPath(); x.ellipse(30 + i * 34, 90 + (i % 2) * 16, 22, 9, 0, 0, 7); x.fill(); }
+                const cx = w / 2;
+                if (G.tablet) {   // 公媽龕 painting: a tall ancestral tablet with golden script
+                    x.fillStyle = '#7d1611'; x.fillRect(cx - 40, 92, 80, 190); x.strokeStyle = '#e0b04a'; x.lineWidth = 4; x.strokeRect(cx - 34, 98, 68, 178);
+                    x.fillStyle = '#f0c75a'; x.font = '900 30px "LXGW WenKai TC","Noto Serif TC",serif'; '歷代祖先'.split('').forEach((ch, i) => x.fillText(ch, cx, 122 + i * 40));
+                    return;
+                }
+                if (G.halo) { x.fillStyle = 'rgba(232,180,60,0.85)'; x.beginPath(); x.arc(cx, 118, 40, 0, 7); x.fill(); x.strokeStyle = '#b8862b'; x.lineWidth = 3; x.stroke(); }
+                x.fillStyle = vHex(G.robe); x.beginPath(); x.moveTo(cx - 26, 150); x.quadraticCurveTo(cx - 62, 230, cx - 70, 272); x.lineTo(cx + 70, 272); x.quadraticCurveTo(cx + 62, 230, cx + 26, 150); x.fill();
+                x.strokeStyle = 'rgba(0,0,0,0.25)'; x.lineWidth = 2; x.stroke();
+                x.fillStyle = vHex(G.acc); x.beginPath(); x.moveTo(cx - 12, 152); x.lineTo(cx + 12, 152); x.lineTo(cx + 20, 272); x.lineTo(cx - 20, 272); x.fill();
+                x.fillStyle = vHex(G.skin); x.beginPath(); x.arc(cx, 122, G.child ? 25 : 22, 0, 7); x.fill();
+                x.fillStyle = '#1b1b1b'; x.fillRect(cx - 9, 118, 5, 2.5); x.fillRect(cx + 4, 118, 5, 2.5);
+                const hat = G.hat;
+                if (hat === 'official') { x.fillStyle = '#1b1b1b'; x.fillRect(cx - 22, 92, 44, 12); x.fillRect(cx - 14, 80, 28, 14); x.fillRect(cx - 46, 94, 92, 4); }
+                else if (hat === 'crown') { x.fillStyle = '#e0b04a'; x.fillRect(cx - 22, 88, 44, 14); x.fillStyle = '#1b1b1b'; x.fillRect(cx - 32, 82, 64, 5); x.fillStyle = '#c0261e'; for (let i = 0; i < 6; i++) x.fillRect(cx - 25 + i * 10, 87, 2, 14); }
+                else if (hat === 'green') { x.fillStyle = '#2f7a4a'; x.beginPath(); x.arc(cx, 104, 24, Math.PI, 0); x.fill(); x.fillStyle = '#e0b04a'; x.beginPath(); x.arc(cx, 92, 5, 0, 7); x.fill(); }
+                else if (hat === 'hood') { x.fillStyle = '#f7f5ee'; x.beginPath(); x.arc(cx, 116, 30, Math.PI * 0.95, Math.PI * 2.05); x.lineTo(cx + 30, 150); x.lineTo(cx - 30, 150); x.fill(); x.fillStyle = vHex(G.skin); x.beginPath(); x.arc(cx, 124, 20, 0, 7); x.fill(); x.fillStyle = '#e0b04a'; x.fillRect(cx - 7, 94, 14, 9); x.fillStyle = '#1b1b1b'; x.fillRect(cx - 9, 120, 5, 2.5); x.fillRect(cx + 4, 120, 5, 2.5); }
+                else if (hat === 'curl') { x.fillStyle = '#26365c'; x.beginPath(); x.arc(cx, 116, 23, Math.PI, 0); x.fill(); x.beginPath(); x.arc(cx, 92, 9, 0, 7); x.fill(); }
+                else if (hat === 'buns') { x.fillStyle = '#1b1b1b'; x.beginPath(); x.arc(cx, 112, 25, Math.PI, 0); x.fill(); [-1, 1].forEach(s => { x.beginPath(); x.arc(cx + s * 20, 92, 9, 0, 7); x.fill(); }); }
+                else if (hat === 'monk') { x.fillStyle = '#6b5a44'; x.beginPath(); x.moveTo(cx - 26, 104); x.lineTo(cx - 18, 80); x.lineTo(cx + 18, 80); x.lineTo(cx + 26, 104); x.fill(); x.fillStyle = '#f6d36b'; x.font = '900 14px serif'; x.fillText('佛', cx, 94); }
+                else if (hat === 'loose') { x.fillStyle = '#1b1b1b'; x.beginPath(); x.arc(cx, 116, 25, Math.PI, 0); x.fill(); x.fillRect(cx - 27, 114, 8, 40); x.fillRect(cx + 19, 114, 8, 40); x.fillStyle = '#e0b04a'; x.fillRect(cx - 6, 92, 12, 8); }
+                if (G.beard) { x.fillStyle = G.beard === 'white' ? '#f4f4f4' : '#1b1b1b'; const L = G.beard === 'longblack' ? 70 : 42; x.beginPath(); x.moveTo(cx - 13, 132); x.quadraticCurveTo(cx, 132 + L, cx + 13, 132); x.fill(); }
+                if (G.lotus) for (let i = 0; i < 5; i++) { x.fillStyle = i % 2 ? '#e58fb0' : '#f3b6c8'; x.beginPath(); x.ellipse(cx - 40 + i * 20, 284, 12, 7, 0, 0, 7); x.fill(); }
+            });
+        }
+        // painted face for a small statue head (sphere UV: the face is centred at u = 0.25, the eyes just above the equator)
+        function vGodFaceMat(k) {
+            const G = V_GODS[k] || V_GODS.tudi;
+            const Q = V_GOD_Q;
+            return vGodTexMat((Q ? 'faceQ:' : 'face:') + k, 256, 128, (x, w, h) => {
+                x.fillStyle = vHex(G.skin); x.fillRect(0, 0, w, h);
+                const cx = 64, eyY = Q ? 66 : 60, bold = k === 'guangong' || k === 'xuantian', child = !!G.child;
+                // soft shading toward the sides and under the brow
+                const sg = x.createRadialGradient(cx, 66, 8, cx, 66, 60); sg.addColorStop(0, 'rgba(255,255,255,0.10)'); sg.addColorStop(1, 'rgba(0,0,0,0.18)'); x.fillStyle = sg; x.fillRect(0, 0, w, h);
+                // cheeks
+                [-1, 1].forEach(s => { const g = x.createRadialGradient(cx + s * 17, Q ? 79 : 75, 0, cx + s * 17, Q ? 79 : 75, Q ? 10 : child ? 11 : 8); g.addColorStop(0, Q || child ? 'rgba(240,95,100,0.55)' : 'rgba(210,90,80,0.30)'); g.addColorStop(1, 'rgba(210,90,80,0)'); x.fillStyle = g; x.fillRect(cx + s * 17 - 12, Q ? 67 : 63, 24, 24); });
+                // brows
+                x.strokeStyle = G.beard === 'white' ? '#e8e8e8' : '#1b1410'; x.lineCap = 'round';
+                x.lineWidth = bold ? 3.4 : 2.2;
+                if (Q) { x.lineWidth = bold ? 2.8 : 1.8; }
+                [-1, 1].forEach(s => { x.beginPath(); if (Q) { if (bold) { x.moveTo(cx + s * 5, eyY - 11); x.lineTo(cx + s * 18, eyY - 15); } else { x.moveTo(cx + s * 7, eyY - 13); x.quadraticCurveTo(cx + s * 12, eyY - 16, cx + s * 17, eyY - 13); } } else if (bold) { x.moveTo(cx + s * 4, eyY - 6); x.lineTo(cx + s * 20, eyY - 12); } else { x.moveTo(cx + s * 5, eyY - 8); x.quadraticCurveTo(cx + s * 12, eyY - 12, cx + s * 19, eyY - 8); } x.stroke(); });
+                // eyes
+                [-1, 1].forEach(s => {
+                    const ex = cx + s * (Q ? 12 : 11.5);
+                    if (Q) {   // big glossy chibi eyes (closed happy arcs for the serene / laughing ones)
+                        if (k === 'jigong' || k === 'fozu' || k === 'guanyin') { x.strokeStyle = '#2a1a10'; x.lineWidth = 2.4; x.lineCap = 'round'; x.beginPath(); if (k === 'jigong') x.arc(ex, eyY + 2, 5, Math.PI * 1.1, Math.PI * 1.9); else x.arc(ex, eyY - 2, 5, Math.PI * 0.15, Math.PI * 0.85); x.stroke(); return; }
+                        x.save(); x.translate(ex, eyY);
+                        const ry = k === 'guangong' ? 5 : 7.2, rx = 5.6;
+                        x.fillStyle = '#1b1410'; x.beginPath(); x.ellipse(0, 0, rx, ry, 0, 0, 7); x.fill();
+                        const ig = x.createLinearGradient(0, -ry, 0, ry); ig.addColorStop(0, '#1b1410'); ig.addColorStop(1, k === 'guangong' ? '#5a2a10' : '#6b3a1a'); x.fillStyle = ig; x.beginPath(); x.ellipse(0, 1, rx * 0.78, ry * 0.8, 0, 0, 7); x.fill();
+                        x.fillStyle = '#fff'; x.beginPath(); x.arc(-1.8 * s, -2.6, 2.2, 0, 7); x.fill(); x.beginPath(); x.arc(1.6 * s, 2.6, 1.1, 0, 7); x.fill();
+                        if (k === 'guangong') { x.strokeStyle = '#1b1410'; x.lineWidth = 2; x.beginPath(); x.moveTo(-rx - 1, -ry + 1 - s * 1.5); x.lineTo(rx + 1, -ry + 1 + s * 1.5); x.stroke(); }
+                        x.restore(); return;
+                    }
+                    if (k === 'jigong') { x.strokeStyle = '#1b1410'; x.lineWidth = 2; x.beginPath(); x.arc(ex, eyY + 2, 4.5, Math.PI * 1.1, Math.PI * 1.9); x.stroke(); return; }
+                    if (k === 'fozu' || k === 'guanyin') { x.strokeStyle = '#2a1a10'; x.lineWidth = 1.8; x.beginPath(); x.moveTo(ex - 6, eyY); x.quadraticCurveTo(ex, eyY + 3.5, ex + 6, eyY); x.stroke(); return; }   // downcast, half-closed
+                    x.save(); x.translate(ex, eyY); if (k === 'guangong') x.rotate(-s * 0.35);
+                    const ew = child ? 6.5 : 6, eh = child ? 4.2 : (k === 'guangong' ? 2 : 3);
+                    x.fillStyle = '#f7f3ea'; x.beginPath(); x.ellipse(0, 0, ew, eh, 0, 0, 7); x.fill();
+                    x.fillStyle = '#1b1410'; x.beginPath(); x.arc(0, 0.3, eh * (child ? 0.9 : 0.95), 0, 7); x.fill();
+                    x.fillStyle = 'rgba(255,255,255,0.85)'; x.beginPath(); x.arc(-1, -0.8, child ? 1.2 : 0.8, 0, 7); x.fill();
+                    x.strokeStyle = '#1b1410'; x.lineWidth = 1.4; x.beginPath(); x.ellipse(0, 0, ew, eh, 0, Math.PI, Math.PI * 2); x.stroke();
+                    x.restore();
+                });
+                // nose
+                if (Q) { x.fillStyle = 'rgba(150,70,50,0.45)'; x.beginPath(); x.ellipse(cx, eyY + 9, 1.6, 1.1, 0, 0, 7); x.fill(); } else {
+                x.strokeStyle = 'rgba(90,40,30,0.45)'; x.lineWidth = 1.3; x.beginPath(); x.moveTo(cx - 1, eyY + 3); x.lineTo(cx - 2.5, eyY + 15); x.quadraticCurveTo(cx, eyY + 17, cx + 3, eyY + 15); x.stroke();
+                x.fillStyle = 'rgba(90,40,30,0.5)'; [-1, 1].forEach(s => { x.beginPath(); x.arc(cx + s * 3, eyY + 16, 1.2, 0, 7); x.fill(); }); }
+                // mouth
+                x.fillStyle = k === 'guangong' ? '#5a1010' : '#b8323a';
+                const my = Q ? eyY + 15 : eyY + 22;
+                if (Q && k !== 'jigong') { x.beginPath(); x.moveTo(cx - 3.5, my); x.quadraticCurveTo(cx, my + (k === 'guangong' || k === 'xuantian' ? 0.5 : 4), cx + 3.5, my); x.quadraticCurveTo(cx, my + 1, cx - 3.5, my); x.fill(); }
+                else if (k === 'jigong') { x.beginPath(); x.arc(cx, my, Q ? 5 : 6, 0, Math.PI); x.fill(); x.fillStyle = '#fff'; x.fillRect(cx - 4, my, 8, 1.6); }
+                else { x.beginPath(); x.moveTo(cx - 6, eyY + 23); x.quadraticCurveTo(cx, eyY + (child ? 28 : 26), cx + 6, eyY + 23); x.quadraticCurveTo(cx, eyY + 21.5, cx - 6, eyY + 23); x.fill(); }
+                if (k === 'fozu' || k === 'guanyin') { x.fillStyle = '#c0263a'; x.beginPath(); x.arc(cx, eyY - (Q ? 18 : 13), 2, 0, 7); x.fill(); }   // 白毫 / 吉祥痣
+                if (k === 'xuantian' || k === 'guangong') { x.strokeStyle = 'rgba(40,10,10,0.35)'; x.lineWidth = 1; [-1, 1].forEach(s => { x.beginPath(); x.moveTo(cx + s * 2, eyY - 9); x.lineTo(cx + s * 4, eyY - 3); x.stroke(); }); }
+            });
+        }
+        // robe cloth: base colour, gold cloud embroidery, a hem band at the bottom and a collar band at the top
+        function vGodRobeMat(k, two) {
+            const G = V_GODS[k] || V_GODS.tudi;
+            const m = vGodTexMat((two ? 'robeD:' : 'robe:') + k, 256, 256, (x, w, h) => {
+                x.fillStyle = vHex(G.robe); x.fillRect(0, 0, w, h);
+                const sh = x.createLinearGradient(0, 0, w, 0); [0, 0.5, 1].forEach(t => sh.addColorStop(t, 'rgba(0,0,0,0.10)')); [0.25, 0.75].forEach(t => sh.addColorStop(t, 'rgba(255,255,255,0.06)')); x.fillStyle = sh; x.fillRect(0, 0, w, h);
+                const goldC = k === 'guanyin' ? 'rgba(200,160,70,0.55)' : 'rgba(230,185,70,0.85)';
+                x.strokeStyle = goldC; x.lineWidth = 2;
+                for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {   // 如意 cloud scrolls
+                    const px = c * 52 + (r % 2) * 26 + 10, py = 40 + r * 38;
+                    x.beginPath(); x.arc(px, py, 7, Math.PI * 0.2, Math.PI * 1.9); x.stroke();
+                    x.beginPath(); x.arc(px + 11, py + 2, 5, Math.PI * 1.1, Math.PI * 2.7); x.stroke();
+                    x.beginPath(); x.moveTo(px - 7, py + 5); x.quadraticCurveTo(px + 4, py + 12, px + 16, py + 6); x.stroke();
+                }
+                x.fillStyle = vHex(G.acc); x.fillRect(0, h - 26, w, 22); x.fillStyle = '#e0b04a'; x.fillRect(0, h - 28, w, 3); x.fillRect(0, h - 6, w, 3);
+                for (let i = 0; i < 16; i++) { x.fillStyle = '#e0b04a'; x.beginPath(); x.moveTo(i * 16, h - 8); x.lineTo(i * 16 + 8, h - 22); x.lineTo(i * 16 + 16, h - 8); x.fill(); }
+                x.fillStyle = vHex(G.acc); x.fillRect(0, 0, w, 14); x.fillStyle = '#e0b04a'; x.fillRect(0, 14, w, 2);
+            });
+            if (two) m.side = THREE.DoubleSide;
+            return m;
+        }
+        function vGodHaloMat() {
+            const m = vGodTexMat('halo', 128, 128, (x, w, h) => {
+                const g = x.createRadialGradient(64, 64, 6, 64, 64, 62); g.addColorStop(0, 'rgba(255,240,180,1)'); g.addColorStop(0.55, 'rgba(240,196,80,1)'); g.addColorStop(0.8, 'rgba(214,150,40,1)'); g.addColorStop(1, 'rgba(160,100,20,1)'); x.fillStyle = g; x.beginPath(); x.arc(64, 64, 63, 0, 7); x.fill();
+                x.strokeStyle = 'rgba(150,90,20,0.6)'; x.lineWidth = 1.5; for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; x.beginPath(); x.moveTo(64 + Math.cos(a) * 20, 64 + Math.sin(a) * 20); x.lineTo(64 + Math.cos(a) * 56, 64 + Math.sin(a) * 56); x.stroke(); }
+                x.strokeStyle = '#b07a20'; x.lineWidth = 3; x.beginPath(); x.arc(64, 64, 58, 0, 7); x.stroke();
+            });
+            m.emissive = new THREE.Color(0x5a3a08); m.emissiveIntensity = 0.5; m.metalness = 0.3; m.roughness = 0.4;
+            return m;
+        }
+        // a carved, painted and gilded seated statue (神尊) of the chosen deity, or an ancestral tablet
+        function vGodFigure(k) {
+            const G = V_GODS[k] || V_GODS.tudi, fig = new THREE.Group();
+            const A = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0, parent = fig) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; parent.add(m); return m; };
+            const gold = vGodMat(0xd9a520, true), goldP = vGodMat(0xd4a537), black = vGodMat(0x1b1b1b), white = vGodMat(0xf4f4f4), lac = vGodMat(0x7d1611);
+            if (G.tablet) {
+                const tab = vGodTexMat('tablet', 64, 192, (x, w, h) => { x.fillStyle = '#7d1611'; x.fillRect(0, 0, w, h); x.strokeStyle = '#e0b04a'; x.lineWidth = 4; x.strokeRect(5, 5, w - 10, h - 10); x.fillStyle = '#f0c75a'; x.font = '900 30px "LXGW WenKai TC","Noto Serif TC",serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; '歷代祖先'.split('').forEach((ch, i) => x.fillText(ch, w / 2, 30 + i * 44)); });
+                A(new THREE.BoxGeometry(0.32, 0.05, 0.18), lac, 0, 0.025, 0);
+                A(new THREE.BoxGeometry(0.28, 0.03, 0.15), goldP, 0, 0.065, 0);
+                A(new THREE.BoxGeometry(0.17, 0.46, 0.05), [lac, lac, lac, lac, tab, lac], 0, 0.31, 0);
+                A(new THREE.CylinderGeometry(0.1, 0.1, 0.06, 20, 1, false, 0, Math.PI), goldP, 0, 0.54, 0, Math.PI / 2, 0, Math.PI / 2);
+                A(new THREE.SphereGeometry(0.03, 10, 8), gold, 0, 0.66, 0);
+                [-1, 1].forEach(s => { A(new THREE.BoxGeometry(0.05, 0.36, 0.06), goldP, s * 0.125, 0.26, 0); A(new THREE.SphereGeometry(0.035, 10, 8), gold, s * 0.125, 0.47, 0); const cl = A(new THREE.TorusGeometry(0.035, 0.01, 6, 12, Math.PI * 1.5), goldP, s * 0.15, 0.4, 0.03); cl.rotation.y = s > 0 ? 0 : Math.PI; });
+                return fig;
+            }
+            const robe = vGodRobeMat(k), robeD = vGodRobeMat(k, true), acc = vGodMat(G.acc), skin = vGodMat(G.skin), face = vGodFaceMat(k);
+            // ---- throne
+            let seatY;
+            if (G.lotus) {
+                A(new THREE.CylinderGeometry(0.15, 0.17, 0.04, 20), goldP, 0, 0.02, 0);
+                const pinkO = vGodMat(0xe58fb0), pinkI = vGodMat(0xf6c3d3);
+                [[12, 0.14, 0.07, pinkO, 0.75], [10, 0.1, 0.1, pinkI, 0.45]].forEach(([n, r, y, m, tilt], ring) => {
+                    for (let i = 0; i < n; i++) { const a = (i + ring * 0.5) / n * Math.PI * 2; const pt = A(new THREE.SphereGeometry(0.055, 10, 8), m, Math.sin(a) * r, y, Math.cos(a) * r * 0.85); pt.scale.set(0.62, 0.42, 1.25); pt.rotation.set(-tilt, a, 0, 'YXZ'); }
+                });
+                A(new THREE.CylinderGeometry(0.11, 0.1, 0.03, 18), vGodMat(0xf2d27a), 0, 0.12, 0);
+                seatY = 0.13;
+            } else {
+                A(new THREE.BoxGeometry(0.38, 0.08, 0.27), lac, 0, 0.04, 0);
+                A(new THREE.BoxGeometry(0.4, 0.018, 0.29), goldP, 0, 0.088, 0);
+                A(new THREE.BoxGeometry(0.39, 0.012, 0.28), goldP, 0, 0.006, 0);
+                A(new THREE.BoxGeometry(0.34, 0.3, 0.03), lac, 0, 0.24, -0.125);
+                A(new THREE.BoxGeometry(0.28, 0.22, 0.01), goldP, 0, 0.24, -0.108);
+                A(new THREE.CylinderGeometry(0.016, 0.016, 0.38, 10), goldP, 0, 0.395, -0.125, 0, 0, Math.PI / 2);
+                [-1, 1].forEach(s => { A(new THREE.SphereGeometry(0.028, 10, 8), gold, s * 0.2, 0.395, -0.125); A(new THREE.BoxGeometry(0.03, 0.09, 0.22), lac, s * 0.175, 0.14, -0.01); A(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 8), goldP, s * 0.175, 0.19, -0.01, Math.PI / 2); });
+                seatY = 0.095;
+            }
+            const sc = G.child ? 0.9 : 1;
+            const g2 = new THREE.Group(); g2.scale.setScalar(sc); g2.position.y = seatY; fig.add(g2);
+            // Q 版: the body is squat and the head (with hat, hair, beard and halo) is enlarged about its centre
+            const Q = V_GOD_Q, QS = Q ? 1.75 : 1, BY = Q ? 0.72 : 1;
+            const bodyG = new THREE.Group(); bodyG.scale.set(Q ? 1.08 : 1, BY, Q ? 1.08 : 1); g2.add(bodyG);
+            const headG = new THREE.Group(); headG.scale.setScalar(QS); headG.position.y = Q ? 0.37 : 0.4; g2.add(headG);
+            const headIn = new THREE.Group(); headIn.position.y = -0.4; headG.add(headIn);
+            let tgt = bodyG;
+            const B = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => A(geo, mat, x, y, z, rx, ry, rz, tgt);
+            const along = (geo, mat, a, b) => { const m = new THREE.Mesh(geo, mat); m.position.copy(a).add(b).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()); m.castShadow = true; tgt.add(m); return m; };
+            const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+            // ---- lap, hem draped over the seat front, boots
+            B(new THREE.BoxGeometry(0.25, 0.07, 0.2), robe, 0, 0.035, 0.02);
+            [-1, 1].forEach(s => B(new THREE.SphereGeometry(0.058, 12, 10), robe, s * 0.065, 0.04, 0.115).scale.set(1, 0.75, 1));
+            if (!G.lotus) {
+                B(new THREE.CylinderGeometry(0.13, 0.15, 0.1, 18, 1, true, -1.0, 2.0), robeD, 0, -0.04, 0.03);
+                [-1, 1].forEach(s => B(new THREE.BoxGeometry(0.05, 0.035, 0.085), black, s * 0.055, -0.075, 0.165));
+            }
+            // ---- torso (lathe), shoulders, front placket, belt, collar
+            const torso = B(new THREE.LatheGeometry([[0.122, 0], [0.125, 0.05], [0.116, 0.12], [0.102, 0.19], [0.094, 0.235], [0.074, 0.265], [0.035, 0.28], [0, 0.284]].map(([r, y]) => new THREE.Vector2(r, y)), 20), robe, 0, 0.04, 0);
+            torso.scale.z = 0.78;
+            B(new THREE.SphereGeometry(0.1, 16, 10), robe, 0, 0.3, -0.005).scale.set(1.28, 0.46, 0.8);
+            B(new THREE.CylinderGeometry(0.096, 0.112, 0.15, 14, 1, true, -0.28, 0.56), robeD, 0, 0.2, 0.002).scale.z = 0.8;
+            B(new THREE.TorusGeometry(0.105, 0.013, 6, 24), gold, 0, 0.13, 0, Math.PI / 2).scale.y = 0.8;
+            B(new THREE.SphereGeometry(0.02, 10, 8), vGodMat(0x3f9a6a), 0, 0.13, 0.087);
+            B(new THREE.TorusGeometry(0.042, 0.012, 8, 20), acc, 0, 0.325, 0.006, Math.PI / 2 - 0.25);
+            // ---- wide sleeves hanging to hands resting on the lap
+            const handAt = s => V3(s * 0.045, 0.1, 0.135);
+            [-1, 1].forEach(s => {
+                const sh = V3(s * 0.125, 0.29, -0.005), elb = V3(s * 0.135, 0.18, 0.05), hd = handAt(s);
+                along(new THREE.CylinderGeometry(0.045, 0.05, sh.distanceTo(elb), 12), robe, sh, elb);
+                along(new THREE.CylinderGeometry(0.05, 0.078, elb.distanceTo(hd) + 0.02, 14, 1, true), robeD, elb, hd);
+                const inner = along(new THREE.CircleGeometry(0.07, 14), vGodMat(0x2a1a10), elb, hd); inner.position.copy(hd).lerp(elb, 0.08); inner.rotateX(Math.PI / 2);
+                B(new THREE.SphereGeometry(0.026, 12, 10), skin, hd.x, hd.y + 0.005, hd.z + 0.012).scale.set(1, 0.8, 1.25);
+            });
+            // ---- neck and head with a painted face, ears
+            tgt = headIn;
+            const hr = G.child ? 0.074 : 0.064, hy = 0.4;
+            B(new THREE.CylinderGeometry(0.028, 0.034, 0.05, 12), skin, 0, 0.34, 0);
+            B(new THREE.SphereGeometry(hr, 32, 20), face, 0, hy, 0).scale.set(0.95, 1.08, 0.98);
+            [-1, 1].forEach(s => B(new THREE.SphereGeometry(0.016, 8, 6), skin, s * hr * 0.93, hy - 0.004, -0.004).scale.set(0.5, k === 'fozu' || k === 'guanyin' ? 2.1 : 1.3, 1));
+            if (!Q) B(new THREE.SphereGeometry(0.01, 8, 6), skin, 0, hy - 0.012, hr * 0.98).scale.set(0.9, 1, 0.8);   // nose tip (the Q face just has a painted dot)
+            const crown = hy + hr * 0.82;
+            const hairCap = c => B(new THREE.SphereGeometry(hr * 1.04, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.5), c, 0, hy + 0.004, -0.006);
+            const hairBack = c => B(new THREE.SphereGeometry(hr * 1.05, 24, 14, Math.PI, Math.PI, 0, Math.PI * 0.72), c, 0, hy, -0.004);
+            if (G.hat === 'official') {   // 烏紗帽 with long paddle wings
+                hairBack(black);
+                B(new THREE.SphereGeometry(hr * 1.06, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.45), black, 0, hy + 0.01, -0.004).scale.y = 1.05;
+                B(new THREE.CylinderGeometry(0.045, 0.05, 0.065, 16), black, 0, crown + 0.02, -0.025);
+                B(new THREE.TorusGeometry(0.066, 0.006, 6, 24), gold, 0, hy + 0.03, -0.003, Math.PI / 2);
+                [-1, 1].forEach(s => { const wgt = B(new THREE.BoxGeometry(Q ? 0.09 : 0.15, 0.006, 0.032), black, s * (Q ? 0.105 : 0.135), crown + 0.012, -0.03); wgt.rotation.z = s * 0.08; B(new THREE.CylinderGeometry(0.004, 0.004, 0.06, 5), black, s * 0.065, crown + 0.012, -0.03, 0, 0, Math.PI / 2); });
+            } else if (G.hat === 'crown') {   // 媽祖 冕旒 crown
+                hairBack(black);
+                B(new THREE.CylinderGeometry(0.068, 0.072, 0.065, 20, 1, true), goldP, 0, crown - 0.005, 0).material.side = THREE.DoubleSide;
+                for (let i = 0; i < 7; i++) { const a = -0.9 + i * 0.3; B(new THREE.ConeGeometry(0.012, 0.035, 6), gold, Math.sin(a) * 0.07, crown + 0.04, Math.cos(a) * 0.07); }
+                B(new THREE.BoxGeometry(0.19, 0.012, 0.14), black, 0, crown + 0.065, 0);
+                B(new THREE.BoxGeometry(0.192, 0.004, 0.142), goldP, 0, crown + 0.072, 0);
+                const red = vGodMat(0xc0263a), pearl = vGodMat(0xf2ead8);
+                [1, -1].forEach(f => { for (let i = 0; i < 7; i++) { const x0 = -0.075 + i * 0.025; for (let j = 0; j < 4; j++) B(new THREE.SphereGeometry(0.0055, 6, 5), j % 2 ? red : pearl, x0, crown + 0.05 - j * 0.014, f * 0.072); } });
+                [-1, 1].forEach(s => B(new THREE.SphereGeometry(0.018, 10, 8), red, s * 0.07, crown - 0.01, 0.03));
+            } else if (G.hat === 'green') {   // 關公 green 頭巾 with a red pompom
+                hairBack(black);
+                B(new THREE.SphereGeometry(hr * 1.1, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.5), robe, 0, hy + 0.008, -0.006).scale.y = 1.15;
+                B(new THREE.SphereGeometry(0.022, 10, 8), vGodMat(0xc0263a), 0, crown + 0.035, 0.03);
+                B(new THREE.TorusGeometry(0.068, 0.008, 6, 24), gold, 0, hy + 0.028, -0.004, Math.PI / 2);
+                [-1, 1].forEach(s => B(new THREE.BoxGeometry(0.02, 0.1, 0.006), robe, s * 0.03, hy - 0.02, -0.07, 0.3, 0, s * 0.15));
+            } else if (G.hat === 'hood') {   // 觀音 white hood falling over the shoulders
+                hairCap(black);
+                B(new THREE.SphereGeometry(hr * 1.2, 24, 14, Math.PI, Math.PI, 0, Math.PI * 0.62), white, 0, hy + 0.005, -0.002).scale.set(1, 1.15, 1);
+                B(new THREE.SphereGeometry(hr * 1.16, 24, 8, 0, Math.PI, 0, Math.PI * 0.22), white, 0, hy + 0.01, 0).scale.set(1, 1.15, 1);
+                [-1, 1].forEach(s => B(new THREE.CylinderGeometry(0.02, 0.034, 0.17, 10), white, s * 0.066, hy - 0.07, -0.01, 0, 0, -s * 0.12));
+                B(new THREE.CylinderGeometry(0.095, 0.115, 0.12, 18, 1, true, Math.PI * 0.55, Math.PI * 0.9), vGodMat(0xf4f4f4), 0, 0.29, -0.01).material.side = THREE.DoubleSide;
+                B(new THREE.SphereGeometry(0.014, 10, 8), vGodMat(0xc0263a), 0, crown - 0.002, hr * 0.9);
+                B(new THREE.TorusGeometry(0.02, 0.005, 6, 12), goldP, 0, crown - 0.002, hr * 0.88);
+            } else if (G.hat === 'curl') {   // 佛 螺髻 curls and 肉髻
+                const blue = vGodMat(0x26365c);
+                hairCap(blue);
+                for (let i = 0; i < 40; i++) { const t = Math.acos(1 - (i + 0.5) / 40 * 0.95), a = i * 2.399; B(new THREE.SphereGeometry(0.009, 6, 5), blue, Math.sin(t) * Math.cos(a) * hr * 1.05, hy + 0.004 + Math.cos(t) * hr * 1.05, Math.sin(t) * Math.sin(a) * hr * 1.05 - 0.006); }
+                B(new THREE.SphereGeometry(0.032, 14, 10), blue, 0, crown + 0.02, -0.004);
+                B(new THREE.SphereGeometry(0.009, 8, 6), vGodMat(0xc0263a), 0, crown + 0.008, 0.045);
+            } else if (G.hat === 'buns') {   // 三太子 twin buns with red ribbons
+                hairCap(black); hairBack(black);
+                [-1, 1].forEach(s => { B(new THREE.SphereGeometry(0.034, 12, 10), black, s * 0.052, crown + 0.012, -0.004); B(new THREE.TorusGeometry(0.03, 0.007, 6, 14), vGodMat(0xd4302a), s * 0.052, crown - 0.008, -0.004, Math.PI / 2); B(new THREE.BoxGeometry(0.012, 0.07, 0.004), vGodMat(0xd4302a), s * 0.07, crown - 0.04, -0.03, 0.2, 0, s * 0.3); });
+                B(new THREE.SphereGeometry(0.013, 8, 6), gold, 0, crown - 0.005, hr * 0.85);
+            } else if (G.hat === 'monk') {   // 濟公 僧帽 with 佛 plaque
+                const hatM = vGodMat(0x6b5a44);
+                B(new THREE.CylinderGeometry(0.08, 0.066, 0.065, 4, 1), hatM, 0, crown + 0.008, -0.004, 0, Math.PI / 4).scale.z = 0.8;
+                const pl = vGodTexMat('fo', 32, 32, (x) => { x.fillStyle = '#e0b04a'; x.fillRect(0, 0, 32, 32); x.fillStyle = '#7a1a14'; x.font = '900 24px serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('佛', 16, 17); });
+                B(new THREE.PlaneGeometry(0.035, 0.035), pl, 0, crown + 0.01, 0.054);
+                hairBack(vGodMat(0x3a3028));
+            } else if (G.hat === 'loose') {   // 玄天上帝 loose hair with a gold crown band
+                hairCap(black); hairBack(black);
+                B(new THREE.BoxGeometry(0.12, 0.2, 0.03), black, 0, hy - 0.05, -0.058, 0.12);
+                B(new THREE.CylinderGeometry(0.03, 0.036, 0.04, 12), gold, 0, crown + 0.012, -0.01);
+                B(new THREE.TorusGeometry(0.067, 0.007, 6, 24), gold, 0, hy + 0.035, -0.004, Math.PI / 2);
+            }
+            // ---- beards: mustache plus one or several strands
+            if (G.beard) {
+                const bm = G.beard === 'white' ? white : black;
+                [-1, 1].forEach(s => B(new THREE.CylinderGeometry(0.004, 0.008, 0.05, 6), bm, s * 0.018, hy - 0.03, hr * 0.92, 0, 0, s * (Math.PI / 2 - 0.45)));
+                const strands = G.beard === 'longblack' ? [[0, 0.22, 0.03], [-0.025, 0.17, 0.022], [0.025, 0.17, 0.022]] : G.beard === 'white' ? [[0, 0.13, 0.036], [-0.022, 0.09, 0.024], [0.022, 0.09, 0.024]] : [[0, 0.09, 0.022], [-0.022, 0.06, 0.015], [0.022, 0.06, 0.015]];
+                strands.forEach(([x0, L0, r]) => { const L = Q ? L0 * 0.55 : L0; B(new THREE.ConeGeometry(r, L, 10), bm, x0, hy - 0.045 - L / 2, hr * 0.8 + 0.012, Math.PI + 0.16); });
+            }
+            // ---- halo with flame tips
+            if (G.halo) {
+                const hl = B(new THREE.CircleGeometry(0.115, 32), vGodHaloMat(), 0, hy + 0.02, -0.085);
+                B(new THREE.TorusGeometry(0.117, 0.008, 6, 32), gold, 0, hy + 0.02, -0.084);
+                for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; B(new THREE.ConeGeometry(0.012, 0.035, 5), gold, Math.cos(a) * 0.128, hy + 0.02 + Math.sin(a) * 0.128, -0.086, 0, 0, a - Math.PI / 2); }
+                hl.castShadow = false;
+            }
+            // ---- what each one holds
+            tgt = bodyG;
+            const P = G.prop, H = handAt(1), Hl = handAt(-1);
+            if (P === 'cane') { B(new THREE.CylinderGeometry(0.008, 0.011, 0.56, 7), vGodMat(0x6b4a2a), 0.16, 0.2, 0.12); const gd = B(new THREE.SphereGeometry(0.024, 10, 8), vGodMat(0xc8962a), 0.16, 0.49, 0.12); B(new THREE.SphereGeometry(0.016, 10, 8), vGodMat(0xc8962a), 0.16, 0.52, 0.12); gd.scale.y = 1.1; const ig = B(new THREE.SphereGeometry(0.03, 12, 8), gold, Hl.x - 0.01, Hl.y + 0.03, Hl.z + 0.01); ig.scale.set(1.5, 0.65, 0.9); B(new THREE.SphereGeometry(0.016, 10, 8), gold, Hl.x - 0.01, Hl.y + 0.045, Hl.z + 0.01); }
+            else if (P === 'vase') { B(new THREE.LatheGeometry([[0, 0], [0.016, 0], [0.024, 0.025], [0.016, 0.05], [0.008, 0.065], [0.012, 0.075]].map(([r, y]) => new THREE.Vector2(r, y)), 12), white, H.x, H.y + 0.01, H.z + 0.01); B(new THREE.CylinderGeometry(0.002, 0.002, 0.09, 4), vGodMat(0x4d8a3e), H.x, H.y + 0.12, H.z + 0.01, 0, 0, -0.2); for (let i = 0; i < 4; i++) B(new THREE.SphereGeometry(0.012, 6, 5), vGodMat(0x5c9a48), H.x + 0.01 + i * 0.006, H.y + 0.13 + i * 0.015, H.z + 0.01).scale.set(0.5, 1.4, 0.3); }
+            else if (P === 'tablet') B(new THREE.BoxGeometry(0.026, 0.17, 0.01), vGodMat(0xf2e6c8), 0, 0.2, 0.15, -0.25);
+            else if (P === 'glaive') { B(new THREE.CylinderGeometry(0.007, 0.007, 0.66, 6), vGodMat(0x6b2a1a), 0.17, 0.25, 0.08); const bl = B(new THREE.CylinderGeometry(0.06, 0.06, 0.008, 16, 1, false, 0, Math.PI * 0.7), vGodMat(0xc8ccd2, true), 0.19, 0.56, 0.08, Math.PI / 2, 0, 0.3); bl.scale.set(1, 1, 1.6); B(new THREE.SphereGeometry(0.014, 8, 6), vGodMat(0x2f7a4a), 0.17, 0.53, 0.08); }
+            else if (P === 'ingot') { const ig = B(new THREE.SphereGeometry(0.042, 14, 8), gold, 0, 0.13, 0.15); ig.scale.set(1.6, 0.6, 1); B(new THREE.SphereGeometry(0.024, 12, 8), gold, 0, 0.15, 0.15); [-1, 1].forEach(s => B(new THREE.SphereGeometry(0.02, 8, 6), gold, s * 0.05, 0.145, 0.15).scale.set(1, 1.3, 1)); }
+            else if (P === 'ring') { B(new THREE.TorusGeometry(0.04, 0.009, 8, 20), gold, H.x + 0.03, H.y + 0.05, H.z, 0.3); const rb = B(new THREE.TorusGeometry(0.17, 0.011, 6, 32), vGodMat(0xd4302a), 0, 0.22, 0, Math.PI / 2 - 0.25); rb.scale.set(1, 0.8, 1); B(new THREE.CylinderGeometry(0.004, 0.004, 0.5, 5), vGodMat(0x8a6a3a), Hl.x - 0.04, 0.2, Hl.z, 0, 0, 0.1); B(new THREE.ConeGeometry(0.012, 0.05, 6), vGodMat(0xc8ccd2, true), Hl.x - 0.065, 0.47, Hl.z); }
+            else if (P === 'fan') { const f = B(new THREE.CircleGeometry(0.075, 16, 0, Math.PI), vGodMat(0xe9dcc0), H.x + 0.03, H.y + 0.06, H.z + 0.01, 0, 0, -0.5); f.material.side = THREE.DoubleSide; const gourd = B(new THREE.SphereGeometry(0.03, 10, 8), vGodMat(0xc8962a), -0.15, 0.08, 0.06); gourd.scale.y = 1.2; B(new THREE.SphereGeometry(0.02, 10, 8), vGodMat(0xc8962a), -0.15, 0.125, 0.06); }
+            else if (P === 'thread') { B(new THREE.SphereGeometry(0.028, 10, 8), vGodMat(0xd4202a), H.x + 0.01, H.y + 0.03, H.z + 0.01); B(new THREE.BoxGeometry(0.1, 0.07, 0.012), vGodMat(0xf2e6c8), Hl.x - 0.02, Hl.y + 0.04, Hl.z + 0.01, -0.3); B(new THREE.TorusGeometry(0.06, 0.002, 4, 24), vGodMat(0xd4202a), 0.02, 0.12, 0.15, Math.PI / 2); }
+            else if (P === 'sword') { B(new THREE.BoxGeometry(0.014, 0.3, 0.004), vGodMat(0xc8ccd2, true), H.x + 0.01, H.y + 0.19, H.z); B(new THREE.BoxGeometry(0.055, 0.012, 0.02), gold, H.x + 0.01, H.y + 0.04, H.z); B(new THREE.CylinderGeometry(0.006, 0.006, 0.04, 6), vGodMat(0x3a2a1a), H.x + 0.01, H.y + 0.015, H.z); }
+            return fig;
+        }
+
+        // ---------------------------------------------------------------- refined house: shared textures / materials
+        function vHouseTex() {
+            if (vHouseTex.t) return vHouseTex.t;
+            const mk = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t; };
+            const speck = (x, w, h, n, a, col, sz = 2) => { for (let i = 0; i < n; i++) { x.fillStyle = `rgba(${col},${(Math.random() * a).toFixed(3)})`; const s = 0.6 + Math.random() * sz; x.fillRect(Math.random() * w, Math.random() * h, s, s); } };
+            const T = {};
+            // lime plaster: soft stains, rain streaks and a damp band at the foot (texture bottom = wall foot)
+            T.plaster = mk(256, 256, (x, w, h) => {
+                x.fillStyle = '#f3f0e8'; x.fillRect(0, 0, w, h);
+                for (let i = 0; i < 26; i++) { const cx = Math.random() * w, cy = Math.random() * h, r = 20 + Math.random() * 60; const g = x.createRadialGradient(cx, cy, 0, cx, cy, r); g.addColorStop(0, 'rgba(150,138,115,0.10)'); g.addColorStop(1, 'rgba(150,138,115,0)'); x.fillStyle = g; x.fillRect(cx - r, cy - r, r * 2, r * 2); }
+                for (let i = 0; i < 14; i++) { const sx = Math.random() * w, len = 30 + Math.random() * 90; const g = x.createLinearGradient(0, 0, 0, len); g.addColorStop(0, 'rgba(95,85,70,0.13)'); g.addColorStop(1, 'rgba(95,85,70,0)'); x.fillStyle = g; x.fillRect(sx, 0, 2 + Math.random() * 4, len); }
+                const d = x.createLinearGradient(0, h, 0, h * 0.78); d.addColorStop(0, 'rgba(105,95,70,0.30)'); d.addColorStop(1, 'rgba(105,95,70,0)'); x.fillStyle = d; x.fillRect(0, h * 0.78, w, h * 0.22);
+                speck(x, w, h, 5000, 0.10, '70,60,50', 1.5);
+            });
+            // Taiwanese red brick, pale lime mortar
+            T.brick = mk(256, 256, (x, w, h) => {
+                x.fillStyle = '#cfc2ad'; x.fillRect(0, 0, w, h);
+                const rows = 16, bw = 64, bh = h / rows;
+                for (let r = 0; r < rows; r++) for (let c = -1; c <= 4; c++) {
+                    const o = (r % 2) * bw / 2, s = 0.82 + Math.random() * 0.3;
+                    x.fillStyle = `rgb(${Math.min(255, 178 * s) | 0},${(72 * s) | 0},${(52 * s) | 0})`;
+                    x.fillRect(c * bw + o + 1.5, r * bh + 1.5, bw - 3, bh - 3);
+                    if (Math.random() < 0.3) { x.fillStyle = 'rgba(60,20,10,0.25)'; x.fillRect(c * bw + o + 1.5, r * bh + bh - 4, bw - 3, 2.5); }
+                }
+                speck(x, w, h, 4000, 0.18, '40,15,10', 1.6);
+            });
+            // weatherboard (雨淋板) for the timber house; tinted by the material colour
+            T.board = mk(256, 256, (x, w, h) => {
+                const n = 10, bh = h / n;
+                for (let i = 0; i < n; i++) {
+                    const g = x.createLinearGradient(0, i * bh, 0, (i + 1) * bh); g.addColorStop(0, '#f4ede0'); g.addColorStop(0.85, '#d9cdb8'); g.addColorStop(1, '#6d604e');
+                    x.fillStyle = g; x.fillRect(0, i * bh, w, bh);
+                    for (let k = 0; k < 18; k++) { x.fillStyle = 'rgba(110,85,55,0.10)'; x.fillRect(Math.random() * w, i * bh + Math.random() * bh * 0.8, 20 + Math.random() * 60, 1); }
+                }
+                for (let k = 0; k < 4; k++) { x.fillStyle = 'rgba(60,45,30,0.35)'; x.fillRect(k * 64 + 31, 0, 1.5, h); }
+            });
+            T.floorTile = mk(256, 256, (x, w, h) => {   // 紅地磚
+                x.fillStyle = '#7d4334'; x.fillRect(0, 0, w, h);
+                for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) { const s = 0.85 + Math.random() * 0.25; x.fillStyle = `rgb(${(190 * s) | 0},${(92 * s) | 0},${(66 * s) | 0})`; x.fillRect(c * 64 + 2, r * 64 + 2, 60, 60); const g = x.createLinearGradient(c * 64, r * 64, c * 64 + 64, r * 64 + 64); g.addColorStop(0, 'rgba(255,255,255,0.10)'); g.addColorStop(1, 'rgba(0,0,0,0.10)'); x.fillStyle = g; x.fillRect(c * 64 + 2, r * 64 + 2, 60, 60); }
+                speck(x, w, h, 2500, 0.15, '50,20,10', 1.5);
+            });
+            T.floorWood = mk(256, 256, (x, w, h) => {
+                for (let i = 0; i < 8; i++) { const s = 0.85 + Math.random() * 0.25; x.fillStyle = `rgb(${(176 * s) | 0},${(128 * s) | 0},${(84 * s) | 0})`; x.fillRect(0, i * 32, w, 32); x.fillStyle = 'rgba(50,30,15,0.5)'; x.fillRect(0, i * 32, w, 1.5); x.fillRect(((i * 97) % 200) + 20, i * 32, 1.5, 32); for (let k = 0; k < 25; k++) { x.fillStyle = 'rgba(90,55,25,0.13)'; x.fillRect(Math.random() * w, i * 32 + Math.random() * 30, 15 + Math.random() * 50, 1); } }
+            });
+            T.granite = mk(128, 128, (x, w, h) => { x.fillStyle = '#a19c92'; x.fillRect(0, 0, w, h); speck(x, w, h, 3000, 0.35, '40,40,40', 1.4); speck(x, w, h, 1200, 0.4, '235,230,220', 1.4); x.fillStyle = 'rgba(50,48,45,0.45)'; x.fillRect(0, 0, w, 1.5); x.fillRect(0, 0, 1.5, h); x.fillRect(64, 0, 1.5, h); });
+            T.court = mk(256, 256, (x, w, h) => {   // 埕: red brick pavers
+                x.fillStyle = '#8a5a48'; x.fillRect(0, 0, w, h);
+                for (let r = 0; r < 8; r++) for (let c = -1; c < 5; c++) { const s = 0.8 + Math.random() * 0.3, o = (r % 2) * 32; x.fillStyle = `rgb(${(170 * s) | 0},${(84 * s) | 0},${(60 * s) | 0})`; x.fillRect(c * 64 + o + 2, r * 32 + 2, 60, 28); }
+                speck(x, w, h, 3000, 0.2, '40,25,15', 1.6);
+            });
+            T.door = mk(128, 256, (x, w, h) => {   // lacquered door leaf: raised panels, brass studs and a ring knocker
+                x.fillStyle = '#8e1a14'; x.fillRect(0, 0, w, h);
+                x.strokeStyle = '#5d0f0b'; x.lineWidth = 5; x.strokeRect(14, 14, w - 28, 100); x.strokeRect(14, 134, w - 28, 108);
+                x.strokeStyle = 'rgba(255,190,150,0.25)'; x.lineWidth = 2; x.strokeRect(18, 18, w - 36, 92); x.strokeRect(18, 138, w - 36, 100);
+                x.fillStyle = '#e0b04a'; for (let r = 0; r < 5; r++) for (let c = 0; c < 3; c++) { x.beginPath(); x.arc(32 + c * 32, 30 + r * 20, 4, 0, 7); x.fill(); }
+                x.strokeStyle = '#e0b04a'; x.lineWidth = 4; x.beginPath(); x.arc(98, 140, 12, 0, 7); x.stroke(); x.beginPath(); x.arc(98, 124, 6, 0, 7); x.fill();
+                speck(x, w, h, 800, 0.2, '30,5,5', 1.5);
+            });
+            T.frieze = mk(1024, 64, (x, w, h) => {   // 水車堵: painted band under the eaves
+                x.fillStyle = '#1d4a52'; x.fillRect(0, 0, w, h);
+                x.fillStyle = '#d8b04c'; x.fillRect(0, 0, w, 5); x.fillRect(0, h - 5, w, 5);
+                for (let i = 0; i < 6; i++) {
+                    const px = 20 + i * 168; x.fillStyle = '#efe6cf'; x.fillRect(px, 10, 148, 44); x.strokeStyle = '#7a1a14'; x.lineWidth = 3; x.strokeRect(px + 3, 13, 142, 38);
+                    for (let k = 0; k < 5; k++) { const fx = px + 18 + k * 28, fy = 32 + Math.sin(k * 1.7 + i) * 8, cols = ['#c43a31', '#e0a03a', '#3f7d4a', '#c86aa0', '#2f6fa8']; x.fillStyle = '#3f6b3a'; x.beginPath(); x.ellipse(fx + 8, fy + 6, 8, 3, 0.5, 0, 7); x.fill(); x.fillStyle = cols[(k + i) % 5]; x.beginPath(); x.arc(fx, fy, 6, 0, 7); x.fill(); x.fillStyle = '#f7dc6f'; x.beginPath(); x.arc(fx, fy, 2, 0, 7); x.fill(); }
+                }
+            });
+            T.sash = mk(128, 128, (x, w, h) => {   // glazed sash window for the timber house
+                const g = x.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#9fc3d6'); g.addColorStop(0.5, '#4e7487'); g.addColorStop(1, '#2c4552'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+                x.fillStyle = 'rgba(255,255,255,0.25)'; x.beginPath(); x.moveTo(10, 0); x.lineTo(40, 0); x.lineTo(0, 50); x.lineTo(0, 20); x.fill();
+                x.fillStyle = '#efe9dc'; x.fillRect(0, 0, w, 7); x.fillRect(0, h - 7, w, 7); x.fillRect(0, 0, 7, h); x.fillRect(w - 7, 0, 7, h); x.fillRect(w / 2 - 3, 0, 6, h); x.fillRect(0, h / 2 - 3, w, 6); x.fillRect(0, h / 4 - 2, w, 4); x.fillRect(0, h * 3 / 4 - 2, w, 4);
+            });
+            T.altarFront = mk(256, 128, (x, w, h) => {   // carved and gilded apron of the 神明桌
+                x.fillStyle = '#7d1611'; x.fillRect(0, 0, w, h);
+                x.strokeStyle = '#d9a83c'; x.lineWidth = 5; x.strokeRect(8, 8, w - 16, h - 16); x.lineWidth = 2; x.strokeRect(18, 18, w - 36, h - 36);
+                x.fillStyle = '#d9a83c'; x.beginPath(); x.ellipse(w / 2, h / 2, 34, 26, 0, 0, 7); x.fill(); x.fillStyle = '#7d1611'; x.beginPath(); x.ellipse(w / 2, h / 2, 26, 18, 0, 0, 7); x.fill();
+                x.fillStyle = '#e8c25a'; x.font = '900 26px "LXGW WenKai TC","Noto Serif TC",serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('福', w / 2, h / 2 + 1);
+                x.strokeStyle = '#d9a83c'; x.lineWidth = 3; [[50, 1], [w - 50, -1]].forEach(([cx, s]) => { x.beginPath(); for (let t = 0; t < 12; t += 0.2) { const r = 3 + t * 2.2; x.lineTo(cx + s * Math.cos(t) * r * 0.9, h / 2 + Math.sin(t) * r * 0.6); } x.stroke(); });
+            });
+            T.paint = mk(256, 320, (x, w, h) => {   // 神明彩 hanging behind the altar
+                x.fillStyle = '#c99a3a'; x.fillRect(0, 0, w, h);
+                const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#f3e5c4'); g.addColorStop(1, '#e2cfa2'); x.fillStyle = g; x.fillRect(12, 12, w - 24, h - 24);
+                x.fillStyle = '#9d1c16'; x.fillRect(12, 12, w - 24, 40); x.fillStyle = '#f6d36b'; x.font = '900 28px "LXGW WenKai TC","Noto Serif TC",serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('神光普照', w / 2, 33);
+                for (let i = 0; i < 7; i++) { x.fillStyle = 'rgba(255,255,255,0.65)'; x.beginPath(); x.ellipse(30 + i * 34, 90 + (i % 2) * 16, 22, 9, 0, 0, 7); x.fill(); }
+                const cx = w / 2;
+                x.fillStyle = 'rgba(232,180,60,0.85)'; x.beginPath(); x.arc(cx, 118, 40, 0, 7); x.fill(); x.strokeStyle = '#b8862b'; x.lineWidth = 3; x.stroke();
+                x.fillStyle = '#b8242a'; x.beginPath(); x.moveTo(cx - 26, 150); x.quadraticCurveTo(cx - 62, 230, cx - 70, 272); x.lineTo(cx + 70, 272); x.quadraticCurveTo(cx + 62, 230, cx + 26, 150); x.fill();
+                x.fillStyle = '#e6b53e'; x.beginPath(); x.moveTo(cx - 14, 152); x.lineTo(cx + 14, 152); x.lineTo(cx + 22, 272); x.lineTo(cx - 22, 272); x.fill();
+                x.fillStyle = '#f1cfa6'; x.beginPath(); x.arc(cx, 122, 22, 0, 7); x.fill();
+                x.fillStyle = '#1b1b1b'; x.fillRect(cx - 26, 92, 52, 12); x.fillRect(cx - 14, 80, 28, 14);
+                x.fillStyle = '#f4f4f4'; x.beginPath(); x.moveTo(cx - 12, 134); x.quadraticCurveTo(cx, 176, cx + 12, 134); x.fill();
+                x.fillStyle = '#2a1a10'; x.fillRect(cx - 9, 118, 5, 2); x.fillRect(cx + 4, 118, 5, 2);
+                for (let i = 0; i < 5; i++) { x.fillStyle = i % 2 ? '#e58fb0' : '#f3b6c8'; x.beginPath(); x.ellipse(cx - 40 + i * 20, 284, 12, 7, 0, 0, 7); x.fill(); }
+            });
+            T.cal = mk(128, 160, (x, w, h) => {   // tear-off calendar
+                x.fillStyle = '#f8f5ee'; x.fillRect(0, 0, w, h); x.fillStyle = '#c0261e'; x.fillRect(0, 0, w, 34);
+                x.fillStyle = '#fff'; x.font = '700 20px "Noto Serif TC",serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; const d = new Date(); x.fillText(`${d.getFullYear()} 年 ${d.getMonth() + 1} 月`, w / 2, 18);
+                x.fillStyle = d.getDay() === 0 ? '#c0261e' : '#1a1a1a'; x.font = '900 72px Georgia,serif'; x.fillText(String(d.getDate()), w / 2, 88);
+                x.fillStyle = '#555'; x.font = '700 16px "Noto Serif TC",serif'; x.fillText('宜 祭祀 祈福', w / 2, 140);
+            });
+            T.clock = mk(128, 128, (x, w, h) => {
+                x.fillStyle = '#5a3a20'; x.beginPath(); x.arc(64, 64, 63, 0, 7); x.fill(); x.fillStyle = '#f6f1e4'; x.beginPath(); x.arc(64, 64, 54, 0, 7); x.fill();
+                x.fillStyle = '#222'; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; x.fillRect(64 + Math.sin(a) * 46 - 2, 64 - Math.cos(a) * 46 - 2, 4, 4); }
+                x.strokeStyle = '#222'; x.lineWidth = 4; x.beginPath(); x.moveTo(64, 64); x.lineTo(64 + 22, 64 - 14); x.stroke(); x.lineWidth = 2.5; x.beginPath(); x.moveTo(64, 64); x.lineTo(64 - 6, 64 - 40); x.stroke();
+            });
+            T.rug = mk(256, 256, (x, w, h) => { [['#7a1e22', 128], ['#d9b25a', 118], ['#8c2a2c', 110], ['#5a1518', 70], ['#d9b25a', 64], ['#9c3434', 56]].forEach(([c, r]) => { x.fillStyle = c; x.beginPath(); x.arc(128, 128, r, 0, 7); x.fill(); }); x.strokeStyle = '#e8c97a'; x.lineWidth = 2; for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; x.beginPath(); x.arc(128 + Math.cos(a) * 88, 128 + Math.sin(a) * 88, 9, 0, 7); x.stroke(); } });
+            const MSM = THREE.MeshStandardMaterial, S = villageShared();
+            const m = (o, tri) => { const mm = new MSM(o); if (tri) mm.userData.tri = tri; S.mats.add(mm); if (mm.map) S.texs.add(mm.map); return mm; };
+            Object.values(T).forEach(t => S.texs.add(t));
+            T.m = {
+                stone: m({ map: T.granite, roughness: 0.9 }, 1.6),
+                trimLime: m({ map: T.plaster, color: 0xe4dfd2, roughness: 0.9 }, 2.9),
+                trimBrick: m({ map: T.brick, roughness: 0.85 }, 1.4),
+                floorTile: m({ map: T.floorTile, roughness: 0.6 }, 1.2),
+                floorWood: m({ map: T.floorWood, roughness: 0.7 }, 2.0),
+                court: m({ map: T.court, roughness: 0.9 }, 2.0),
+                door: m({ map: T.door, roughness: 0.45 }),
+                frieze: m({ map: T.frieze, roughness: 0.7 }),
+                sash: m({ map: T.sash, roughness: 0.25, metalness: 0.1 }),
+                altarFront: m({ map: T.altarFront, roughness: 0.45, metalness: 0.15 }),
+                paint: m({ map: T.paint, roughness: 0.8 }),
+                cal: m({ map: T.cal, roughness: 0.9 }),
+                clock: m({ map: T.clock, roughness: 0.5 }),
+                rug: m({ map: T.rug, roughness: 0.95 }),
+                bulb: m({ color: 0xfff0c8, emissive: 0xffd890, emissiveIntensity: 1.2 }),
+                flame: m({ color: 0xffd060, emissive: 0xffa020, emissiveIntensity: 1.5 }),
+                candle: m({ color: 0xc8231c, roughness: 0.6 }),
+                shade: m({ color: 0x2f6b4f, roughness: 0.4, metalness: 0.4, side: THREE.DoubleSide }),
+                fruit: m({ color: 0xf08a1c, roughness: 0.5 }),
+                porcelain: m({ color: 0xf4f2ec, roughness: 0.25 }),
+                skin: m({ color: 0xe9c29a, roughness: 0.6 }),
+                black: m({ color: 0x1b1b1b, roughness: 0.6 }),
+                vent: m({ color: 0x1f1a16, roughness: 1 })
+            };
+            return (vHouseTex.t = T);
+        }
+
+        // merge every plain (non-clickable) mesh directly under `parent` by material → far fewer draw calls.
+        // materials carrying userData.tri get world-scale box-projected UVs so textures keep their real size.
+        function vMergeStatic(parent) {
+            const groups = new Map();
+            parent.children.slice().forEach(m => {
+                if (!m.isMesh || m.isInstancedMesh || Array.isArray(m.material) || m.userData.interactType || m.userData.noMerge) return;
+                const k = m.material.uuid + (m.castShadow ? '1' : '0');
+                if (!groups.has(k)) groups.set(k, []);
+                groups.get(k).push(m);
+            });
+            groups.forEach(list => {
+                const mat = list[0].material, tri = mat.userData.tri;
+                if (list.length < 2 && !tri) return;
+                const P = [], N = [], U = [];
+                list.forEach(m => {
+                    m.updateMatrix();
+                    const geo = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+                    geo.applyMatrix4(m.matrix);
+                    if (!geo.attributes.normal) geo.computeVertexNormals();
+                    const p = geo.attributes.position.array, n = geo.attributes.normal.array, uv = geo.attributes.uv ? geo.attributes.uv.array : null;
+                    for (let i = 0, c = p.length / 3; i < c; i++) {
+                        const x = p[i * 3], y = p[i * 3 + 1], z = p[i * 3 + 2];
+                        P.push(x, y, z); N.push(n[i * 3], n[i * 3 + 1], n[i * 3 + 2]);
+                        if (tri) {
+                            const ax = Math.abs(n[i * 3]), ay = Math.abs(n[i * 3 + 1]), az = Math.abs(n[i * 3 + 2]);
+                            if (ay >= ax && ay >= az) U.push(x / tri, z / tri);
+                            else if (ax >= az) U.push(z / tri, y / tri);
+                            else U.push(x / tri, y / tri);
+                        } else U.push(uv ? uv[i * 2] : 0, uv ? uv[i * 2 + 1] : 0);
+                    }
+                    geo.dispose();
+                    parent.remove(m);
+                    if (!V_GEO_SET.has(m.geometry)) m.geometry.dispose();
+                });
+                const geo = new THREE.BufferGeometry();
+                geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+                geo.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+                geo.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+                const mm = new THREE.Mesh(geo, mat); mm.castShadow = list[0].castShadow; mm.receiveShadow = true; mm.userData.ownGeo = true;
+                parent.add(mm);
+            });
+        }
+
+        // roof profile for each house type (house-local coordinates); t = 0 at the ridge, 1 at the eave
+        function vRoofSpec(ty) {
+            const { hw, zb, zf, H } = VH, depth = zf - zb, zc = (zb + zf) / 2;
+            const o = ty === 'wood' ? { over: 0.95, side: 0.7, top: 1.0, eave: -0.25, sag: 0.04, lift: 0, rib: 0.26 }
+                : ty === 'sanhe' ? { over: 0.65, side: 0.45, top: 1.5, eave: -0.15, sag: 0.22, lift: 0.35, rib: 0.24 }
+                    : { over: 0.55, side: 0.14, top: 1.35, eave: -0.1, sag: 0.15, lift: 0, rib: 0.24 };
+            o.zc = zc; o.half = depth / 2 + o.over; o.Wr = hw * 2 + o.side * 2; o.yTop = H + o.top; o.yEave = H + o.eave;
+            o.yAt = t => o.yTop + (o.yEave - o.yTop) * t - o.sag * Math.sin(Math.PI * t);
+            o.yAtZ = z => o.yAt(Math.min(1, Math.abs(z - zc) / o.half));
+            o.liftAt = (x, t) => o.lift * Math.pow(Math.min(1, Math.abs(x) / (o.Wr / 2)), 6) * t * t;
+            return o;
+        }
+        // both tiled slopes as one geometry with real barrel-tile ribs (cached per house type, shared by all houses)
+        function vRoofGeo(key, o) {
+            if (V_GEO[key]) return V_GEO[key];
+            const segX = Math.round(o.Wr / o.rib * 6), segT = 16, pos = [], uv = [], idx = [];
+            const slopeLen = Math.hypot(o.half, o.yTop - o.yEave) + o.sag;
+            [1, -1].forEach((s, si) => {
+                const base = si * (segT + 1) * (segX + 1);
+                for (let i = 0; i <= segT; i++) {
+                    const t = i / segT, y0 = o.yAt(t);
+                    for (let j = 0; j <= segX; j++) {
+                        const x = -o.Wr / 2 + o.Wr * j / segX, fr = ((x / o.rib) % 1 + 1) % 1;
+                        const bump = Math.sqrt(Math.max(0, 1 - Math.pow(2 * fr - 1, 2))) * 0.055;
+                        pos.push(x, y0 + o.liftAt(x, t) + bump, o.zc + s * o.half * t);
+                        uv.push(x / (o.rib * 8), t * slopeLen / 2.4);
+                    }
+                }
+                for (let i = 0; i < segT; i++) for (let j = 0; j < segX; j++) {
+                    const a = base + i * (segX + 1) + j, b = a + 1, c = a + segX + 1, d = c + 1;
+                    if (s > 0) idx.push(a, c, b, b, c, d); else idx.push(a, b, c, b, d, c);
+                }
+            });
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+            geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+            geo.setIndex(idx); geo.computeVertexNormals();
+            V_GEO[key] = geo; V_GEO_SET.add(geo);
+            return geo;
+        }
+        function vCachedGeo(key, make) { if (!V_GEO[key]) { V_GEO[key] = make(); V_GEO_SET.add(V_GEO[key]); } return V_GEO[key]; }
+
         // ---------------------------------------------------------------- a house
         function buildVillageHouse(p, home, mine) {
-            const VM = villageMats(), M = VM.M;
+            const VM = villageMats(), M = VM.M, HT = vHouseTex(), HM = HT.m;
             const { hw, zb, zf, H, T, door } = VH;
+            const ty = home.ty, wood = ty === 'wood';
             const g = new THREE.Group(); g.position.set(p.x, 0, p.z); g.rotation.y = p.rot; VILLAGE.group.add(g);
             const roofG = new THREE.Group(), frontG = new THREE.Group(), decoG = new THREE.Group();
             g.add(roofG, frontG, decoG);
             const ud = (act, extra) => Object.assign({ interactType: 'vhome', act, plot: p.i }, extra || {});
             const click = (m, act, label, extra) => { m.userData = Object.assign(ud(act, extra), { label }); clickableMeshes.push(m); return m; };
-            const add = (geo, mat, x, y, z, parent = g, own = false) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; if (own) m.userData.ownGeo = true; parent.add(m); return m; };
+            const add = (geo, mat, x, y, z, parent = g) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
+            const flat = m => { m.castShadow = false; return m; };
             const wallDef = V_WALLS[home.wc], roofDef = V_ROOFS[home.rc];
             let wallMat;
-            if (home.ty === 'wood' && home.wc === 2) wallMat = new THREE.MeshStandardMaterial({ map: VM.planksTex, color: 0xc08a52, roughness: 0.75 });
-            else if (wallDef.brick) wallMat = new THREE.MeshStandardMaterial({ map: VM.brickTex, roughness: 0.65 });
-            else wallMat = new THREE.MeshStandardMaterial({ color: wallDef.c, roughness: 0.85 });
-            const roofTex = VM.tileTex.clone(); roofTex.needsUpdate = true; roofTex.repeat.set(4, 2);
-            const roofMat = new THREE.MeshStandardMaterial({ map: roofTex, color: roofDef.c, roughness: 0.6 });
-            const depth = zf - zb, zc = (zb + zf) / 2;
-            // yard: stone path and low hedges on the plot's sides and back
-            const yard = add(vBox(VILLAGE.W - 0.6, 0.01, VILLAGE.D - 0.6), VM.yard, 0, 0.008, 0); yard.castShadow = false;
-            const path = add(vBox(1.4, 0.03, VILLAGE.D / 2 - zf + 0.2), VM.slab, 0, 0.03, (zf + VILLAGE.D / 2) / 2); path.castShadow = false;
-            [[-1, 0], [1, 0]].forEach(([s]) => add(vBox(0.45, 0.7, VILLAGE.D - 1.2), VM.hedge, s * (VILLAGE.W / 2 - 0.35), 0.35, -0.2));
+            if (wallDef.brick) { wallMat = new THREE.MeshStandardMaterial({ map: HT.brick, roughness: 0.85 }); wallMat.userData.tri = 1.4; }
+            else if (wood) { wallMat = new THREE.MeshStandardMaterial({ map: HT.board, color: home.wc === 2 ? 0xc49060 : wallDef.c, roughness: 0.8 }); wallMat.userData.tri = 2.0; }
+            else { wallMat = new THREE.MeshStandardMaterial({ map: HT.plaster, color: wallDef.c, roughness: 0.92 }); wallMat.userData.tri = 2.9; }
+            const trimMat = wood ? VM.darkWood : wallDef.brick ? HM.trimLime : HM.trimBrick;
+            const roofTex = VM.tileTex.clone(); roofTex.needsUpdate = true;
+            const roofMat = new THREE.MeshStandardMaterial({ map: roofTex, color: roofDef.c, roughness: 0.6, side: THREE.DoubleSide });
+            const ridgeMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(roofDef.c).multiplyScalar(0.62), roughness: 0.55 });
+            const depth = zf - zb, zc = (zb + zf) / 2, W2 = hw * 2, R = vRoofSpec(ty);
+            const segs = [];
+            // ---- yard: hedges, a stone path and a pair of gate posts
+            flat(add(vBox(VILLAGE.W - 0.6, 0.01, VILLAGE.D - 0.6), VM.yard, 0, 0.008, 0));
+            flat(add(vBox(1.4, 0.03, VILLAGE.D / 2 - zf + 0.2), VM.slab, 0, 0.03, (zf + VILLAGE.D / 2) / 2));
+            [-1, 1].forEach(s => add(vBox(0.45, 0.7, VILLAGE.D - 1.2), VM.hedge, s * (VILLAGE.W / 2 - 0.35), 0.35, -0.2));
             add(vBox(VILLAGE.W - 1.2, 0.7, 0.45), VM.hedge, 0, 0.35, -VILLAGE.D / 2 + 0.35);
-            // floor and inside walls (plaster) — the walls are boxes so the inside faces are plaster-coloured by a thin lining
-            const fl = add(vBox(hw * 2 - T, 0.02, depth - T), VM.floor, 0, 0.014, zc); fl.castShadow = false;
-            const W2 = hw * 2;
+            const gz = VILLAGE.D / 2 - 0.55;
+            [-1, 1].forEach(s => {
+                add(vBox(0.4, 1.15, 0.4), wood ? VM.darkWood : HM.trimBrick, s * 1.05, 0.575, gz);
+                add(vBox(0.52, 0.1, 0.52), HM.stone, s * 1.05, 1.2, gz);
+                add(new THREE.SphereGeometry(0.13, 10, 8), wood ? HM.stone : VM.gold, s * 1.05, 1.33, gz);
+            });
+            // ---- floor
+            flat(add(vBox(W2 - T, 0.02, depth - T), wood ? HM.floorWood : HM.floorTile, 0, 0.014, zc));
+            // ---- walls (back, sides), plaster lining inside, stone plinth outside, corner piers, cornice
             add(vBox(W2, H, T), wallMat, 0, H / 2, zb);
             [-1, 1].forEach(s => add(vBox(T, H, depth), wallMat, s * hw, H / 2, zc));
             add(vBox(W2 - T * 2, H - 0.05, 0.02), VM.plaster, 0, H / 2, zb + T / 2 + 0.01);
             [-1, 1].forEach(s => add(vBox(0.02, H - 0.05, depth - T * 2), VM.plaster, s * (hw - T / 2 - 0.01), H / 2, zc));
-            const pw = (W2 - door) / 2;
+            const bh = wood ? 0.42 : 0.5;
+            add(vBox(W2 + 0.12, bh, 0.1), HM.stone, 0, bh / 2, zb - T / 2 - 0.04);
+            [-1, 1].forEach(s => add(vBox(0.1, bh, depth + 0.12), HM.stone, s * (hw + T / 2 + 0.04), bh / 2, zc));
+            if (wood) [-1, 1].forEach(s => [-0.9, 0.9].forEach(dz => add(vBox(0.11, 0.12, 0.3), HM.vent, s * (hw + T / 2 + 0.05), 0.24, zc + dz)));
+            const pier = wood ? 0.16 : 0.34;
+            [[-1, zb], [1, zb], [-1, zf], [1, zf]].forEach(([s, z]) => add(vBox(pier, H, pier), trimMat, s * (hw - pier / 2 + 0.06), H / 2, z + (z === zb ? -0.06 : 0.06), z === zf ? frontG : g));
+            add(vBox(W2 + 0.16, 0.1, T + 0.12), trimMat, 0, H - 0.05, zb);
+            [-1, 1].forEach(s => add(vBox(T + 0.12, 0.1, depth + 0.16), trimMat, s * hw, H - 0.05, zc));
+            // ---- front wall with windows, door frame, couplets
+            const pw = (W2 - door) / 2, winMat = wood ? HM.sash : VM.window;
             [-1, 1].forEach(s => {
-                add(vBox(pw, H, T), wallMat, s * (door / 2 + pw / 2), H / 2, zf, frontG);
-                add(vBox(pw - 0.02, H - 0.05, 0.02), VM.plaster, s * (door / 2 + pw / 2), H / 2, zf - T / 2 - 0.01, frontG);
-                const win = add(vBox(1.0, 0.85, 0.04), VM.window, s * (door / 2 + pw / 2), 1.55, zf + T / 2 + 0.01, frontG); win.castShadow = false;
-                add(vBox(1.12, 0.08, 0.1), VM.darkWood, s * (door / 2 + pw / 2), 1.1, zf + T / 2 + 0.03, frontG);
-                const sideWin = add(vBox(0.04, 0.8, 1.0), VM.window, s * (hw + T / 2 + 0.01), 1.55, zc + 0.6); sideWin.castShadow = false;
-                // couplets beside the door and an open door leaf
-                const cp = add(new THREE.PlaneGeometry(0.28, 1.35), s < 0 ? VM.coupletL : VM.coupletR, s * (door / 2 + 0.22), 1.35, zf + T / 2 + 0.012, frontG); cp.castShadow = false;
+                const wx = s * (door / 2 + pw / 2);
+                add(vBox(pw, H, T), wallMat, wx, H / 2, zf, frontG);
+                add(vBox(pw - 0.02, H - 0.05, 0.02), VM.plaster, wx, H / 2, zf - T / 2 - 0.01, frontG);
+                add(vBox(pw + 0.02, bh, 0.1), HM.stone, wx, bh / 2, zf + T / 2 + 0.04, frontG);
+                const fz = zf + T / 2;
+                flat(add(vBox(1.0, 0.85, 0.04), winMat, wx, 1.55, fz + 0.01, frontG));
+                // window surround: jambs, lintel and a projecting sill
+                [-1, 1].forEach(e => add(vBox(0.09, 1.0, 0.1), wood ? VM.lightWood : trimMat, wx + e * 0.545, 1.55, fz + 0.04, frontG));
+                add(vBox(1.28, 0.12, 0.12), wood ? VM.lightWood : trimMat, wx, 2.06, fz + 0.05, frontG);
+                add(vBox(1.3, 0.07, 0.2), wood ? VM.lightWood : HM.stone, wx, 1.09, fz + 0.08, frontG);
+                // side window with the same surround
+                const sx = s * (hw + T / 2);
+                flat(add(vBox(0.04, 0.8, 1.0), winMat, sx + s * 0.01, 1.55, zc + 0.6));
+                [-1, 1].forEach(e => add(vBox(0.1, 0.95, 0.09), wood ? VM.lightWood : trimMat, sx + s * 0.04, 1.55, zc + 0.6 + e * 0.545));
+                add(vBox(0.12, 0.12, 1.28), wood ? VM.lightWood : trimMat, sx + s * 0.05, 2.03, zc + 0.6);
+                add(vBox(0.2, 0.07, 1.3), wood ? VM.lightWood : HM.stone, sx + s * 0.08, 1.11, zc + 0.6);
+                // couplets beside the door and an open door leaf (lacquered, studded)
+                flat(add(new THREE.PlaneGeometry(0.26, 1.35), s < 0 ? VM.coupletL : VM.coupletR, s * (door / 2 + 0.3), 1.35, fz + 0.012, frontG));
                 const hinge = new THREE.Group(); hinge.position.set(s * door / 2, 0, zf - T / 2 - 0.03); hinge.rotation.y = -s * 1.35; g.add(hinge);
-                add(vBox(door / 2 - 0.02, 2.05, 0.06), VM.lacquer, -s * (door / 4), 1.03, 0, hinge);
+                const leaf = new THREE.Mesh(vBox(door / 2 - 0.02, 2.05, 0.06), [VM.lacquer, VM.lacquer, VM.lacquer, VM.lacquer, HM.door, HM.door]);
+                leaf.position.set(-s * (door / 4), 1.03, 0); leaf.castShadow = true; hinge.add(leaf);
+                add(vBox(0.13, 2.22, T + 0.1), wood ? VM.darkWood : VM.lacquer, s * (door / 2 + 0.065), 1.11, zf, frontG);   // door jambs
             });
             add(vBox(door, H - 2.15, T), wallMat, 0, 2.15 + (H - 2.15) / 2, zf, frontG);
-            add(vBox(door + 0.1, 0.12, 0.3), M.stone, 0, 0.06, zf + 0.05);   // threshold
+            add(vBox(door + 0.4, 0.15, T + 0.12), wood ? VM.darkWood : VM.lacquer, 0, 2.2, zf, frontG);   // lintel
+            if (!wood) [-1, 1].forEach(s => { const z = add(new THREE.CylinderGeometry(0.07, 0.07, 0.12, 10), VM.gold, s * 0.38, 2.2, zf + T / 2 + 0.1, frontG); z.rotation.x = Math.PI / 2; });   // 門簪
+            add(vBox(door + 0.1, 0.12, 0.3), HM.stone, 0, 0.06, zf + 0.05);   // threshold
+            add(vBox(door + 0.7, 0.1, 0.5), HM.stone, 0, 0.05, zf + 0.42);    // front step
+            add(vBox(W2 + 0.16, 0.1, T + 0.12), trimMat, 0, H - 0.05, zf, frontG);
+            if (!wood) flat(add(new THREE.PlaneGeometry(W2 - 0.5, 0.24), HM.frieze, 0, H - 0.24, zf + T / 2 + 0.065, frontG));   // 水車堵
             // nameplate over the door
             const nmTex = createSignboardTexture(`${home.nm || '香客'} 宅`, 320, 96, '#7a1814', '#facc15', '#fde68a', false, 46);
-            const plate = add(new THREE.PlaneGeometry(1.5, 0.45), new THREE.MeshStandardMaterial({ map: nmTex, roughness: 0.5 }), 0, 2.52, zf + T / 2 + 0.015, frontG);
-            plate.castShadow = false;
+            const plate = flat(add(new THREE.PlaneGeometry(1.25, 0.36), new THREE.MeshStandardMaterial({ map: nmTex, roughness: 0.5 }), 0, 2.45, zf + T / 2 + 0.075, frontG));
             click(plate, 'door', `🏠 ${home.nm || '香客'}的家（點擊${mine ? '管理我的家' : '按門鈴、留言'}）`);
-            // roof: two tiled slopes with eaves, gable ends, a ridge (swallowtail for 三合院, low and deep-eaved for 木造)
-            const over = home.ty === 'wood' ? 0.95 : 0.6, rise = home.ty === 'wood' ? 1.05 : 1.45;
-            const half = depth / 2 + over, slope = Math.hypot(half, rise), ang = Math.atan2(rise, half);
-            [-1, 1].forEach(s => {
-                const sl = add(vBox(W2 + over * 1.6, 0.14, slope), roofMat, 0, H + rise / 2 - 0.02, zc + s * half / 2, roofG);
-                sl.rotation.x = s * ang;
-            });
-            const gable = new THREE.Shape(); gable.moveTo(-depth / 2, 0); gable.lineTo(depth / 2, 0); gable.lineTo(0, rise * (depth / 2) / half); gable.lineTo(-depth / 2, 0);
-            const gGeo = new THREE.ShapeGeometry(gable);
-            [-1, 1].forEach(s => { const gm = add(gGeo, new THREE.MeshStandardMaterial({ color: wallDef.brick ? 0xb85a43 : wallDef.c, roughness: 0.85, side: THREE.DoubleSide }), s * hw, H, zc, roofG, true); gm.rotation.y = Math.PI / 2; });
-            const ridgeMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(roofDef.c).multiplyScalar(0.7), roughness: 0.6 });
-            add(vBox(W2 + over * 1.6, 0.18, 0.26), ridgeMat, 0, H + rise + 0.05, zc, roofG);
-            if (home.ty === 'sanhe' || home.ty === 'brick') {   // swallowtail (燕尾) or simple upturned ridge ends
-                const swallow = home.ty === 'sanhe';
-                [-1, 1].forEach(s => {
-                    const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(s * (hw + over * 0.6), H + rise + 0.05, zc), new THREE.Vector3(s * (hw + over * 0.8 + 0.3), H + rise + 0.2, zc), new THREE.Vector3(s * (hw + over * 0.8 + (swallow ? 0.75 : 0.45)), H + rise + (swallow ? 0.75 : 0.4), zc)]);
-                    const t = add(new THREE.TubeGeometry(curve, 10, 0.09, 6, false), ridgeMat, 0, 0, 0, roofG, true);
-                    if (swallow) [-1, 1].forEach(f => { const tip = add(new THREE.ConeGeometry(0.07, 0.4, 5), ridgeMat, s * (hw + over * 0.8 + 0.8), H + rise + 0.85, zc + f * 0.12, roofG); tip.rotation.z = -s * 0.6; tip.rotation.x = f * 0.4; });
-                });
+            // ---- roof: curved tiled slopes with barrel-tile ribs, eave and verge rolls, ridge, gables
+            add(vRoofGeo('roof:' + ty, R), roofMat, 0, 0, 0, roofG);
+            const rollR = wood ? 0.06 : 0.075;
+            add(vCachedGeo('eave:' + ty, () => {
+                const gs = [1, -1].map(s => { const pts = []; for (let k = 0; k <= 24; k++) { const x = -R.Wr / 2 + R.Wr * k / 24; pts.push(new THREE.Vector3(x, R.yAt(1) + R.liftAt(x, 1) + 0.03, R.zc + s * R.half)); } return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 32, rollR, 6, false); });
+                [-1, 1].forEach(e => [1, -1].forEach(s => { const pts = []; for (let k = 0; k <= 12; k++) { const t = k / 12, x = e * R.Wr / 2; pts.push(new THREE.Vector3(x, R.yAt(t) + R.liftAt(x, t) + 0.06, R.zc + s * R.half * t)); } gs.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, rollR + 0.02, 6, false)); }));
+                return vMergeGeos(gs);
+            }), ridgeMat, 0, 0, 0, roofG);
+            // ridge: upturned ends (brick), swallowtails (三合院) or a straight ridge with 鬼瓦 (timber house)
+            const ext = ty === 'sanhe' ? 0.55 : ty === 'brick' ? 0.2 : 0.05, up = ty === 'sanhe' ? 0.55 : ty === 'brick' ? 0.18 : 0;
+            add(vCachedGeo('ridge:' + ty, () => {
+                const pts = []; for (let k = 0; k <= 20; k++) { const x = (-1 + 2 * k / 20) * (R.Wr / 2 + ext), e = Math.max(0, Math.abs(x) - R.Wr / 2 + 0.6) / (0.6 + ext); pts.push(new THREE.Vector3(x, R.yTop + 0.1 + up * e * e, R.zc)); }
+                const gs = [new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.12, 8, false), new THREE.BoxGeometry(R.Wr - 0.2, 0.16, 0.3).translate(0, R.yTop + 0.02, R.zc)];
+                return vMergeGeos(gs);
+            }), ridgeMat, 0, 0, 0, roofG);
+            if (ty === 'sanhe') {
+                [-1, 1].forEach(s => [-1, 1].forEach(f => { const tip = add(new THREE.ConeGeometry(0.07, 0.5, 6), ridgeMat, s * (R.Wr / 2 + ext + 0.12), R.yTop + 0.1 + up + 0.18, R.zc + f * 0.1, roofG); tip.rotation.z = -s * 0.75; tip.rotation.x = f * 0.35; }));
+                [-1, 1].forEach(f => { const band = flat(add(new THREE.PlaneGeometry(R.Wr - 1.2, 0.16), HM.frieze, 0, R.yTop + 0.03, R.zc + f * 0.155, roofG)); if (f < 0) band.rotation.y = Math.PI; });
+                add(new THREE.SphereGeometry(0.16, 12, 10), VM.gold, 0, R.yTop + 0.36, R.zc, roofG);
+                const fl = add(new THREE.ConeGeometry(0.1, 0.3, 8), VM.gold, 0, R.yTop + 0.6, R.zc, roofG);
+                [-1, 1].forEach(s => { const sw = add(new THREE.TorusGeometry(0.16, 0.035, 6, 14, Math.PI), VM.gold, s * 0.28, R.yTop + 0.26, R.zc, roofG); sw.rotation.z = s > 0 ? 0 : Math.PI; });
+            } else if (wood) {
+                [-1, 1].forEach(s => add(vBox(0.16, 0.42, 0.42), ridgeMat, s * (R.Wr / 2 - 0.02), R.yTop + 0.2, R.zc, roofG));
             }
-            const ceil = add(new THREE.PlaneGeometry(W2 - T, depth - T), VM.plaster, 0, H - 0.01, zc, roofG); ceil.rotation.x = Math.PI / 2; ceil.castShadow = false;
-            // 三合院: two wing rooms (護龍) flanking the front yard
-            const segs = [];
-            if (home.ty === 'sanhe') {
+            // gable infill under the curved roof; brick 硬山 gables rise just above the tiles with a rounded 馬背 coping
+            const gUp = ty === 'brick' ? 0.16 : -0.03;
+            const gableGeo = vCachedGeo('gable:' + ty, () => {
+                const sh = new THREE.Shape(); const n = 18;
+                sh.moveTo(-zf, H - 0.02);
+                for (let k = 0; k <= n; k++) { const z = zf - (zf - zb) * k / n; sh.lineTo(-z, R.yAtZ(z) + gUp); }
+                sh.lineTo(-zb, H - 0.02); sh.lineTo(-zf, H - 0.02);
+                return new THREE.ExtrudeGeometry(sh, { depth: T, bevelEnabled: false });
+            });
+            [-1, 1].forEach(s => { const gm = add(gableGeo, wallMat, s * hw - T / 2, 0, 0, roofG); gm.rotation.y = Math.PI / 2; gm.position.x = s * hw - T / 2; });
+            if (ty === 'brick') {
+                add(vCachedGeo('mabei', () => vMergeGeos([-1, 1].map(s => { const pts = []; for (let k = 0; k <= 16; k++) { const z = zb - 0.05 + (zf - zb + 0.1) * k / 16; pts.push(new THREE.Vector3(s * hw, R.yAtZ(z) + gUp + 0.02, z)); } return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, 0.14, 8, false); }))), HM.trimLime, 0, 0, 0, roofG);
+                const cz = zb + 1.0, cy = R.yAtZ(cz);
+                add(vBox(0.5, 1.1, 0.5), HM.trimBrick, hw - 1.1, cy + 0.35, cz, roofG);   // kitchen chimney
+                add(vBox(0.64, 0.08, 0.64), HM.stone, hw - 1.1, cy + 0.94, cz, roofG);
+            }
+            // gable vent / 懸魚 ornament on the timber and 三合院 gables
+            if (ty !== 'brick') [-1, 1].forEach(s => { const o = add(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 16), wood ? VM.darkWood : VM.gold, s * (hw + T / 2 + 0.03), H + 0.55, zc, roofG); o.rotation.z = Math.PI / 2; });
+            flat(add(new THREE.PlaneGeometry(W2 - T, depth - T), VM.plaster, 0, H - 0.01, zc, roofG)).rotation.x = Math.PI / 2;
+            // red lanterns hanging under the front eave
+            if (!wood) [-1, 1].forEach(s => {
+                const lx = s * (door / 2 + 0.6), lz = zf + 0.45, top = R.yAtZ(lz) - 0.05;
+                add(new THREE.CylinderGeometry(0.008, 0.008, top - 2.55, 4), VM.darkWood, lx, (top + 2.55) / 2, lz, frontG);
+                const l = flat(add(new THREE.SphereGeometry(0.19, 14, 10), VM.lantern, lx, 2.35, lz, frontG)); l.scale.y = 1.2; l.userData.noMerge = true;
+                [2.57, 2.13].forEach(y => add(new THREE.CylinderGeometry(0.09, 0.09, 0.05, 10), VM.gold, lx, y, lz, frontG));
+                add(new THREE.CylinderGeometry(0.02, 0.05, 0.2, 6), VM.lacquer, lx, 2.0, lz, frontG);
+            });
+            // ---- 三合院: two wing rooms (護龍) with their own little curved roofs, and a brick-paved 埕
+            if (ty === 'sanhe') {
+                const ww = 1.9, wd = 3.3, wh = 2.4;
+                const W = { zc: 0, half: ww / 2 + 0.45, Wr: wd + 0.5, yTop: wh + 0.75, yEave: wh - 0.1, sag: 0.08, lift: 0.15, rib: 0.24 };
+                W.yAt = t => W.yTop + (W.yEave - W.yTop) * t - W.sag * Math.sin(Math.PI * t);
+                W.liftAt = (x, t) => W.lift * Math.pow(Math.min(1, Math.abs(x) / (W.Wr / 2)), 6) * t * t;
+                const wRoof = vRoofGeo('roof:wing', W);
+                const wGable = vCachedGeo('gable:wing', () => { const sh = new THREE.Shape(), n = 12; sh.moveTo(-ww / 2, wh - 0.02); for (let k = 0; k <= n; k++) { const x = -ww / 2 + ww * k / n; sh.lineTo(x, W.yAt(Math.abs(x) / W.half) - 0.03); } sh.lineTo(ww / 2, wh - 0.02); return new THREE.ExtrudeGeometry(sh, { depth: T, bevelEnabled: false }); });
                 [-1, 1].forEach(s => {
-                    const wx = s * (hw - 0.6), wz0 = zf + 0.1, wz1 = zf + 3.4, ww = 1.9, wd = wz1 - wz0, wzc = (wz0 + wz1) / 2;
-                    add(vBox(ww, 2.4, wd), wallMat, wx, 1.2, wzc);
-                    const wwin = add(vBox(0.04, 0.7, 1.1), VM.window, wx - s * (ww / 2 + 0.02), 1.4, wzc); wwin.castShadow = false;
-                    [-1, 1].forEach(f => { const sl = add(vBox(ww / 2 + 0.55, 0.12, wd + 0.5), roofMat, wx + f * (ww / 4 + 0.12), 2.72, wzc, roofG); sl.rotation.z = -f * 0.5; });
+                    const wx = s * (hw - 0.6), wz0 = zf + 0.1, wz1 = zf + 3.4, wzc = (wz0 + wz1) / 2;
+                    add(vBox(ww, wh, wd), wallMat, wx, wh / 2, wzc);
+                    add(vBox(ww + 0.1, 0.45, wd + 0.1), HM.stone, wx, 0.225, wzc);
+                    add(vBox(ww + 0.14, 0.09, wd + 0.14), trimMat, wx, wh - 0.04, wzc);
+                    const face = wx - s * (ww / 2 + 0.012);
+                    const wd1 = flat(add(new THREE.PlaneGeometry(0.85, 1.9), HM.door, face, 0.95, wzc - 0.65)); wd1.rotation.y = -s * Math.PI / 2;
+                    add(vBox(0.08, 2.0, 1.05), VM.lacquer, face - s * 0.03, 1.0, wzc - 0.65);
+                    const wwin = flat(add(new THREE.PlaneGeometry(0.9, 0.7), VM.window, face, 1.45, wzc + 0.8)); wwin.rotation.y = -s * Math.PI / 2;
+                    add(vBox(0.12, 0.07, 1.05), HM.stone, face - s * 0.04, 1.08, wzc + 0.8);
+                    const r = add(wRoof, roofMat, wx, 0, wzc, roofG); r.rotation.y = Math.PI / 2;
+                    add(vBox(0.2, 0.16, wd + 0.7), ridgeMat, wx, W.yTop + 0.06, wzc, roofG);
+                    [wz0, wz1 - T].forEach(z => add(wGable, wallMat, wx, 0, z, roofG));
                     const a = vLocal(p, wx - ww / 2, 0, wz0), b = vLocal(p, wx + ww / 2, 0, wz0), c = vLocal(p, wx + ww / 2, 0, wz1), d = vLocal(p, wx - ww / 2, 0, wz1);
                     segs.push([a, b], [b, c], [c, d], [d, a]);
                 });
+                flat(add(vBox(2 * (hw - 0.6 - ww / 2), 0.02, 3.4), HM.court, 0, 0.02, zf + 0.15 + 1.7));
             }
-            // 木造: an engawa porch along the front with two posts
-            if (home.ty === 'wood') {
-                add(vBox(W2, 0.12, 1.1), VM.lightWood, 0, 0.12, zf + 0.6);
-                [-1, 1].forEach(s => add(new THREE.CylinderGeometry(0.07, 0.07, H + 0.3, 8), VM.darkWood, s * (hw - 0.1), (H + 0.3) / 2, zf + 1.05));
+            // ---- 木造: raised engawa porch with posts, railings and a step
+            if (wood) {
+                add(vBox(W2, 0.14, 1.1), VM.lightWood, 0, 0.13, zf + 0.6);
+                add(vBox(W2, 0.06, 0.06), VM.darkWood, 0, 0.04, zf + 1.12);
+                [-1, 1].forEach(s => {
+                    add(new THREE.CylinderGeometry(0.075, 0.075, H + 0.3, 8), VM.darkWood, s * (hw - 0.1), (H + 0.3) / 2, zf + 1.05);
+                    const rl = hw - door / 2 - 0.45, rx = s * (door / 2 + 0.45 + rl / 2);
+                    [0.55, 0.85].forEach(y => add(vBox(rl, 0.06, 0.06), VM.darkWood, rx, y, zf + 1.05));
+                    for (let k = 0; k <= 5; k++) add(vBox(0.05, 0.7, 0.05), VM.darkWood, s * (door / 2 + 0.45 + rl * k / 5), 0.55, zf + 1.05);
+                });
+                add(vBox(door + 0.4, 0.08, 0.45), HM.stone, 0, 0.04, zf + 1.35);
             }
-            // ---- inside: 神明桌 against the back wall, a bed, a round table with two stools
-            const altar = add(vBox(1.7, 0.9, 0.55), VM.lacquer, 0, 0.45, zb + 0.45);
-            click(altar, 'altar', '🙏 神明桌（點擊上香）');
-            add(vBox(1.8, 0.05, 0.62), VM.gold, 0, 0.92, zb + 0.45);
-            const fu = add(new THREE.PlaneGeometry(1.1, 1.1), VM.fu, 0, 1.75, zb + T / 2 + 0.03); fu.castShadow = false;
-            add(new THREE.CylinderGeometry(0.07, 0.09, 0.22, 10), VM.gold, 0, 1.06, zb + 0.4);
-            add(new THREE.SphereGeometry(0.08, 10, 8), VM.gold, 0, 1.24, zb + 0.4);
-            [-1, 1].forEach(s => { const lp = add(new THREE.SphereGeometry(0.07, 10, 8), VM.lantern, s * 0.6, 1.02, zb + 0.45); lp.castShadow = false; });
-            add(new THREE.CylinderGeometry(0.08, 0.06, 0.1, 10), M.bronze, 0.32, 0.99, zb + 0.5);
+            // ---- inside: 神明桌 with a shrine, candles and offerings; painted 神明彩 above
+            const altar = add(vBox(1.7, 0.9, 0.55), [VM.lacquer, VM.lacquer, VM.lacquer, VM.lacquer, HM.altarFront, VM.lacquer], 0, 0.45, zb + 0.45);
+            click(altar, 'altar', `🙏 神明桌・安奉${V_GODS[V_GODS[home.gd] ? home.gd : 'tudi'].name}（點擊上香）`);
+            add(vBox(1.82, 0.05, 0.62), VM.darkWood, 0, 0.925, zb + 0.45);
+            const shz = zb + 0.33;
+            add(vBox(0.82, 0.78, 0.04), VM.lacquer, 0, 1.34, shz - 0.19);
+            [-1, 1].forEach(s => add(vBox(0.05, 0.78, 0.4), VM.lacquer, s * 0.4, 1.34, shz));
+            add(vBox(0.94, 0.06, 0.46), VM.gold, 0, 1.75, shz);
+            add(vBox(1.02, 0.08, 0.5), VM.lacquer, 0, 1.82, shz);
+            const gd = V_GODS[home.gd] ? home.gd : 'tudi';
+            const fig = vGodFigure(gd); fig.position.set(0, 0.95, shz - 0.02); g.add(fig);
+            fig.traverse(o => { if (o.isGroup) vMergeStatic(o); });
+            flat(add(new THREE.PlaneGeometry(1.15, 1.0), vGodPaintMat(gd), 0, 2.36, zb + T / 2 + 0.03));
+            [-1, 1].forEach(s => {
+                add(new THREE.CylinderGeometry(0.05, 0.07, 0.12, 10), VM.gold, s * 0.62, 1.01, zb + 0.55);
+                add(new THREE.CylinderGeometry(0.03, 0.03, 0.22, 8), HM.candle, s * 0.62, 1.18, zb + 0.55);
+                flat(add(new THREE.ConeGeometry(0.022, 0.07, 6), HM.flame, s * 0.62, 1.33, zb + 0.55));
+            });
+            add(new THREE.CylinderGeometry(0.1, 0.08, 0.11, 14), M.bronze, 0, 1.0, zb + 0.6);
+            [-0.03, 0, 0.03].forEach((dx, k) => flat(add(new THREE.CylinderGeometry(0.005, 0.005, 0.28, 4), VM.darkWood, dx, 1.18, zb + 0.6 + (k - 1) * 0.01)));
+            add(new THREE.CylinderGeometry(0.16, 0.1, 0.03, 14), HM.porcelain, 0.33, 0.97, zb + 0.5);
+            [[0.29, 0.47], [0.37, 0.47], [0.33, 0.54], [0.33, 0.5]].forEach(([x, z], k) => add(new THREE.SphereGeometry(0.05, 10, 8), HM.fruit, x, 1.02 + (k === 3 ? 0.06 : 0), zb + z));
+            [-0.25, -0.33, -0.41].forEach(x => add(new THREE.CylinderGeometry(0.03, 0.022, 0.045, 8), HM.porcelain, x, 0.97, zb + 0.55));
+            // wardrobe, wall clock, calendar, a pendant lamp and a round rug
+            const wx = hw - 0.85, wz = zb + 0.37;
+            add(vBox(1.1, 1.9, 0.5), VM.darkWood, wx, 0.95, wz);
+            [-1, 1].forEach(s => { add(vBox(0.5, 1.6, 0.03), VM.lightWood, wx + s * 0.26, 1.0, wz + 0.26); add(vBox(0.03, 0.18, 0.04), VM.gold, wx + s * 0.04, 1.05, wz + 0.29); });
+            add(vBox(1.16, 0.07, 0.55), VM.darkWood, wx, 1.93, wz);
+            flat(add(new THREE.CircleGeometry(0.2, 24), HM.clock, wx, 2.35, zb + T / 2 + 0.03));
+            const cal = flat(add(new THREE.PlaneGeometry(0.32, 0.4), HM.cal, hw - T / 2 - 0.03, 1.6, zc - 0.7)); cal.rotation.y = -Math.PI / 2;
+            const fuP = flat(add(new THREE.PlaneGeometry(0.6, 0.6), VM.fu, -hw + 0.95, 1.75, zb + T / 2 + 0.03)); fuP.rotation.z = Math.PI / 4;
+            const lx = 0.2, lz = zc + 0.6;
+            add(new THREE.CylinderGeometry(0.008, 0.008, 0.6, 4), HM.black, lx, H - 0.3, lz);
+            add(new THREE.ConeGeometry(0.24, 0.16, 18, 1, true), HM.shade, lx, H - 0.66, lz);
+            flat(add(new THREE.SphereGeometry(0.07, 10, 8), HM.bulb, lx, H - 0.74, lz));
+            // 眠床: canopy bed with posts, a carved valance and tied-back curtains
             const bed = new THREE.Group(); bed.position.set(-hw + 0.95, 0, zb + 1.35); g.add(bed);
             add(vBox(1.3, 0.35, 2.1), VM.darkWood, 0, 0.18, 0, bed);
             add(vBox(1.2, 0.14, 2.0), VM.linen, 0, 0.42, 0, bed);
             add(vBox(1.22, 0.1, 1.2), VM.cloth, 0, 0.52, 0.35, bed);
             add(vBox(0.6, 0.12, 0.35), VM.linen, 0, 0.54, -0.75, bed);
-            add(vBox(1.3, 0.9, 0.08), VM.darkWood, 0, 0.45, -1.05, bed);
+            add(vBox(1.3, 1.2, 0.06), VM.lacquer, 0, 0.95, -1.03, bed);
+            add(vBox(1.3, 0.55, 0.06), VM.lacquer, 0, 0.62, 1.03, bed);
+            add(vBox(0.06, 1.2, 2.1), VM.lacquer, -0.63, 0.95, 0, bed);
+            [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => add(vBox(0.07, 2.15, 0.07), VM.lacquer, a * 0.62, 1.08, b * 1.02, bed));
+            add(vBox(1.34, 0.06, 2.14), VM.lacquer, 0, 2.17, 0, bed);
+            add(vBox(0.04, 0.3, 2.1), VM.gold, 0.64, 1.98, 0, bed);
+            const val = new THREE.Mesh(vBox(0.03, 0.26, 1.9), HM.altarFront); val.position.set(0.665, 1.98, 0); bed.add(val);
+            [-1, 1].forEach(b => { const c = add(new THREE.CylinderGeometry(0.07, 0.12, 1.5, 8), VM.cloth, 0.6, 1.35, b * 0.92, bed); c.scale.z = 0.5; });
+            vMergeStatic(bed);
             bed.children.forEach(m => click(m, 'bed', mine ? '🛏️ 床（點擊躺下休息）' : '🛏️ 別人家的床'));
             const tx = hw - 1.25, tz = zc + 0.5;
-            const table = add(new THREE.CylinderGeometry(0.5, 0.5, 0.06, 18), VM.lightWood, tx, 0.72, tz);
+            flat(add(new THREE.CylinderGeometry(0.95, 0.95, 0.01, 32), HM.rug, tx - 0.2, 0.03, tz + 0.2));
+            add(new THREE.CylinderGeometry(0.5, 0.5, 0.06, 18), VM.lightWood, tx, 0.72, tz);
             add(new THREE.CylinderGeometry(0.08, 0.14, 0.7, 10), VM.darkWood, tx, 0.36, tz);
-            add(new THREE.CylinderGeometry(0.13, 0.13, 0.08, 12), VM.linen, tx, 0.79, tz);
-            [[-0.85, 0], [0, 0.85]].forEach(([ox, oz], k) => {
+            add(new THREE.SphereGeometry(0.1, 12, 10), HM.porcelain, tx, 0.83, tz).scale.y = 0.8;
+            add(new THREE.CylinderGeometry(0.03, 0.05, 0.03, 8), HM.porcelain, tx, 0.9, tz);
+            [[0.2, 0.1], [-0.15, 0.18]].forEach(([dx, dz]) => add(new THREE.CylinderGeometry(0.035, 0.026, 0.05, 8), HM.porcelain, tx + dx, 0.775, tz + dz));
+            [[-0.85, 0], [0, 0.85]].forEach(([ox, oz]) => {
                 const st = add(new THREE.CylinderGeometry(0.2, 0.18, 0.44, 12), VM.lightWood, tx + ox, 0.22, tz + oz);
                 click(st, 'seat', '🪑 凳子（點擊坐下）', { sx: tx + ox, sz: tz + oz, face: Math.atan2(-ox, -oz) });
             });
@@ -16264,25 +16920,176 @@
             mb.children.forEach(m => click(m, 'mail', mine ? '📮 我的信箱（看留言）' : '📮 信箱（點擊留言）'));
             // decorations
             (home.it || []).forEach((it, k) => { const m = buildVillageItem(it.t); m.position.set(it.x, 0, it.z); m.rotation.y = it.r || 0; m.userData.itemIdx = k; decoG.add(m); });
+            vMergeStatic(g); vMergeStatic(roofG); vMergeStatic(frontG);
             // collision segments (world): walls with the door gap
             const L = (lx, lz) => vLocal(p, lx, 0, lz);
             segs.push([L(-hw, zb), L(hw, zb)], [L(hw, zb), L(hw, zf)], [L(-hw, zb), L(-hw, zf)], [L(-hw, zf), L(-door / 2, zf)], [L(door / 2, zf), L(hw, zf)]);
             segs.push([L(-VILLAGE.W / 2 + 0.35, -VILLAGE.D / 2 + 0.6), L(-VILLAGE.W / 2 + 0.35, VILLAGE.D / 2 - 0.8)], [L(VILLAGE.W / 2 - 0.35, -VILLAGE.D / 2 + 0.6), L(VILLAGE.W / 2 - 0.35, VILLAGE.D / 2 - 0.8)], [L(-VILLAGE.W / 2 + 0.6, -VILLAGE.D / 2 + 0.35), L(VILLAGE.W / 2 - 0.6, -VILLAGE.D / 2 + 0.35)]);
-            const bedC = L(-hw + 0.95, zb + 1.35), altC = L(0, zb + 0.45), tabC = L(tx, tz);
-            return { group: g, roofG, frontG, decoG, segs, home, mine, solids: [{ x: bedC.x, z: bedC.z, r: 0.75 }, { x: altC.x, z: altC.z, r: 0.55 }, { x: tabC.x, z: tabC.z, r: 0.5 }], bedAt: { lx: -hw + 0.95, lz: zb + 1.35 }, altarAt: { lx: 0, lz: zb + 1.25 } };
+            const bedC = L(-hw + 0.95, zb + 1.35), altC = L(0, zb + 0.45), tabC = L(tx, tz), wrC = L(wx, wz);
+            return { group: g, roofG, frontG, decoG, segs, home, mine, solids: [{ x: bedC.x, z: bedC.z, r: 0.75 }, { x: altC.x, z: altC.z, r: 0.55 }, { x: tabC.x, z: tabC.z, r: 0.5 }, { x: wrC.x, z: wrC.z, r: 0.55 }], bedAt: { lx: -hw + 0.95, lz: zb + 1.35 }, altarAt: { lx: 0, lz: zb + 1.25 } };
+        }
+        // concatenate geometries (non-indexed) into one
+        function vMergeGeos(list) {
+            const P = [], N = [], U = [];
+            list.forEach(g0 => { const g1 = g0.index ? g0.toNonIndexed() : g0; const p = g1.attributes.position.array, n = g1.attributes.normal.array, uv = g1.attributes.uv; for (let i = 0; i < p.length; i++) { P.push(p[i]); N.push(n[i]); } for (let i = 0; i < p.length / 3; i++) U.push(uv ? uv.array[i * 2] : 0, uv ? uv.array[i * 2 + 1] : 0); if (g1 !== g0) g1.dispose(); g0.dispose(); });
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+            geo.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+            geo.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+            return geo;
         }
 
         // ---------------------------------------------------------------- decorations
+        // ---------------------------------------------------------------- realistic yard plants (小樹 / 盆栽): shared textures, materials and geometry
+        function vPlantKit() {
+            if (vPlantKit.k) return vPlantKit.k;
+            let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+            const mk = (w, h, f) => { const c = document.createElement('canvas'); c.width = w; c.height = h; f(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t; };
+            // a cluster of leaves with midribs on a transparent card
+            const leafTex = mk(128, 128, x => {
+                for (let i = 0; i < 30; i++) {
+                    const a = rnd() * Math.PI * 2, r = Math.sqrt(rnd()) * 46, px = 64 + Math.cos(a) * r, py = 64 + Math.sin(a) * r, L = 11 + rnd() * 9, W = 4.5 + rnd() * 3;
+                    x.save(); x.translate(px, py); x.rotate(a + (rnd() - 0.5) * 1.2);
+                    x.fillStyle = `hsl(${88 + rnd() * 34},${38 + rnd() * 26}%,${22 + rnd() * 22}%)`;
+                    x.beginPath(); x.moveTo(-L, 0); x.quadraticCurveTo(0, -W * 1.6, L, 0); x.quadraticCurveTo(0, W * 1.6, -L, 0); x.fill();
+                    x.strokeStyle = 'rgba(215,235,170,0.35)'; x.lineWidth = 0.8; x.beginPath(); x.moveTo(-L * 0.9, 0); x.lineTo(L * 0.9, 0); x.stroke();
+                    x.restore();
+                }
+            });
+            const barkTex = mk(64, 256, (x, w, h) => {
+                x.fillStyle = '#5b4834'; x.fillRect(0, 0, w, h);
+                for (let i = 0; i < 70; i++) { x.fillStyle = rnd() < 0.5 ? `rgba(30,22,14,${0.25 + rnd() * 0.35})` : `rgba(150,130,105,${0.15 + rnd() * 0.25})`; x.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 3, 20 + rnd() * 80); }
+                for (let i = 0; i < 40; i++) { x.fillStyle = 'rgba(25,18,10,0.45)'; x.fillRect(rnd() * w, rnd() * h, 4 + rnd() * 8, 1.2); }
+                for (let i = 0; i < 12; i++) { x.fillStyle = 'rgba(110,130,80,0.25)'; x.beginPath(); x.arc(rnd() * w, rnd() * h, 2 + rnd() * 5, 0, 7); x.fill(); }   // lichen
+            });
+            const glazeTex = mk(256, 64, (x, w, h) => {   // celadon-blue glaze with a darker drip band and crackle
+                const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#2c5f73'); g.addColorStop(0.55, '#3f7f8f'); g.addColorStop(1, '#21485a'); x.fillStyle = g; x.fillRect(0, 0, w, h);
+                for (let i = 0; i < 40; i++) { x.fillStyle = 'rgba(15,40,52,0.35)'; x.fillRect(rnd() * w, 0, 2 + rnd() * 4, 8 + rnd() * 16); }
+                x.strokeStyle = 'rgba(200,230,235,0.16)'; x.lineWidth = 0.7; for (let i = 0; i < 60; i++) { x.beginPath(); let px = rnd() * w, py = rnd() * h; x.moveTo(px, py); for (let k = 0; k < 3; k++) { px += (rnd() - 0.5) * 20; py += (rnd() - 0.5) * 14; x.lineTo(px, py); } x.stroke(); }
+                x.fillStyle = '#d9b25a'; x.fillRect(0, 10, w, 2); x.fillRect(0, 16, w, 1);
+            });
+            const S = villageShared(), MSM = THREE.MeshStandardMaterial;
+            const leaf = new MSM({ map: leafTex, alphaTest: 0.45, side: THREE.DoubleSide, vertexColors: true, roughness: 0.75 });
+            leaf.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: leafTex, alphaTest: 0.45 });
+            const k = {
+                leaf, bark: new MSM({ map: barkTex, roughness: 0.95 }),
+                glaze: new MSM({ map: glazeTex, roughness: 0.22, metalness: 0.08 }),
+                soil: new MSM({ color: 0x3b2a1c, roughness: 1 }), pebble: new MSM({ color: 0xa39d92, roughness: 0.8 }),
+                mulch: new MSM({ color: 0x4a3524, roughness: 1 }), rnd
+            };
+            [leafTex, barkTex, glazeTex].forEach(t => S.texs.add(t));
+            Object.values(k).forEach(m => m && m.isMaterial && S.mats.add(m));
+            return (vPlantKit.k = k);
+        }
+        // a tube whose radius tapers from r0 to r1 along the curve
+        function vTaperTube(curve, segs, r0, r1, radial = 8) {
+            const geo = new THREE.TubeGeometry(curve, segs, 1, radial, false), pos = geo.attributes.position;
+            for (let i = 0; i <= segs; i++) {
+                const c = curve.getPointAt(i / segs), r = r0 + (r1 - r0) * i / segs;
+                for (let j = 0; j <= radial; j++) { const n = i * (radial + 1) + j; pos.setXYZ(n, c.x + (pos.getX(n) - c.x) * r, c.y + (pos.getY(n) - c.y) * r, c.z + (pos.getZ(n) - c.z) * r); }
+            }
+            geo.computeVertexNormals();
+            return geo;
+        }
+        // foliage: many crossed leaf cards per cluster; normals point away from the crown centre so it shades like a soft mass
+        function vFoliageGeo(clusters, center, rnd) {
+            const P = [], N = [], U = [], C = [], idx = [];
+            const q = new THREE.Quaternion(), e = new THREE.Euler(), v = new THREE.Vector3(), nv = new THREE.Vector3();
+            clusters.forEach(([cx, cy, cz, r, n, size]) => {
+                for (let i = 0; i < n; i++) {
+                    const a = rnd() * Math.PI * 2, b = Math.acos(2 * rnd() - 1), d = Math.cbrt(rnd()) * r;
+                    const px = cx + Math.sin(b) * Math.cos(a) * d, py = cy + Math.cos(b) * d * 0.8, pz = cz + Math.sin(b) * Math.sin(a) * d;
+                    q.setFromEuler(e.set(rnd() * Math.PI, rnd() * Math.PI * 2, rnd() * Math.PI));
+                    const s = size * (0.75 + rnd() * 0.5), base = P.length / 3;
+                    const shade = 0.55 + 0.45 * Math.min(1, Math.max(0, (py - center.y + r) / (2 * r))) * (0.8 + rnd() * 0.25);
+                    const tint = 0.9 + rnd() * 0.2;
+                    [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]].forEach(([sx, sy, u, w]) => {
+                        v.set(sx * s / 2, sy * s / 2, 0).applyQuaternion(q).add(nv.set(px, py, pz));
+                        P.push(v.x, v.y, v.z);
+                        nv.set(v.x - center.x, (v.y - center.y) * 1.3 + 0.25, v.z - center.z).normalize(); N.push(nv.x, nv.y, nv.z);
+                        U.push(u, w); C.push(shade * tint * 0.95, shade * tint, shade * 0.9);
+                    });
+                    idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+                }
+            });
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+            geo.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+            geo.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+            geo.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
+            geo.setIndex(idx);
+            return geo;
+        }
+        function vTreeGeos() {
+            return vCachedGeo('tree:bark', () => {
+                const K = vPlantKit(), rnd = K.rnd, parts = [];
+                const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+                const trunk = new THREE.CatmullRomCurve3([V3(0, 0, 0), V3(0.05, 0.55, 0.02), V3(-0.05, 1.15, 0.05), V3(0.02, 1.75, -0.02), V3(0, 2.1, 0)]);
+                parts.push(vTaperTube(trunk, 16, 0.14, 0.04, 10));
+                parts.push(new THREE.CylinderGeometry(0.13, 0.24, 0.2, 10).translate(0, 0.1, 0));   // root flare
+                [0, 1, 2, 3].forEach(k => { const a = k * 1.7 + 0.4; parts.push(new THREE.CylinderGeometry(0.02, 0.07, 0.42, 6).rotateZ(Math.PI / 2 - 0.25).translate(0.2, 0.05, 0).rotateY(a)); });   // surface roots
+                const ends = [];
+                for (let k = 0; k < 6; k++) {
+                    const a = k * 2.4 + 0.3, y = 0.95 + k * 0.17, out = 0.5 + rnd() * 0.3, upv = 0.35 + rnd() * 0.35;
+                    const s = trunk.getPointAt(y / 2.15), m = V3(s.x + Math.cos(a) * out * 0.5, y + upv * 0.45, s.z + Math.sin(a) * out * 0.5), e2 = V3(s.x + Math.cos(a) * out, y + upv, s.z + Math.sin(a) * out);
+                    parts.push(vTaperTube(new THREE.CatmullRomCurve3([s, m, e2]), 8, 0.055, 0.018, 6));
+                    ends.push([e2.x, e2.y + 0.12, e2.z]);
+                }
+                vTreeGeos.ends = ends;
+                return vMergeGeos(parts);
+            });
+        }
+        function vTreeLeafGeo() {
+            return vCachedGeo('tree:leaf', () => {
+                vTreeGeos();
+                const K = vPlantKit(), cl = vTreeGeos.ends.map(([x, y, z]) => [x, y, z, 0.42, 16, 0.62]);
+                cl.push([0, 2.25, 0, 0.5, 22, 0.66], [0.15, 1.95, -0.2, 0.45, 14, 0.6], [-0.2, 1.9, 0.18, 0.45, 14, 0.6]);
+                return vFoliageGeo(cl, new THREE.Vector3(0, 1.95, 0), K.rnd);
+            });
+        }
+        function vPotGeos() {
+            const pot = vCachedGeo('pot:body', () => {
+                const pts = [[0, 0.01], [0.15, 0.01], [0.16, 0], [0.18, 0.02], [0.2, 0.08], [0.235, 0.24], [0.255, 0.31], [0.275, 0.33], [0.278, 0.36], [0.262, 0.37], [0.245, 0.36], [0.23, 0.33]].map(([r, y]) => new THREE.Vector2(r, y));
+                return new THREE.LatheGeometry(pts, 28);
+            });
+            const stems = vCachedGeo('pot:stems', () => {
+                const K = vPlantKit(), V3 = (x, y, z) => new THREE.Vector3(x, y, z), parts = [];
+                parts.push(vTaperTube(new THREE.CatmullRomCurve3([V3(0, 0.3, 0), V3(0.02, 0.48, 0.01), V3(-0.02, 0.66, 0)]), 8, 0.035, 0.015, 6));
+                for (let k = 0; k < 5; k++) { const a = k * 1.25, o = 0.14 + K.rnd() * 0.08; parts.push(vTaperTube(new THREE.CatmullRomCurve3([V3(0, 0.42 + k * 0.05, 0), V3(Math.cos(a) * o * 0.6, 0.55 + k * 0.05, Math.sin(a) * o * 0.6), V3(Math.cos(a) * o, 0.66 + k * 0.04, Math.sin(a) * o)]), 6, 0.016, 0.007, 5)); }
+                vPotGeos.ends = []; for (let k = 0; k < 5; k++) { const a = k * 1.25; vPotGeos.ends.push([Math.cos(a) * 0.17, 0.7 + k * 0.04, Math.sin(a) * 0.17]); }
+                return vMergeGeos(parts);
+            });
+            const leaves = vCachedGeo('pot:leaf', () => {
+                const K = vPlantKit(), cl = vPotGeos.ends.map(([x, y, z]) => [x, y, z, 0.17, 10, 0.3]);
+                cl.push([0, 0.8, 0, 0.2, 14, 0.32], [0, 0.62, 0, 0.22, 10, 0.3]);
+                return vFoliageGeo(cl, new THREE.Vector3(0, 0.72, 0), K.rnd);
+            });
+            const soil = vCachedGeo('pot:soil', () => new THREE.CircleGeometry(0.235, 24).rotateX(-Math.PI / 2).translate(0, 0.335, 0));
+            return { pot, stems, leaves, soil };
+        }
+
         function buildVillageItem(t) {
             const VM = villageMats(), M = VM.M, g = new THREE.Group();
             const add = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
-            if (t === 'pot') { add(new THREE.CylinderGeometry(0.28, 0.2, 0.42, 12), VM.terracotta, 0, 0.21, 0); add(new THREE.SphereGeometry(0.36, 10, 8), VM.leaf, 0, 0.66, 0).scale.y = 0.85; }
+            if (t === 'pot') {   // glazed pot, dark soil with pebbles and a bushy shrub
+                const K = vPlantKit(), G = vPotGeos();
+                const pm = new THREE.Mesh(G.pot, K.glaze); pm.scale.setScalar(1.15); pm.castShadow = true; g.add(pm);
+                const sm = new THREE.Mesh(G.soil, K.soil); sm.scale.setScalar(1.15); g.add(sm);
+                [[0.12, 0.05], [-0.1, 0.12], [0.05, -0.14]].forEach(([x, z]) => add(new THREE.SphereGeometry(0.03, 6, 5), K.pebble, x * 1.15, 0.39, z * 1.15).scale.y = 0.6);
+                const st = new THREE.Mesh(G.stems, K.bark); st.scale.setScalar(1.15); st.castShadow = true; g.add(st);
+                const lf = new THREE.Mesh(G.leaves, K.leaf); lf.scale.setScalar(1.15); lf.castShadow = true; g.add(lf);
+            }
             else if (t === 'flower') {
                 add(vBox(1.2, 0.2, 0.7), M.stone, 0, 0.1, 0); add(vBox(1.1, 0.06, 0.6), new THREE.MeshStandardMaterial({ color: 0x4a3020 }), 0, 0.22, 0);
                 const cols = [0xf472b6, 0xfacc15, 0xf87171, 0xffffff, 0xc084fc];
                 for (let i = 0; i < 10; i++) { const f = add(new THREE.SphereGeometry(0.07, 6, 5), new THREE.MeshStandardMaterial({ color: cols[i % 5] }), -0.45 + (i % 5) * 0.22, 0.34, i < 5 ? -0.13 : 0.13); f.castShadow = false; add(new THREE.CylinderGeometry(0.01, 0.01, 0.12, 4), VM.leaf, f.position.x, 0.27, f.position.z); }
             }
-            else if (t === 'tree') { add(new THREE.CylinderGeometry(0.1, 0.15, 1.4, 7), VM.darkWood, 0, 0.7, 0); [[0, 1.7, 0, 0.75], [0.35, 1.45, 0.1, 0.5], [-0.3, 1.5, -0.15, 0.5]].forEach(([x, y, z, r]) => add(new THREE.IcosahedronGeometry(r, 1), VM.leaf, x, y, z)); }
+            else if (t === 'tree') {   // branching tree with a bark trunk, surface roots, a mulch ring and a leafy crown
+                const K = vPlantKit();
+                const b = new THREE.Mesh(vTreeGeos(), K.bark); b.castShadow = true; b.receiveShadow = true; g.add(b);
+                const l = new THREE.Mesh(vTreeLeafGeo(), K.leaf); l.castShadow = true; l.receiveShadow = true; g.add(l);
+                const mu = new THREE.Mesh(vCachedGeo('tree:mulch', () => new THREE.CircleGeometry(0.55, 20).rotateX(-Math.PI / 2).translate(0, 0.012, 0)), K.mulch); mu.receiveShadow = true; g.add(mu);
+            }
             else if (t === 'lantern') { add(new THREE.CylinderGeometry(0.06, 0.08, 1.9, 8), VM.darkWood, 0, 0.95, 0); add(vBox(0.5, 0.06, 0.06), VM.darkWood, 0.2, 1.85, 0); const l = add(new THREE.SphereGeometry(0.2, 12, 10), VM.lantern, 0.38, 1.55, 0); l.scale.y = 1.15; add(new THREE.CylinderGeometry(0.1, 0.1, 0.05, 10), VM.gold, 0.38, 1.79, 0); }
             else if (t === 'lion') { add(vBox(0.6, 0.35, 0.6), M.stone, 0, 0.18, 0); add(new THREE.SphereGeometry(0.26, 12, 10), M.stone, 0, 0.6, -0.05).scale.set(1, 1.1, 1.2); add(new THREE.SphereGeometry(0.22, 12, 10), M.stone, 0, 0.92, 0.12); add(new THREE.TorusGeometry(0.2, 0.07, 6, 14), M.darkStone, 0, 0.9, 0.08); add(new THREE.SphereGeometry(0.09, 8, 6), M.stone, 0.14, 0.4, 0.22); }
             else if (t === 'jar') { add(new THREE.LatheGeometry([[0, 0], [0.32, 0], [0.45, 0.25], [0.48, 0.45], [0.42, 0.62], [0.44, 0.66], [0.4, 0.66], [0.36, 0.6]].map(([r, y]) => new THREE.Vector2(r, y)), 18), new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.4, side: THREE.DoubleSide }), 0, 0, 0); const w = add(new THREE.CircleGeometry(0.38, 16), VM.water, 0, 0.58, 0); w.rotation.x = -Math.PI / 2; add(new THREE.CircleGeometry(0.1, 10), VM.leaf, 0.1, 0.585, 0.05).rotation.x = -Math.PI / 2; }
@@ -16349,7 +17156,7 @@
                 const h = V.houses[p.i]; if (!h) return;
                 walkPlayerTo(vLocal(p, h.altarAt.lx, 0, h.altarAt.lz), p.rot + Math.PI, 'kneel');
                 playTempleBellSound(587);
-                showToast(mine ? '🙏 在自家神明廳點香：祖先保佑、闔家平安、出入順遂。' : `🙏 在「${o ? o.home.nm || '香客' : ''}」家的神明桌前合掌：祝福這一家平安喜樂。`);
+                const gN = V_GODS[(o && o.home.gd) || 'tudi'] || V_GODS.tudi; showToast(mine ? (gN.tablet ? '🙏 在自家公媽龕前點香：祖先保佑、闔家平安、出入順遂。' : `🙏 在自家神明廳向${gN.name}點香：神明保佑、闔家平安、出入順遂。`) : `🙏 在「${o ? o.home.nm || '香客' : ''}」家的神明桌前合掌：祝福這一家平安喜樂。`);
                 return;
             }
             if (act === 'bed') {
@@ -16509,6 +17316,7 @@
                     <div><div class="text-[11px] text-amber-200 mb-1">房型</div><div class="flex gap-1.5">${V_TYPES.map(t => `<button onclick="villageDraft('ty', '${t.k}')" class="flex-1 py-2 rounded-lg text-xs font-bold border ${d.ty === t.k ? 'border-amber-300 bg-amber-900/50 text-amber-100' : 'border-white/20 bg-black/30 text-stone-300'}">${t.name}</button>`).join('')}</div></div>
                     <div><div class="text-[11px] text-amber-200 mb-1">外牆</div><div class="flex gap-1.5">${sw(V_WALLS, 'wc')}</div></div>
                     <div><div class="text-[11px] text-amber-200 mb-1">屋瓦</div><div class="flex gap-1.5">${sw(V_ROOFS, 'rc')}</div></div>
+                    <div><div class="text-[11px] text-amber-200 mb-1">安奉神明（家中神明桌供奉）</div><div class="grid grid-cols-4 gap-1.5">${V_GOD_ORDER.map(k => `<button onclick="villageDraft('gd', '${k}')" class="py-1.5 rounded-lg text-[11px] font-bold border ${(d.gd || 'tudi') === k ? 'border-amber-300 bg-amber-900/60 text-amber-100 ring-2 ring-amber-300/50' : 'border-white/20 bg-black/30 text-stone-300'}">${V_GODS[k].e} ${V_GODS[k].short}</button>`).join('')}</div><div class="text-[11px] text-stone-400 mt-1">目前：${V_GODS[d.gd || 'tudi'].name}</div></div>
                     <label class="block text-[11px] text-amber-200">門牌名字（最多 10 字）<input id="vName" maxlength="10" value="${escapeHtmlLite(d.nm || '')}" oninput="villageDraft('nm', this.value)" class="mt-1 w-full px-2.5 py-1.5 bg-black/50 border border-amber-300/40 rounded-lg text-sm text-white"></label>
                 </div>
                 <div class="grid grid-cols-2 gap-2 mt-3"><button onclick="saveHomeDraft()" class="py-2.5 btn-warm-gold text-sm tracking-widest">${isNew ? '🏡 蓋好了' : '✅ 儲存'}</button><button onclick="closeVillageModal()" class="py-2.5 rounded-xl border border-amber-300/40 bg-black/30 text-amber-100 text-sm font-bold">取消</button></div>`;
@@ -16898,7 +17706,7 @@
         // 點空油位下豆腐、看顏色在金黃時撈起，湊滿客人要的份數、照客人要不要泡菜再上菜。60 秒比分數。
         // 最高分存在自己的 pilgrims/<id>.games（tofu, nm），所有人共讀成排行榜。
         // =====================================================================
-        const TOFU_POS = { x: 12.0, z: 54.0, rot: -Math.PI / 2 };   // at the village entrance, east of the 山門 (clear of its pillars), front faces -x (the street)
+        const TOFU_POS = { x: -27.0, z: 58.5, rot: -Math.PI / 2 };   // 問心夜市 lane (west of the village entrance), east side, front faces -x (the aisle)
         const TOFU = { group: null, board: null, boardTex: null, boardKey: '' };
         function tofuBest() {
             let b = 0; try { b = +localStorage.getItem('temple.tofuBest') || 0; } catch (e) {}
@@ -16923,7 +17731,7 @@
         function buildTofuStall() {
             const P = TOFU_POS, M = propMats();
             const g = new THREE.Group(); g.position.set(P.x, 0, P.z); g.rotation.y = P.rot; templeGroup.add(g); TOFU.group = g;
-            const click = { interactType: 'tofu', label: '🍢 村口臭豆腐攤（點擊炸臭豆腐小遊戲）' };
+            const click = { interactType: 'tofu', label: '🍢 夜市臭豆腐攤（點擊炸臭豆腐小遊戲）' };
             const add = (geo, mat, x, y, z, parent = g) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); m.userData = { ...click }; clickableMeshes.push(m); return m; };
             const red = new THREE.MeshStandardMaterial({ color: 0xc0261e, roughness: 0.6 });
             const white = new THREE.MeshStandardMaterial({ color: 0xf5f0e6, roughness: 0.7 });
@@ -17617,9 +18425,9 @@
         // 每攤一個畫布小遊戲，最高分存在自己的 pilgrims/<id>.games.<key>，大家共讀成各攤排行榜。
         // =====================================================================
         const MG_INFO = {
-            fish: { name: '撈金魚', icon: '🐟', title: '撈金魚高手', pos: { x: 19.5, z: 54.3, rot: 0 }, color: 0x1d4ed8, sign: '夜市撈金魚', banner: '一網打盡' },
-            balloon: { name: '射氣球', icon: '🎯', title: '神射手', pos: { x: -11.5, z: 54.3, rot: 0 }, color: 0x15803d, sign: '射氣球', banner: '百發百中' },
-            ring: { name: '套圈圈', icon: '⭕', title: '套圈圈達人', pos: { x: -19.5, z: 54.3, rot: 0 }, color: 0x7c3aed, sign: '套圈圈', banner: '圈圈有獎' }
+            fish: { name: '撈金魚', icon: '🐟', title: '撈金魚高手', pos: { x: -27.0, z: 65.5, rot: -Math.PI / 2 }, color: 0x1d4ed8, sign: '夜市撈金魚', banner: '一網打盡' },
+            balloon: { name: '射氣球', icon: '🎯', title: '神射手', pos: { x: -35.0, z: 58.5, rot: Math.PI / 2 }, color: 0x15803d, sign: '射氣球', banner: '百發百中' },
+            ring: { name: '套圈圈', icon: '⭕', title: '套圈圈達人', pos: { x: -35.0, z: 65.5, rot: Math.PI / 2 }, color: 0x7c3aed, sign: '套圈圈', banner: '圈圈有獎' }
         };
         const MG_STALLS = {};
 
@@ -17689,6 +18497,64 @@
             return out.sort((a, b) => b.score - a.score).slice(0, 20);
         }
 
+
+        // ---------------------------------------------------------------- 問心夜市: the four stalls gathered on one paved lane west of the village entrance,
+        // with a lit 牌樓 at its mouth, strings of bulbs across the aisle and a corner of tables and stools
+        const NM_LANE = { x: -31, z0: 53.2, z1: 71, w: 12 };
+        function buildNightMarketLane() {
+            const L = NM_LANE, M = propMats(), VM = villageMats();
+            const g = new THREE.Group(); templeGroup.add(g);
+            const add = (geo, mat, x, y, z, parent = g) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true; parent.add(m); return m; };
+            const len = L.z1 - L.z0, zc = (L.z0 + L.z1) / 2;
+            // paving
+            const pt = VM.slabTex.clone(); pt.needsUpdate = true; pt.wrapS = pt.wrapT = THREE.RepeatWrapping; pt.repeat.set(L.w / 3, len / 3);
+            const pave = add(new THREE.PlaneGeometry(L.w, len), new THREE.MeshStandardMaterial({ map: pt, color: 0xb8ab98, roughness: 0.9 }), L.x, 0.02, zc); pave.rotation.x = -Math.PI / 2; pave.castShadow = false;
+            const curbM = new THREE.MeshStandardMaterial({ color: 0x8f8a80, roughness: 0.9 });
+            [-1, 1].forEach(s => add(new THREE.BoxGeometry(0.2, 0.1, len), curbM, L.x + s * L.w / 2, 0.05, zc));
+            // 牌樓 at the lane mouth
+            const red = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.5 });
+            const gold = new THREE.MeshStandardMaterial({ color: 0xd9a520, metalness: 0.6, roughness: 0.35 });
+            const ax = 3.4, az = L.z0 + 0.3;
+            [-1, 1].forEach(s => { add(new THREE.CylinderGeometry(0.16, 0.2, 4.2, 12), red, L.x + s * ax, 2.1, az); add(new THREE.BoxGeometry(0.6, 0.3, 0.6), M.stone || curbM, L.x + s * ax, 0.15, az); });
+            add(new THREE.BoxGeometry(ax * 2 + 0.9, 0.22, 0.4), red, L.x, 4.05, az);
+            add(new THREE.BoxGeometry(ax * 2 + 1.6, 0.14, 0.9), new THREE.MeshStandardMaterial({ color: 0x2f7a55, roughness: 0.5 }), L.x, 4.35, az);
+            const signTex = createSignboardTexture('問心夜市', 512, 128, '#7a1814', '#facc15', '#fde68a', false, 78);
+            const sign = add(new THREE.PlaneGeometry(3.4, 0.85), new THREE.MeshStandardMaterial({ map: signTex, roughness: 0.5, emissive: 0x442200, emissiveIntensity: 0.4, side: THREE.DoubleSide }), L.x, 3.55, az);
+            sign.castShadow = false;
+            add(new THREE.BoxGeometry(3.6, 1.0, 0.08), gold, L.x, 3.55, az);
+            sign.position.z = az - 0.06; sign.rotation.y = Math.PI;   // faces the temple (-z)
+            const sign2 = sign.clone(); sign2.position.z = az + 0.06; sign2.rotation.y = 0; g.add(sign2);   // faces into the lane
+            const lanMat = createRedLanternMat();
+            [-1, 1].forEach(s => { const l = add(new THREE.SphereGeometry(0.32, 14, 10), lanMat, L.x + s * (ax - 0.9), 3.35, az); l.scale.y = 1.2; add(new THREE.CylinderGeometry(0.18, 0.18, 0.08, 12), gold, L.x + s * (ax - 0.9), 3.76, az); });
+            // strings of warm bulbs zig-zagging across the aisle between poles
+            const poleM = new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.6, metalness: 0.4 });
+            const poles = [];
+            [56, 62, 68.5].forEach(z => [-1, 1].forEach(s => { const x = L.x + s * (L.w / 2 - 0.3); add(new THREE.CylinderGeometry(0.05, 0.06, 3.6, 8), poleM, x, 1.8, z); poles.push(new THREE.Vector3(x, 3.5, z)); }));
+            const spans = [];
+            for (let k = 0; k + 3 < poles.length; k += 2) { spans.push([poles[k], poles[k + 3]], [poles[k + 1], poles[k + 2]]); }
+            for (let k = 0; k + 1 < poles.length; k += 2) spans.push([poles[k], poles[k + 1]]);
+            const bulbs = [], wire = [];
+            spans.forEach(([a, b]) => { const n = Math.round(a.distanceTo(b) / 0.55); const pts = []; for (let i = 0; i <= n; i++) { const t = i / n, p = a.clone().lerp(b, t); p.y -= Math.sin(Math.PI * t) * 0.55; pts.push(p); if (i > 0 && i < n) bulbs.push(p.clone().setY(p.y - 0.1)); } wire.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), n * 2, 0.012, 4, false)); });
+            const wm = new THREE.Mesh(vMergeGeos(wire), new THREE.MeshStandardMaterial({ color: 0x1a1a1a })); g.add(wm);
+            const cols = [0xfff1c4, 0xffc46b, 0xff8a7a, 0xa7f3d0, 0xfde68a];
+            const bm = new THREE.InstancedMesh(new THREE.SphereGeometry(0.06, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff }), bulbs.length);
+            const mtx = new THREE.Matrix4(), col = new THREE.Color();
+            bulbs.forEach((p, i) => { mtx.makeTranslation(p.x, p.y, p.z); bm.setMatrixAt(i, mtx); bm.setColorAt(i, col.set(cols[i % cols.length])); });
+            g.add(bm);
+            // tables and stools at the far end of the lane, plus a trash bin and a hand-washing tap
+            const tableM = new THREE.MeshStandardMaterial({ color: 0xe8e2d4, roughness: 0.6 }), stoolM = new THREE.MeshStandardMaterial({ color: 0xd42a2a, roughness: 0.55 });
+            [[-2.2, 69.4], [2.2, 69.4]].forEach(([dx, z]) => {
+                const x = L.x + dx;
+                add(new THREE.CylinderGeometry(0.55, 0.55, 0.04, 20), tableM, x, 0.72, z);
+                add(new THREE.CylinderGeometry(0.05, 0.2, 0.7, 10), poleM, x, 0.36, z);
+                for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2 + 0.4; add(new THREE.CylinderGeometry(0.17, 0.15, 0.42, 12), stoolM, x + Math.cos(a) * 0.85, 0.21, z + Math.sin(a) * 0.85); }
+            });
+            add(new THREE.CylinderGeometry(0.28, 0.25, 0.8, 14), new THREE.MeshStandardMaterial({ color: 0x2f6b4f, roughness: 0.5 }), L.x + L.w / 2 - 0.6, 0.4, L.z1 - 0.6);
+            addLightPool(L.x, zc - 2, 6, 0.9);
+            addLightPool(L.x, L.z1 - 2, 4, 0.7);
+            const lbl = (typeof addFloatingLabel === 'function') ? addFloatingLabel : null;
+            if (lbl) try { lbl('🏮 問心夜市', L.x, 5.2, L.z0 + 0.3); } catch (e) {}
+        }
         // ---------------------------------------------------------------- the three stalls (cart, canopy, sign, prize display, leaderboard)
         function buildGameStall(key) {
             const I = MG_INFO[key], P = I.pos;
@@ -20647,7 +21513,7 @@ YUFO.busy = true; YUFO.t0 = performance.now(); YUFO.lastPour = -1;
             presets.wishtree = { r: 13, theta: -0.95, phi: 1.12, tx: WISHTREE.x - 2, ty: 2.0, tz: WISHTREE.z + 0.5 };
             if (TIGER_CAVE.cam) presets.tigercave = TIGER_CAVE.cam;
             Object.entries(MG_INFO).forEach(([k, I]) => { presets['mg_' + k] = { r: 7, theta: I.pos.rot + 0.35, phi: 1.22, tx: I.pos.x, ty: 1.3, tz: I.pos.z }; });
-            presets.tofu = { r: 7.5, theta: -Math.PI / 2 + 0.45, phi: 1.22, tx: TOFU_POS.x, ty: 1.3, tz: TOFU_POS.z };
+            presets.tofu = { r: 7.5, theta: TOFU_POS.rot + 0.45, phi: 1.22, tx: TOFU_POS.x, ty: 1.3, tz: TOFU_POS.z };
             presets.village = { r: 72, theta: 0.35, phi: 0.95, tx: VILLAGE.axisX, ty: 0, tz: VILLAGE.crossZ };
             { const mh = myHome(), pl = mh && VILLAGE.plots[mh.p]; presets.myhome = pl ? { r: 15, theta: pl.rot + 0.4, phi: 1.2, tx: pl.x, ty: 1.4, tz: pl.z } : presets.village; }
             presets.longquan = { r: 24, theta: -Math.PI / 2 - 0.25, phi: 1.3, tx: 57, ty: 4.5, tz: LONGQUAN.z + 3 };
